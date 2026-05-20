@@ -1,4 +1,4 @@
-# Plataforma de Torneos eSports
+# PVP - Plataforma de Torneos eSports
 
 Plataforma modular de torneos de eSports inspirada en experiencias tipo Challengermode, enfocada en competicion organizada, comunidad, auditoria, tokens internos no monetarios y crecimiento seguro.
 
