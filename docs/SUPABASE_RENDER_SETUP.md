@@ -11,13 +11,15 @@ Usar Supabase como PostgreSQL administrado y Render como hosting de dos servicio
 
 En Supabase se usa solo PostgreSQL en esta fase. No se necesita Supabase Auth para el MVP actual porque la autenticacion vive en `apps/api`.
 
-Formato recomendado para `DATABASE_URL` en Render:
+Formato recomendado para `DATABASE_URL` en Render y migraciones desde redes sin IPv6:
 
 ```env
-postgresql://postgres:TU_PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres?sslmode=require
+postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?sslmode=require
 ```
 
-No guardes esta URL en el repositorio. Debe ir como variable secreta en Render.
+Ese valor sale desde Supabase en `Connect` -> `ORMs` -> `Prisma` o `Session pooler`. No guardes esta URL en el repositorio. Debe ir como variable secreta en Render.
+
+El host directo `db.PROJECT_REF.supabase.co:5432` puede fallar desde redes locales sin IPv6. Para el MVP en Render, el Session pooler es la ruta mas simple.
 
 ## Render API Service
 
@@ -26,7 +28,7 @@ Configurar estas variables:
 ```env
 NODE_ENV=production
 API_PORT=10000
-DATABASE_URL=postgresql://postgres:TU_PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?sslmode=require
 JWT_SECRET=valor-largo-aleatorio
 JWT_EXPIRES_IN=7d
 FRONTEND_URL=https://tu-frontend.onrender.com
