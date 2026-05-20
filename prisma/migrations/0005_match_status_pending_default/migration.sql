@@ -1,0 +1,3 @@
+UPDATE "Match" SET "status" = 'PENDING' WHERE "status" = 'SCHEDULED';
+
+ALTER TABLE "Match" ALTER COLUMN "status" SET DEFAULT 'PENDING';

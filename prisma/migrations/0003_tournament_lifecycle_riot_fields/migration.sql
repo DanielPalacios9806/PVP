@@ -33,8 +33,5 @@ ALTER TABLE "Match"
   ADD COLUMN "callbackReceivedAt" TIMESTAMP(3),
   ADD COLUMN "resultSyncedAt" TIMESTAMP(3);
 
-UPDATE "Match" SET "status" = 'PENDING' WHERE "status" = 'SCHEDULED';
-ALTER TABLE "Match" ALTER COLUMN "status" SET DEFAULT 'PENDING';
-
 ALTER TABLE "TournamentRegistration" ADD CONSTRAINT "TournamentRegistration_approvedByUserId_fkey"
   FOREIGN KEY ("approvedByUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
