@@ -14,8 +14,8 @@ En Supabase se usa solo PostgreSQL en esta fase. No se necesita Supabase Auth pa
 Formato recomendado para Render:
 
 ```env
-DATABASE_URL=postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?pgbouncer=true
-DIRECT_URL=postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require
+DIRECT_URL=postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?sslmode=require
 ```
 
 Estos valores salen desde Supabase en `Connect` -> `ORMs` -> `Prisma`. No guardes estas URLs en el repositorio. Deben ir como variables secretas en Render.
@@ -29,8 +29,8 @@ Configurar estas variables:
 ```env
 NODE_ENV=production
 API_PORT=10000
-DATABASE_URL=postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?pgbouncer=true
-DIRECT_URL=postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require
+DIRECT_URL=postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?sslmode=require
 JWT_SECRET=valor-largo-aleatorio
 JWT_EXPIRES_IN=7d
 FRONTEND_URL=https://tu-frontend.onrender.com
