@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --font-heading: "Oxanium", sans-serif;
+  --font-body: "Sora", sans-serif;
+  --cm-bg: #10151f;
+  --cm-bg-soft: #161d29;
+  --cm-surface: #1a2230;
+  --cm-surface-2: #212b3b;
+  --cm-line: rgba(255, 255, 255, 0.08);
+  --cm-line-strong: rgba(255, 255, 255, 0.14);
+  --cm-text: #f3f6fb;
+  --cm-text-soft: rgba(226, 233, 245, 0.74);
+  --cm-text-muted: rgba(151, 163, 183, 0.74);
+  --cm-accent: #7b61ff;
+  --cm-accent-soft: rgba(123, 97, 255, 0.18);
+  --cm-blue: #5ea7ff;
+  --cm-gold: #d6af37;
+  --cm-emerald: #3ddc97;
+  --cm-danger: #ff566e;
+}
+
+html {
+  scrollbar-color: rgba(123, 97, 255, 0.35) #131925;
+  scrollbar-width: thin;
+}
+
+body {
+  @apply min-h-screen text-white;
+  font-family: var(--font-body);
+  background:
+    radial-gradient(circle at top center, rgba(123, 97, 255, 0.16), transparent 26%),
+    radial-gradient(circle at 88% 12%, rgba(255, 111, 145, 0.12), transparent 22%),
+    linear-gradient(180deg, #121822 0%, #10151f 60%, #0d131d 100%);
+  color: var(--cm-text);
+}
+
+a {
+  @apply no-underline;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}
+
+input,
+select,
+textarea {
+  @apply w-full outline-none transition;
+  border: 1px solid var(--cm-line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--cm-text);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--cm-text-muted);
+}
+
+button {
+  @apply transition;
+}
+
+::selection {
+  background: rgba(123, 97, 255, 0.28);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #131925;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(123, 97, 255, 0.4);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(123, 97, 255, 0.58);
+}
+
+.glass-panel {
+  background: rgba(26, 34, 48, 0.76);
+  border: 1px solid var(--cm-line);
+  backdrop-filter: blur(18px);
+}
+
+.surface-panel {
+  background: linear-gradient(180deg, rgba(26, 34, 48, 0.92), rgba(21, 28, 41, 0.92));
+  border: 1px solid var(--cm-line);
+  border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.surface-tile {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+
+.page-section {
+  @apply px-4 py-5 md:px-6 md:py-6;
+}
+
+.page-header {
+  @apply space-y-2;
+}
+
+.page-kicker {
+  color: var(--cm-blue);
+  font-size: 0.68rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.page-title {
+  @apply text-3xl font-semibold uppercase tracking-[0.05em] md:text-4xl;
+}
+
+.page-copy {
+  color: var(--cm-text-soft);
+  @apply text-sm leading-7 md:text-base;
+}
+
+.top-pill {
+  @apply inline-flex items-center rounded-full border px-4 py-2 text-sm;
+  border-color: var(--cm-line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--cm-text-soft);
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold;
+  background: linear-gradient(135deg, #7b61ff, #5ea7ff);
+  color: white;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold;
+  border: 1px solid var(--cm-line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--cm-text);
+}
+
+.stat-tile {
+  @apply rounded-[18px] p-4;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.eyebrow {
+  color: var(--cm-blue);
+  @apply text-[11px] uppercase tracking-[0.35em];
+}
+
+.status-badge {
+  @apply inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em];
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.status-live {
+  background: rgba(123, 97, 255, 0.16);
+  color: #c7b8ff;
+}
+
+.status-open {
+  background: rgba(94, 167, 255, 0.16);
+  color: #8bc2ff;
+}
+
+.status-complete {
+  background: rgba(61, 220, 151, 0.14);
+  color: #91f1c4;
+}

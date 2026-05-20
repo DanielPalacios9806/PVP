@@ -1,0 +1,554 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ORGANIZER
+  MODERATOR
+  ADMIN
+  FINANCE
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum ExternalAccountProvider {
+  RIOT
+  STEAM
+  DISCORD
+  OTHER
+}
+
+enum TeamStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum TeamMemberRole {
+  OWNER
+  CAPTAIN
+  MEMBER
+  SUBSTITUTE
+}
+
+enum SpaceVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum SpaceStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum SpaceMemberRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum TournamentFormat {
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+  ROUND_ROBIN
+}
+
+enum TournamentType {
+  SOLO
+  TEAM
+}
+
+enum TournamentStatus {
+  DRAFT
+  PUBLISHED
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  CHECK_IN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  REJECTED
+  CANCELLED
+}
+
+enum BracketStatus {
+  DRAFT
+  GENERATED
+  LOCKED
+  COMPLETED
+}
+
+enum RoundStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+}
+
+enum MatchStatus {
+  PENDING
+  READY
+  IN_PROGRESS
+  RESULT_PENDING
+  COMPLETED
+  DISPUTED
+  CANCELLED
+}
+
+enum ResultSource {
+  MANUAL
+  MOCK_RIOT
+  RIOT_CALLBACK
+  ADMIN_OVERRIDE
+}
+
+enum MatchResultStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  REJECTED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum RewardType {
+  POINTS
+  XP
+  BADGE
+  BENEFIT
+}
+
+enum WalletType {
+  INTERNAL_REWARD
+  TOURNAMENT_PRIZE
+}
+
+enum PrizePoolStatus {
+  DRAFT
+  APPROVED
+  LOCKED
+  DISTRIBUTED
+}
+
+enum PrizeAllocationStatus {
+  PENDING
+  APPROVED
+  PAID
+  BLOCKED
+}
+
+enum PayoutStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  PAID
+  REJECTED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+model User {
+  id                String                 @id @default(cuid())
+  email             String                 @unique
+  username          String                 @unique
+  passwordHash      String
+  displayName       String
+  avatarUrl         String?
+  bio               String?
+  role              UserRole               @default(USER)
+  status            UserStatus             @default(ACTIVE)
+  country           String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  gameAccounts      UserGameAccount[]
+  teamMemberships   TeamMember[]
+  spaceMemberships  SpaceMember[]
+  registrations     TournamentRegistration[] @relation("RegistrationUser")
+  approvedRegistrations TournamentRegistration[] @relation("RegistrationApprovedBy")
+  rewards           UserReward[]
+  wallets           Wallet[]
+  auditLogs         AuditLog[]             @relation("ActorAuditLogs")
+  ownedTeams        Team[]                 @relation("TeamOwner")
+  ownedSpaces       Space[]                @relation("SpaceOwner")
+  organizedTourney  Tournament[]           @relation("TournamentOrganizer")
+  reportedResults   MatchResult[]          @relation("ReportedResults")
+  confirmedResults  MatchResult[]          @relation("ConfirmedResults")
+  openedDisputes    Dispute[]              @relation("OpenedDisputes")
+  resolvedDisputes  Dispute[]              @relation("ResolvedDisputes")
+  sentTeamInvites   TeamInvitation[]       @relation("SentTeamInvitations")
+  teamInvites       TeamInvitation[]       @relation("ReceivedTeamInvitations")
+  sentSpaceInvites  SpaceInvitation[]      @relation("SentSpaceInvitations")
+  spaceInvites      SpaceInvitation[]      @relation("ReceivedSpaceInvitations")
+}
+
+model UserGameAccount {
+  id               String                  @id @default(cuid())
+  userId           String
+  provider         ExternalAccountProvider
+  game             String
+  riotGameName     String?
+  riotTagLine      String?
+  externalPlayerId String?
+  puuid            String?
+  summonerId       String?
+  platformRoute    String?
+  regionalRoute    String?
+  verified         Boolean                 @default(false)
+  verifiedAt       DateTime?
+  lastSyncedAt     DateTime?
+  metadata         Json?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Team {
+  id            String                   @id @default(cuid())
+  name          String
+  slug          String                   @unique
+  tag           String?
+  logoUrl       String?
+  ownerId       String
+  description   String?
+  status        TeamStatus               @default(ACTIVE)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  owner         User                     @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members       TeamMember[]
+  registrations TournamentRegistration[]
+  invitations   TeamInvitation[]
+}
+
+model TeamMember {
+  id       String         @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamMemberRole @default(MEMBER)
+  joinedAt DateTime       @default(now())
+  team     Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model Space {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  description String?
+  ownerId     String
+  visibility  SpaceVisibility   @default(PUBLIC)
+  status      SpaceStatus       @default(ACTIVE)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  owner       User              @relation("SpaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     SpaceMember[]
+  tournaments Tournament[]
+  invitations SpaceInvitation[]
+}
+
+model SpaceMember {
+  id       String          @id @default(cuid())
+  spaceId  String
+  userId   String
+  role     SpaceMemberRole @default(MEMBER)
+  joinedAt DateTime        @default(now())
+  space    Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([spaceId, userId])
+}
+
+model Tournament {
+  id               String                   @id @default(cuid())
+  spaceId          String?
+  organizerId      String
+  name             String
+  slug             String                   @unique
+  game             String
+  platformRoute    String?
+  regionalRoute    String?
+  teamSize         Int?
+  format           TournamentFormat
+  type             TournamentType
+  status           TournamentStatus         @default(DRAFT)
+  rules            String?
+  publicRules      String?
+  prizes           String?
+  entryFeeTokens   Int?                     @default(0)
+  maxParticipants  Int
+  minParticipants  Int?                     @default(20)
+  checkInEnabled   Boolean                  @default(false)
+  registrationClosesAt DateTime?
+  startsAt         DateTime?
+  endsAt           DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  space            Space?                   @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  organizer        User                     @relation("TournamentOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  registrations    TournamentRegistration[]
+  bracket          Bracket?
+  matches          Match[]
+  prizePools       PrizePool[]
+}
+
+model TournamentRegistration {
+  id                   String             @id @default(cuid())
+  tournamentId         String
+  userId               String?
+  teamId               String?
+  status               RegistrationStatus @default(PENDING)
+  checkedInAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  approvedByUserId     String?
+  approvedAt           DateTime?
+  rejectedReason       String?
+  tournament           Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user                 User?              @relation("RegistrationUser", fields: [userId], references: [id], onDelete: SetNull)
+  team                 Team?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  approvedByUser       User?              @relation("RegistrationApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  homeMatches          Match[]            @relation("HomeRegistration")
+  awayMatches          Match[]            @relation("AwayRegistration")
+  wonMatches           Match[]            @relation("WinnerRegistration")
+  reportedAsWinner     MatchResult[]      @relation("WinnerInResult")
+  allocatedPrizes      PrizeAllocation[]
+}
+
+model Bracket {
+  id           String        @id @default(cuid())
+  tournamentId String        @unique
+  status       BracketStatus @default(DRAFT)
+  metadata     Json?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  rounds       Round[]
+}
+
+model Round {
+  id        String      @id @default(cuid())
+  bracketId String
+  name      String
+  sequence  Int
+  status    RoundStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  bracket   Bracket     @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  matches   Match[]
+}
+
+model Match {
+  id                 String                    @id @default(cuid())
+  roundId            String?
+  tournamentId       String
+  homeRegistrationId String?
+  awayRegistrationId String?
+  status             MatchStatus               @default(PENDING)
+  scheduledAt        DateTime?
+  bestOf             Int                       @default(1)
+  winnerRegistrationId String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  round              Round?                    @relation(fields: [roundId], references: [id], onDelete: SetNull)
+  tournament         Tournament                @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  homeRegistration   TournamentRegistration?   @relation("HomeRegistration", fields: [homeRegistrationId], references: [id], onDelete: SetNull)
+  awayRegistration   TournamentRegistration?   @relation("AwayRegistration", fields: [awayRegistrationId], references: [id], onDelete: SetNull)
+  winnerRegistration TournamentRegistration?   @relation("WinnerRegistration", fields: [winnerRegistrationId], references: [id], onDelete: SetNull)
+  results            MatchResult[]
+  disputes           Dispute[]
+
+  riotShortCode       String?
+  riotGameId          String?
+  riotPlatform        String?
+  riotRegion          String?
+  resultSource        ResultSource             @default(MANUAL)
+  callbackReceivedAt  DateTime?
+  resultSyncedAt      DateTime?
+}
+
+model MatchResult {
+  id                   String                    @id @default(cuid())
+  matchId              String
+  reportedByUserId     String
+  winnerRegistrationId String?
+  homeScore            Int
+  awayScore            Int
+  status               MatchResultStatus         @default(PENDING_CONFIRMATION)
+  evidenceUrls         Json?
+  notes                String?
+  confirmedByUserId    String?
+  confirmedAt          DateTime?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  match                Match                     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  reportedByUser       User                      @relation("ReportedResults", fields: [reportedByUserId], references: [id], onDelete: Cascade)
+  confirmedByUser      User?                     @relation("ConfirmedResults", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  winnerRegistration   TournamentRegistration?   @relation("WinnerInResult", fields: [winnerRegistrationId], references: [id], onDelete: SetNull)
+}
+
+model Dispute {
+  id               String         @id @default(cuid())
+  matchId          String
+  openedByUserId   String
+  reason           String
+  status           DisputeStatus  @default(OPEN)
+  resolution       String?
+  resolvedByUserId String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  match            Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  openedByUser     User           @relation("OpenedDisputes", fields: [openedByUserId], references: [id], onDelete: Cascade)
+  resolvedByUser   User?          @relation("ResolvedDisputes", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+}
+
+model Reward {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  name        String
+  description String?
+  type        RewardType
+  value       Int
+  isMonetary  Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  userRewards UserReward[]
+}
+
+model UserReward {
+  id              String   @id @default(cuid())
+  userId          String
+  rewardId        String
+  grantedByUserId String?
+  notes           String?
+  grantedAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward          Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+}
+
+model Wallet {
+  id              String      @id @default(cuid())
+  userId          String
+  type            WalletType
+  currencyCode    String
+  balance         Decimal     @default(0)
+  nonWithdrawable Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payouts         Payout[]
+}
+
+model PrizePool {
+  id           String            @id @default(cuid())
+  tournamentId String
+  name         String
+  currencyCode String
+  totalAmount  Decimal
+  status       PrizePoolStatus   @default(DRAFT)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  tournament   Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  allocations  PrizeAllocation[]
+}
+
+model PrizeAllocation {
+  id             String                @id @default(cuid())
+  prizePoolId    String
+  position       Int
+  amount         Decimal
+  registrationId String?
+  status         PrizeAllocationStatus @default(PENDING)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  prizePool      PrizePool             @relation(fields: [prizePoolId], references: [id], onDelete: Cascade)
+  registration   TournamentRegistration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+  payouts        Payout[]
+}
+
+model Payout {
+  id                String       @id @default(cuid())
+  walletId          String
+  prizeAllocationId String?
+  status            PayoutStatus @default(PENDING)
+  amount            Decimal
+  requestedAt       DateTime     @default(now())
+  processedAt       DateTime?
+  metadata          Json?
+  wallet            Wallet       @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  prizeAllocation   PrizeAllocation? @relation(fields: [prizeAllocationId], references: [id], onDelete: SetNull)
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  before      Json?
+  after       Json?
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+  actorUser   User?    @relation("ActorAuditLogs", fields: [actorUserId], references: [id], onDelete: SetNull)
+}
+
+model TeamInvitation {
+  id           String           @id @default(cuid())
+  teamId        String
+  invitedUserId String
+  invitedByUserId String
+  role         TeamMemberRole   @default(MEMBER)
+  status       InvitationStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  respondedAt  DateTime?
+  team         Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  invitedUser  User             @relation("ReceivedTeamInvitations", fields: [invitedUserId], references: [id], onDelete: Cascade)
+  invitedByUser User            @relation("SentTeamInvitations", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, invitedUserId, status])
+}
+
+model SpaceInvitation {
+  id             String           @id @default(cuid())
+  spaceId         String
+  invitedUserId   String
+  invitedByUserId String
+  role           SpaceMemberRole  @default(MEMBER)
+  status         InvitationStatus @default(PENDING)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  respondedAt    DateTime?
+  space          Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  invitedUser    User             @relation("ReceivedSpaceInvitations", fields: [invitedUserId], references: [id], onDelete: Cascade)
+  invitedByUser  User             @relation("SentSpaceInvitations", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([spaceId, invitedUserId, status])
+}

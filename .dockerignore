@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+.git
+.github
+.runtime
+coverage
+backups
+.env
+.env.server
+.env.render
+apps/web/.next
+apps/api/dist
+packages/shared/dist

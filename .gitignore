@@ -1,0 +1,59 @@
+# Environment
+.env
+.env.local
+.env.*.local
+.env.server
+.env.render
+.env.production
+
+# Dependencies
+node_modules
+pnpm-lock.yaml
+
+# Build outputs
+dist
+.next
+build
+coverage
+.runtime
+
+# IDE
+.vscode/settings.json
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Backups and databases
+backups
+*.sql
+*.sql.gz
+*.dump
+!prisma/migrations/**/*.sql
+
+# Test
+.nyc_output
+.coverage
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temp files
+tmp
+temp
+*.tmp
+
+# Local review/export artifacts
+review_pack
+review_pack.zip

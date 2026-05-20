@@ -1,0 +1,42 @@
+name: deploy-render-preview
+
+on:
+  push:
+    branches: ["develop"]
+  workflow_dispatch:
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger web preview deploy hook
+        if: ${{ secrets.RENDER_WEB_DEPLOY_HOOK_URL != '' }}
+        run: curl --fail --silent --show-error --request POST "${{ secrets.RENDER_WEB_DEPLOY_HOOK_URL }}"
+
+      - name: Trigger api preview deploy hook
+        if: ${{ secrets.RENDER_API_DEPLOY_HOOK_URL != '' }}
+        run: curl --fail --silent --show-error --request POST "${{ secrets.RENDER_API_DEPLOY_HOOK_URL }}"
+
+      - name: Trigger web preview via Render API
+        if: ${{ secrets.RENDER_WEB_DEPLOY_HOOK_URL == '' && secrets.RENDER_API_KEY != '' && vars.RENDER_WEB_SERVICE_ID != '' }}
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            --url "https://api.render.com/v1/services/${{ vars.RENDER_WEB_SERVICE_ID }}/deploys" \
+            --header "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            --header "Accept: application/json"
+
+      - name: Trigger api preview via Render API
+        if: ${{ secrets.RENDER_API_DEPLOY_HOOK_URL == '' && secrets.RENDER_API_KEY != '' && vars.RENDER_API_SERVICE_ID != '' }}
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            --url "https://api.render.com/v1/services/${{ vars.RENDER_API_SERVICE_ID }}/deploys" \
+            --header "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            --header "Accept: application/json"
+
+      - name: Preview configuration notice
+        if: ${{ secrets.RENDER_WEB_DEPLOY_HOOK_URL == '' && secrets.RENDER_API_DEPLOY_HOOK_URL == '' && (secrets.RENDER_API_KEY == '' || vars.RENDER_WEB_SERVICE_ID == '' || vars.RENDER_API_SERVICE_ID == '') }}
+        run: |
+          echo "No hay hooks ni configuracion Render API completa."
+          echo "Configura RENDER_WEB_DEPLOY_HOOK_URL / RENDER_API_DEPLOY_HOOK_URL o RENDER_API_KEY + service IDs."

@@ -1,0 +1,19 @@
+{
+	email {$CADDY_EMAIL}
+	auto_https {$CADDY_AUTO_HTTPS}
+}
+
+{$APP_DOMAIN} {
+	@api path /api /api/*
+	handle @api {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+{$API_DOMAIN} {
+	reverse_proxy api:4000
+}
