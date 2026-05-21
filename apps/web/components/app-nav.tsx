@@ -29,7 +29,8 @@ export function AppNav() {
     }
   }, []);
 
-  const links = role === "ADMIN" || role === "MODERATOR" ? [...playerLinks, ...adminLinks] : playerLinks;
+  const canOperate = role === "ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
+  const links = canOperate ? [...playerLinks, ...adminLinks] : playerLinks;
 
   return (
     <nav className="flex flex-wrap items-center gap-2 text-sm text-white/80">

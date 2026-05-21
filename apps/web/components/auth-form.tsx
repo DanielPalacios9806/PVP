@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiUrl } from "../lib/config";
 import { persistSession } from "../lib/session";
 
 type Mode = "login" | "register";
 
 export function AuthForm({ mode }: { mode: Mode }) {
+  const router = useRouter();
   const [message, setMessage] = useState("");
   const [token, setToken] = useState("");
 
@@ -50,6 +52,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       });
       setToken(data.token);
       setMessage("Sesion iniciada correctamente.");
+      router.push("/dashboard");
       return;
     }
 

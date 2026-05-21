@@ -20,7 +20,7 @@ const railItems: RailItem[] = [
   { id: "teams", href: "/dashboard/teams", label: "Equipos", short: "TA", tone: "text-white" },
   { id: "spaces", href: "/dashboard/spaces", label: "Espacios", short: "A", tone: "text-white" },
   { id: "tokens", href: "/dashboard/tokens", label: "Tokens", short: "6", tone: "text-white" },
-  { id: "admin", href: "/dashboard/admin", label: "Admin", short: "+", tone: "text-white", roles: ["ADMIN", "MODERATOR"] }
+  { id: "admin", href: "/dashboard/admin", label: "Admin", short: "+", tone: "text-white", roles: ["ADMIN", "MODERATOR", "ORGANIZER"] }
 ];
 
 export function SidebarLeft() {

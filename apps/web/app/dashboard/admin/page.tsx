@@ -17,7 +17,7 @@ export default function AdminPage() {
           </div>
         </div>
       </section>
-      <RoleGate allowedRoles={["ADMIN", "MODERATOR"]} title="Administracion">
+      <RoleGate allowedRoles={["ADMIN", "MODERATOR", "ORGANIZER"]} title="Administracion">
         <div className="space-y-6">
           <TournamentOpsPanel />
           <AdminTokenPanel />

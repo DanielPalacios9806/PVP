@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { PublicLanding } from "@/components/public-landing";
 
 export default function HomePage() {
-  redirect("/dashboard/tournaments");
+  return <PublicLanding />;
 }

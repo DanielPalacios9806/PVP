@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getStoredUser } from "@/lib/session";
 import { useEffect, useState } from "react";
+import { RiotLinkCard } from "@/components/riot-link-card";
 
 const featuredMoments = [
   {
@@ -147,6 +148,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      <RiotLinkCard compact />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {pillars.map((pillar) => (

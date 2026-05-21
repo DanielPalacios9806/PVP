@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiUrl, getAuthHeaders } from "../lib/config";
 import { clearSession, getStoredUser, getStoredWallet, persistSession, type AppRole } from "../lib/session";
+import { RiotLinkCard } from "./riot-link-card";
 import { SectionCard } from "./section-card";
 
 const roleOptions: Array<{ role: AppRole; label: string; description: string }> = [
@@ -17,6 +18,11 @@ const roleOptions: Array<{ role: AppRole; label: string; description: string }> 
     role: "MODERATOR",
     label: "Moderacion",
     description: "Revisa disputas y valida incidencias competitivas."
+  },
+  {
+    role: "ORGANIZER",
+    label: "Organizador",
+    description: "Publica torneos, aprueba inscripciones y opera brackets."
   },
   {
     role: "ADMIN",
@@ -66,7 +72,9 @@ export function AccountCenter() {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+    <div className="space-y-6">
+      <RiotLinkCard />
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
       <SectionCard title="Cuenta" description="Resumen de la cuenta actual y su saldo interno.">
         <div className="space-y-5">
           <div className="rounded-[26px] border border-white/10 bg-black/20 p-5">
@@ -120,6 +128,7 @@ export function AccountCenter() {
           {message ? <p className="text-sm text-brand-cyan">{message}</p> : null}
         </div>
       </SectionCard>
+      </div>
     </div>
   );
 }
