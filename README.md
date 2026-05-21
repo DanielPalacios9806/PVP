@@ -1,4 +1,4 @@
-# PVP - Plataforma de Torneos eSports
+# Darkside.gg - Plataforma de Torneos eSports
 
 Plataforma modular de torneos de eSports inspirada en experiencias tipo Challengermode, enfocada en competicion organizada, comunidad, auditoria, tokens internos no monetarios y crecimiento seguro.
 
@@ -31,13 +31,13 @@ prisma/
 
 ### GitHub Repository Setup
 1. Crear repositorio en https://github.com/new
-   - Nombre: `pvp-project`
+   - Nombre sugerido: `Darkside.gg` o el nombre de repositorio disponible en GitHub
    - Visibilidad: Public
    - No inicializar (el código ya existe localmente)
 
 2. Conectar repositorio local:
 ```bash
-git remote add origin https://github.com/DanielPalacios98/pvp-project.git
+git remote add origin https://github.com/DanielPalacios9806/PVP.git
 git branch -M main
 git push -u origin main
 ```

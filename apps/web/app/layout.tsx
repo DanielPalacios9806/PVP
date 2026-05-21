@@ -13,8 +13,8 @@ const bodyFont = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "Arena OS",
-  description: "Plataforma de torneos de eSports con gestion competitiva y tokens internos"
+  title: "Darkside.gg",
+  description: "Plataforma universitaria de torneos de eSports con gestion competitiva y tokens internos"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

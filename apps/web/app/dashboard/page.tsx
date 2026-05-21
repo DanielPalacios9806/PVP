@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getStoredUser } from "@/lib/session";
 import { useEffect, useState } from "react";
 import { RiotLinkCard } from "@/components/riot-link-card";
+import { brand } from "@/lib/brand";
 
 const featuredMoments = [
   {
@@ -66,12 +67,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-col justify-center gap-6 p-6 lg:p-8">
-            <p className="page-kicker">Arena competitiva</p>
+            <p className="page-kicker">{brand.name}</p>
             <div>
-              <h1 className="page-title max-w-xl">Torneos, equipos y espacios listos para competir.</h1>
+              <h1 className="page-title max-w-xl">Tu centro competitivo universitario.</h1>
               <p className="page-copy mt-4 max-w-xl">
-                Organiza circuitos para League of Legends, VALORANT y otros juegos con una experiencia clara,
-                visual y orientada a operaciones reales.
+                Revisa torneos, administra tus equipos, vincula Riot ID en modo mock y sigue tus partidas desde una experiencia separada por rol.
               </p>
             </div>
 
@@ -86,9 +86,9 @@ export default function DashboardPage() {
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="stat-tile">
-                <span className="eyebrow">Modo</span>
-                <strong className="mt-3 block text-2xl text-white">5vs5</strong>
-                <p className="mt-2 text-sm text-white/58">Circuitos principales y ligas.</p>
+                <span className="eyebrow">Perfil</span>
+                <strong className="mt-3 block text-2xl text-white">Jugador</strong>
+                <p className="mt-2 text-sm text-white/58">Participa, reporta resultados y gestiona equipos.</p>
               </div>
               <div className="stat-tile">
                 <span className="eyebrow">Rol activo</span>
@@ -98,9 +98,9 @@ export default function DashboardPage() {
                 <p className="mt-2 text-sm text-white/58">La interfaz se adapta al tipo de acceso.</p>
               </div>
               <div className="stat-tile">
-                <span className="eyebrow">Estado</span>
-                <strong className="mt-3 block text-2xl text-white">Activo</strong>
-                <p className="mt-2 text-sm text-white/58">Prototipo visual conectado al flujo del producto.</p>
+                <span className="eyebrow">Riot</span>
+                <strong className="mt-3 block text-2xl text-white">Mock</strong>
+                <p className="mt-2 text-sm text-white/58">Preparado para integracion oficial futura.</p>
               </div>
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function DashboardPage() {
           <div className="page-header">
             <div>
               <p className="page-kicker">Panel principal</p>
-              <h2 className="text-3xl font-semibold text-white">Lo mas importante de tu plataforma</h2>
+              <h2 className="text-3xl font-semibold text-white">Acciones principales</h2>
             </div>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -138,7 +138,7 @@ export default function DashboardPage() {
               <p className="mt-2 text-sm text-white/58">Revisa calendarios, brackets, estados y cupos.</p>
             </Link>
             <Link href="/dashboard/spaces" className="surface-tile transition hover:border-white/18">
-              <strong className="text-lg text-white">Espacios</strong>
+              <strong className="text-lg text-white">Comunidades</strong>
               <p className="mt-2 text-sm text-white/58">Agrupa comunidades, temporadas y ligas recurrentes.</p>
             </Link>
             <Link href="/dashboard/tokens" className="surface-tile transition hover:border-white/18">

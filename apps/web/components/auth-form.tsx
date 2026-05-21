@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiUrl } from "../lib/config";
 import { persistSession } from "../lib/session";
+import { brand } from "@/lib/brand";
 
 type Mode = "login" | "register";
 
@@ -77,7 +78,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       <aside className="glass-panel relative overflow-hidden rounded-[30px] p-6">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(47,107,255,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,79,99,0.14),transparent_30%)]" />
         <div className="relative space-y-5">
-          <p className="eyebrow">{mode === "register" ? "Alta de jugador" : "Acceso a plataforma"}</p>
+          <p className="eyebrow">{mode === "register" ? "Alta de jugador" : `Acceso a ${brand.name}`}</p>
           <h2 className="text-3xl font-semibold uppercase leading-none">
             {mode === "register" ? "Crea tu identidad competitiva." : "Vuelve al circuito."}
           </h2>
@@ -102,7 +103,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
       <form action={onSubmit} className="glass-panel space-y-4 rounded-[30px] p-6">
         <div className="mb-2">
-          <p className="eyebrow">{mode === "register" ? "Unete a Arena OS" : "Inicio seguro"}</p>
+          <p className="eyebrow">{mode === "register" ? `Unete a ${brand.name}` : "Inicio seguro"}</p>
           <h3 className="mt-2 text-2xl font-semibold uppercase">
             {mode === "register" ? "Registro de jugador" : "Inicio de sesion"}
           </h3>

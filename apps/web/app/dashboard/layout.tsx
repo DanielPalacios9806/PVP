@@ -6,13 +6,13 @@ import { SidebarRight } from "@/components/sidebar-right";
 import { ReactNode } from "react";
 
 export const metadata = {
-  title: "Dashboard | Arena OS",
+  title: "Dashboard | Darkside.gg",
   description: "Plataforma de torneos de eSports"
 };
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[var(--cm-bg)]">
+    <div className="min-h-screen bg-[var(--ds-bg-950)]">
       <NavbarTop />
       <DashboardGridWrapper
         leftSidebar={<SidebarLeft />}

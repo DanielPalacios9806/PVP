@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { apiUrl } from "@/lib/config";
 import { getStoredUser } from "@/lib/session";
+import { brand } from "@/lib/brand";
 
 type PublicTournament = {
   id: string;
@@ -157,9 +158,9 @@ export function PublicLanding() {
       <header className="sticky top-0 z-50 border-b border-[var(--ds-border-soft)] bg-[rgba(5,8,12,0.94)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-5">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/assets/darkside/logos/darkside-logo-mark.svg" alt="PVP logo" width={36} height={36} className="h-9 w-9" />
+            <Image src={brand.logoMark} alt={`${brand.name} logo`} width={36} height={36} className="h-9 w-9" />
             <span className="font-heading text-xl font-bold tracking-[0.02em]">
-              PVP<span className="text-[var(--ds-cyan-primary)]">.GG</span>
+              Darkside<span className="text-[var(--ds-cyan-primary)]">.gg</span>
             </span>
           </Link>
 
@@ -199,14 +200,14 @@ export function PublicLanding() {
 
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <Image src="/assets/games/valorant-viper.png" alt="Arena competitiva" fill priority className="object-cover object-center opacity-52" />
+          <Image src="/assets/games/valorant-viper.png" alt="Escena competitiva de VALORANT" fill priority className="object-cover object-center opacity-52" />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--ds-bg-950)_0%,rgba(5,8,12,0.86)_35%,rgba(5,8,12,0.4)_70%,var(--ds-bg-950)_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(24,230,242,0.2),transparent_24%),radial-gradient(circle_at_86%_35%,rgba(255,36,56,0.32),transparent_22%)]" />
         </div>
 
         <div className="relative mx-auto grid min-h-[640px] max-w-7xl items-center gap-8 px-5 py-10 lg:grid-cols-[0.95fr_1.05fr] lg:py-20">
           <div className="max-w-xl">
-            <p className="text-xs font-bold uppercase tracking-[0.26em] text-[var(--ds-red-primary)]">Compite. Mejora. Domina.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.26em] text-[var(--ds-red-primary)]">{brand.tagline}</p>
             <h1 className="mt-5 font-heading text-4xl font-bold leading-[1.05] text-white sm:text-5xl lg:text-6xl">
               Compite en torneos de <span className="text-[var(--ds-cyan-primary)]">LoL</span> y{" "}
               <span className="text-[var(--ds-red-primary)]">VALORANT</span>
@@ -241,7 +242,7 @@ export function PublicLanding() {
               <div className="p-4">
                 <Image src={icons.bracket} alt="" width={22} height={22} />
                 <p className="font-heading text-2xl font-semibold">{formatCount(counts.spaces, "0")}</p>
-                <p className="mt-1 text-xs text-white/56">Spaces</p>
+                <p className="mt-1 text-xs text-white/56">Comunidades</p>
               </div>
             </div>
           </div>

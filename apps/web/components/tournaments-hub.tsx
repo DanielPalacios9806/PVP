@@ -10,11 +10,11 @@ import { getStoredUser } from "@/lib/session";
 const hubConfig = {
   lol: {
     title: "League of Legends",
-    subtitle: "Torneos, rankings, emparejamiento y comunidades competitivas.",
+    subtitle: "Torneos, brackets, reglas y comunidades competitivas.",
     cover: "/assets/games/lol-cover.jpg",
     avatar: "/assets/games/lol-cover.jpg",
-    owner: "Palax#LAN",
-    ownerRole: "Editor invocador",
+    owner: "Darkside Ops",
+    ownerRole: "Operacion competitiva",
     accent: "from-[#1d2444]/85 via-[#1c2230]/88 to-[#1a1f2b]/95"
   },
   valorant: {
@@ -22,8 +22,8 @@ const hubConfig = {
     subtitle: "Circuitos tacticos, scrims y competencias por escuadras.",
     cover: "/assets/games/valorant-viper.png",
     avatar: "/assets/games/valorant-viper.png",
-    owner: "Arena Tactical",
-    ownerRole: "Editor competitivo",
+    owner: "Darkside Ops",
+    ownerRole: "Operacion competitiva",
     accent: "from-[#4b1f2e]/78 via-[#2a2135]/86 to-[#151a28]/94"
   }
 } as const;
@@ -31,12 +31,12 @@ const hubConfig = {
 const topTabs = [
   "Descripcion general",
   "Torneos",
-  "Rankings",
-  "Emparejamiento",
-  "Partidas personalizadas",
-  "Buscador de equipos",
-  "Clasificacion",
-  "Espacios"
+  "Equipos inscritos",
+  "Reglas",
+  "Brackets",
+  "Match rooms",
+  "Comunidad",
+  "Riot mock"
 ];
 
 const formatFilters = ["1vs1", "2vs2", "3vs3", "4vs4", "5vs5"];
@@ -79,7 +79,7 @@ const utilityPanels = [
 const curatedCards = [
   {
     id: "hub-1",
-    name: "Arena Rift Weekly",
+    name: "Darkside Rift Weekly",
     startsAt: "En 10 minutos, 02:00 PM",
     game: "League of Legends",
     mode: "5vs5",

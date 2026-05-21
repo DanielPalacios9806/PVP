@@ -39,7 +39,7 @@ export const mockTeams = [
 export const mockSpaces = [
   {
     id: "mock-space-1",
-    name: "LATAM Arena",
+    name: "Darkside Campus",
     slug: "latam-arena",
     visibility: "PUBLIC",
     status: "ACTIVE",

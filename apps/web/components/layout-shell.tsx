@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ReactNode } from "react";
+import Image from "next/image";
+import { brand } from "@/lib/brand";
 
 interface LayoutShellProps {
   title: string;
@@ -29,13 +31,13 @@ export function LayoutShell({
         <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="flex h-12 w-12 items-center justify-center rounded-[6px] bg-[#ff2f43] text-lg font-semibold uppercase text-white"
+            className="flex h-12 w-12 items-center justify-center rounded-[6px] border border-[var(--ds-border-red)] bg-black/30"
           >
-            P
+            <Image src={brand.logoMark} alt={brand.name} width={30} height={30} />
           </Link>
           <div>
             <Link href="/" className="text-[11px] uppercase tracking-[0.35em] text-[#43d3ff]">
-              PVP.GG
+              {brand.name}
             </Link>
             <h1 className="mt-2 text-3xl font-heading font-semibold uppercase tracking-[0.06em]">
               {title}
