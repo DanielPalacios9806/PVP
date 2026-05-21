@@ -157,10 +157,10 @@ export function PublicLanding() {
     <main className="min-h-screen bg-[var(--ds-bg-950)] text-[var(--ds-text-primary)]">
       <header className="sticky top-0 z-50 border-b border-[var(--ds-border-soft)] bg-[rgba(5,8,12,0.94)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-5">
-          <Link href="/" className="flex items-center gap-3">
-            <Image src={brand.logoMark} alt={`${brand.name} logo`} width={36} height={36} className="h-9 w-9" />
-            <span className="font-heading text-xl font-bold tracking-[0.02em]">
-              Darkside<span className="text-[var(--ds-cyan-primary)]">.gg</span>
+          <Link href="/" className="flex items-center gap-2.5 sm:gap-3">
+            <Image src={brand.logoMark} alt={`${brand.name} logo`} width={36} height={36} className="h-7 w-7 sm:h-9 sm:w-9" />
+            <span className="font-heading text-lg font-bold tracking-[0.02em] sm:text-xl">
+              Darkside<span className="hidden text-[var(--ds-cyan-primary)] sm:inline">.gg</span>
             </span>
           </Link>
 
@@ -192,29 +192,25 @@ export function PublicLanding() {
             )}
           </div>
 
-          <button aria-label="Abrir menu" className="ml-auto flex h-10 w-10 items-center justify-center rounded-[8px] border border-white/10 text-white/75 sm:hidden">
-            <Image src={icons.menu} alt="" width={22} height={22} />
-          </button>
+          <div className="ml-auto sm:hidden" />
         </div>
 
         <div className="mx-auto grid max-w-7xl gap-3 px-5 pb-4 sm:hidden">
-          {isLoggedIn ? (
-            <Link href="/dashboard" className="ds-button-secondary inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-semibold">
-              <Image src={icons.user} alt="" width={16} height={16} />
-              Abrir panel
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/auth/login" className="ds-button-secondary inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-semibold">
+              <Image src={icons.login} alt="" width={16} height={16} />
+              Login
             </Link>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <Link href="/auth/login" className="ds-button-secondary inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-semibold">
-                <Image src={icons.login} alt="" width={16} height={16} />
-                Login
-              </Link>
-              <Link href="/auth/register" className="ds-button-primary inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-semibold">
-                <Image src={icons.register} alt="" width={16} height={16} />
-                Registrarse
-              </Link>
-            </div>
-          )}
+            <Link href="/auth/register" className="ds-button-primary inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-semibold">
+              <Image src={icons.register} alt="" width={16} height={16} />
+              Registrarse
+            </Link>
+          </div>
+          {isLoggedIn ? (
+            <Link href="/dashboard" className="text-center text-xs font-semibold text-white/48">
+              Ya tienes sesion abierta. Ir al panel
+            </Link>
+          ) : null}
         </div>
       </header>
 
