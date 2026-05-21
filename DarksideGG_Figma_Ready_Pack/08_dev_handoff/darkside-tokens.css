@@ -1,0 +1,48 @@
+:root {
+  --ds-red-primary: #FF2438;
+  --ds-red-deep: #B90F24;
+  --ds-red-glow: #FF3A4E;
+  --ds-cyan-primary: #18E6F2;
+  --ds-cyan-deep: #0796A8;
+  --ds-gold-prize: #FFB21A;
+
+  --ds-bg-950: #05080C;
+  --ds-bg-900: #080D12;
+  --ds-bg-850: #0B1118;
+  --ds-surface-900: #0E151C;
+  --ds-surface-800: #121B24;
+
+  --ds-text-primary: #F5F7FA;
+  --ds-text-secondary: #B4BEC8;
+  --ds-text-muted: #6D7886;
+
+  --ds-radius-sm: 8px;
+  --ds-radius-md: 12px;
+  --ds-radius-lg: 16px;
+  --ds-radius-xl: 20px;
+
+  --ds-shadow-card: 0 16px 40px rgba(0,0,0,.35);
+  --ds-glow-red: 0 0 24px rgba(255,36,56,.35);
+  --ds-glow-cyan: 0 0 24px rgba(24,230,242,.25);
+}
+
+.ds-card {
+  background: rgba(14, 21, 28, .78);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-card);
+  backdrop-filter: blur(16px);
+}
+
+.ds-button-primary {
+  background: linear-gradient(135deg, var(--ds-red-primary), var(--ds-red-deep));
+  color: var(--ds-text-primary);
+  border: 1px solid rgba(255,36,56,.55);
+  box-shadow: var(--ds-glow-red);
+}
+
+.ds-button-secondary {
+  background: rgba(5,8,12,.65);
+  color: var(--ds-text-primary);
+  border: 1px solid rgba(24,230,242,.55);
+}

@@ -14,7 +14,7 @@ export const adminRouter = Router();
 adminRouter.get(
   "/users",
   requireAuth,
-  requireRole(["ADMIN"]),
+  requireRole(["ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (_request, response) => {
     const users = await prisma.user.findMany({
       select: {
@@ -48,13 +48,13 @@ adminRouter.get(
 adminRouter.patch(
   "/users/:id/role",
   requireAuth,
-  requireRole(["ADMIN"]),
+  requireRole(["SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const userId = getRequestParam(request.params.id);
     const payload = updateUserRoleSchema.parse(request.body);
 
-    if (userId === request.user!.sub && payload.role !== "ADMIN") {
-      throw forbidden("Admin users cannot remove their own admin role");
+    if (userId === request.user!.sub && payload.role !== "SUPER_ADMIN") {
+      throw forbidden("Super admin users cannot remove their own super admin role");
     }
 
     const existing = await prisma.user.findUnique({ where: { id: userId } });
@@ -94,7 +94,7 @@ adminRouter.patch(
 adminRouter.get(
   "/audit-logs",
   requireAuth,
-  requireRole(["ADMIN", "MODERATOR"]),
+  requireRole(["ADMIN", "SUPER_ADMIN", "MODERATOR"]),
   asyncHandler(async (request, response) => {
     const query = auditQuerySchema.parse(request.query);
     const logs = await prisma.auditLog.findMany({
@@ -123,7 +123,7 @@ adminRouter.get(
 adminRouter.get(
   "/audit",
   requireAuth,
-  requireRole(["ADMIN", "MODERATOR"]),
+  requireRole(["ADMIN", "SUPER_ADMIN", "MODERATOR"]),
   asyncHandler(async (request, response) => {
     const query = auditQuerySchema.parse(request.query);
     const logs = await prisma.auditLog.findMany({
@@ -152,7 +152,7 @@ adminRouter.get(
 adminRouter.get(
   "/riot-status",
   requireAuth,
-  requireRole(["ADMIN", "MODERATOR", "ORGANIZER"]),
+  requireRole(["ADMIN", "SUPER_ADMIN", "MODERATOR", "ORGANIZER"]),
   asyncHandler(async (_request, response) => {
     response.json({
       mode: process.env.RIOT_MODE ?? "mock",

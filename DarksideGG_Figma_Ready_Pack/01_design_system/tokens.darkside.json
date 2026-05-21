@@ -1,0 +1,88 @@
+{
+  "name": "Darkside.gg Design Tokens",
+  "version": "1.0.0",
+  "colors": {
+    "brand": {
+      "red_primary": "#FF2438",
+      "red_deep": "#B90F24",
+      "red_glow": "#FF3A4E",
+      "cyan_primary": "#18E6F2",
+      "cyan_deep": "#0796A8",
+      "gold_prize": "#FFB21A"
+    },
+    "background": {
+      "bg_950": "#05080C",
+      "bg_900": "#080D12",
+      "bg_850": "#0B1118",
+      "surface_900": "#0E151C",
+      "surface_800": "#121B24",
+      "surface_glass": "rgba(14, 21, 28, 0.78)"
+    },
+    "text": {
+      "text_primary": "#F5F7FA",
+      "text_secondary": "#B4BEC8",
+      "text_muted": "#6D7886",
+      "text_disabled": "#3E4854"
+    },
+    "semantic": {
+      "success": "#16D178",
+      "warning": "#FFB21A",
+      "danger": "#FF2438",
+      "info": "#18E6F2"
+    },
+    "border": {
+      "border_soft": "rgba(255,255,255,0.08)",
+      "border_red": "rgba(255,36,56,0.55)",
+      "border_cyan": "rgba(24,230,242,0.55)"
+    }
+  },
+  "typography": {
+    "primary_recommended": [
+      "Rajdhani",
+      "Sora",
+      "Inter",
+      "Montserrat",
+      "Arial"
+    ],
+    "display": {
+      "font": "Rajdhani/Sora",
+      "weight": 700,
+      "letter_spacing": "-0.02em"
+    },
+    "body": {
+      "font": "Inter",
+      "weight": 400,
+      "line_height": 1.55
+    },
+    "ui": {
+      "font": "Inter/Sora",
+      "weight": 600
+    }
+  },
+  "radii": {
+    "xs": 6,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 20,
+    "full": 999
+  },
+  "spacing": {
+    "4": 4,
+    "8": 8,
+    "12": 12,
+    "16": 16,
+    "20": 20,
+    "24": 24,
+    "32": 32,
+    "40": 40,
+    "48": 48,
+    "64": 64,
+    "80": 80
+  },
+  "shadows": {
+    "card": "0 16px 40px rgba(0,0,0,0.35)",
+    "red_glow": "0 0 24px rgba(255,36,56,0.35)",
+    "cyan_glow": "0 0 24px rgba(24,230,242,0.25)"
+  }
+}

@@ -126,11 +126,12 @@ El seed crea un administrador inicial:
 - Correo: `admin@esports.local`
 - Contrasena: `Admin1234!`
 
-Usa este usuario para crear torneos en el MVP, porque el endpoint de creacion de torneos requiere rol `ADMIN` u `ORGANIZER`.
+Usa este usuario como super administrador inicial. El registro publico siempre crea usuarios `USER`; los roles `ADMIN`, `ORGANIZER`, `MODERATOR` y `FINANCE` deben asignarse desde el panel interno por un `SUPER_ADMIN`.
 
 ## Roles de experiencia
-- Jugador: se registra, inicia sesion, consulta torneos, participa, hace check-in y administra su saldo de tokens internos desde la vista de usuario.
+- Jugador: se registra, inicia sesion, consulta torneos, participa, hace check-in y administra su saldo de tokens internos desde la vista de usuario. No crea torneos.
 - Administracion: crea torneos, genera brackets, audita acciones, revisa disputas y controla asignacion o verificacion de tokens internos.
+- Super administracion: asigna roles administrativos. No existe registro publico para super admin.
 - Moderacion: revisa disputas y apoya la integridad competitiva.
 
 ## Tokens internos

@@ -1,0 +1,20 @@
+asset,formato,uso,nota,carpeta
+darkside-logo-horizontal.svg,SVG,Logo principal header,Vector editable,02_assets/svg/logos
+darkside-logo-mark.svg,SVG,Isotipo D,Vector editable,02_assets/svg/logos
+darkside-favicon.svg,SVG,Favicon/app icon,Vector editable,02_assets/svg/logos
+icon-search.svg,SVG,Búsqueda,24x24,02_assets/svg/icons
+icon-menu.svg,SVG,Menú móvil,24x24,02_assets/svg/icons
+icon-user.svg,SVG,Usuario/login,24x24,02_assets/svg/icons
+icon-users.svg,SVG,Equipo/jugadores,24x24,02_assets/svg/icons
+icon-trophy.svg,SVG,Premio/torneo,24x24,02_assets/svg/icons
+icon-calendar.svg,SVG,Fecha/eventos,24x24,02_assets/svg/icons
+icon-bracket.svg,SVG,Llave/bracket,24x24,02_assets/svg/icons
+icon-arrow-right.svg,SVG,Flecha CTA,24x24,02_assets/svg/icons
+icon-login.svg,SVG,Acceso,24x24,02_assets/svg/icons
+icon-register.svg,SVG,Crear cuenta,24x24,02_assets/svg/icons
+homepage-desktop.png,PNG,Mockup landing desktop,Referencia visual,02_assets/raster/mockups_png
+homepage-mobile-clean.png,PNG,Mockup landing mobile simplificada,Referencia visual,02_assets/raster/mockups_png
+tournaments-page.png,PNG,Página explorar torneos,Referencia visual,02_assets/raster/mockups_png
+tournament-detail.png,PNG,Detalle de torneo/bracket,Referencia visual,02_assets/raster/mockups_png
+team-dashboard.png,PNG,Dashboard usuario/equipo,Referencia visual,02_assets/raster/mockups_png
+original-logo-reference.png,PNG,Logo original subido,Referencia visual,02_assets/raster/references

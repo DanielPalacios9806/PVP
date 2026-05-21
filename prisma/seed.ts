@@ -8,13 +8,15 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "admin@esports.local" },
-    update: {},
+    update: {
+      role: UserRole.SUPER_ADMIN
+    },
     create: {
       email: "admin@esports.local",
       username: "admin",
       displayName: "Platform Admin",
       passwordHash,
-      role: UserRole.ADMIN,
+      role: UserRole.SUPER_ADMIN,
       status: UserStatus.ACTIVE
     }
   });

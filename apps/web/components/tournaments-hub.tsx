@@ -162,7 +162,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
   }, [items]);
 
   const visibleCards = cards.filter((card) => activeFormats.length === 0 || activeFormats.includes(card.mode));
-  const canCreate = role === "ADMIN" || role === "ORGANIZER";
+  const canCreate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "ORGANIZER";
 
   function toggleFormat(format: string) {
     setActiveFormats((current) =>

@@ -13,7 +13,7 @@ export function SidebarRight() {
     setRole(getStoredUser()?.role ?? "USER");
   }, []);
 
-  const canOperate = role === "ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
+  const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
 
   return (
     <div className="flex h-full flex-col">

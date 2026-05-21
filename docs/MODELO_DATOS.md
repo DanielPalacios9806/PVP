@@ -15,7 +15,7 @@
 - `displayName`: String.
 - `avatarUrl`: String nullable.
 - `bio`: String nullable.
-- `role`: Enum (`USER`, `ORGANIZER`, `MODERATOR`, `ADMIN`, `FINANCE`).
+- `role`: Enum (`USER`, `ORGANIZER`, `MODERATOR`, `ADMIN`, `SUPER_ADMIN`, `FINANCE`).
 - `status`: Enum (`ACTIVE`, `SUSPENDED`, `PENDING`).
 - `country`: String nullable.
 - `createdAt`: DateTime.

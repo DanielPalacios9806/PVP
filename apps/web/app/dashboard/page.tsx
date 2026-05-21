@@ -93,7 +93,7 @@ export default function DashboardPage() {
               <div className="stat-tile">
                 <span className="eyebrow">Rol activo</span>
                 <strong className="mt-3 block text-2xl text-white">
-                  {role === "ADMIN" ? "Admin" : role === "MODERATOR" ? "Moderacion" : "Jugador"}
+                  {role === "SUPER_ADMIN" ? "Super admin" : role === "ADMIN" ? "Admin" : role === "MODERATOR" ? "Moderacion" : "Jugador"}
                 </strong>
                 <p className="mt-2 text-sm text-white/58">La interfaz se adapta al tipo de acceso.</p>
               </div>

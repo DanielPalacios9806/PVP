@@ -7,7 +7,8 @@ Ordenar la experiencia visual y funcional de Darkside.gg antes de aplicar mockup
 - Landing publica mobile-first con identidad temporal Darkside.gg.
 - Login y registro como paginas dedicadas.
 - Dashboard autenticado con rutas para jugador, equipos, comunidades, torneos, tokens y perfil.
-- Paneles de moderacion/admin disponibles para roles `ORGANIZER`, `MODERATOR` y `ADMIN`.
+- Panel de administracion separado disponible para `ADMIN` y `SUPER_ADMIN`.
+- Moderacion separada disponible para `MODERATOR`, `ADMIN` y `SUPER_ADMIN`.
 - Riot ID en modo mock desde perfil.
 - Torneos, brackets, resultados y disputas conectados al MVP backend.
 
@@ -34,6 +35,7 @@ Ordenar la experiencia visual y funcional de Darkside.gg antes de aplicar mockup
 - Perfil gamer y Riot mock.
 - Tokens internos no monetarios.
 - Match room cuando tenga partida asignada.
+- No puede crear torneos ni cambiar su rol desde el frontend.
 
 ### Organizador
 - Todo lo de jugador.
@@ -57,6 +59,12 @@ Ordenar la experiencia visual y funcional de Darkside.gg antes de aplicar mockup
 - Estado Riot mock/development/production.
 - Configuracion futura de premios.
 
+### Super Admin
+- Creado solo por seed/base de datos/env interno.
+- Puede asignar admins y controlar configuracion critica.
+- No aparece como opcion de registro publico.
+- Es el unico rol que puede elevar usuarios a roles administrativos.
+
 ## Pantallas Prioritarias Para Mockup
 1. Landing mobile.
 2. Landing desktop.
@@ -65,7 +73,7 @@ Ordenar la experiencia visual y funcional de Darkside.gg antes de aplicar mockup
 5. Perfil gamer con Riot mock.
 6. Listado/detalle de torneo.
 7. Match room.
-8. Panel organizador/admin desktop.
+8. Panel admin desktop.
 
 ## Reglas Para Los Disenos
 - Mobile-first: primero `390x844` o `430x932`.

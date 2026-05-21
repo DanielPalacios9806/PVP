@@ -16,7 +16,7 @@ export const disputesRouter = Router();
 disputesRouter.get(
   "/",
   requireAuth,
-  requireRole(["MODERATOR", "ADMIN"]),
+  requireRole(["MODERATOR", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (_request, response) => {
     const disputes = await prisma.dispute.findMany({
       include: { match: true },
@@ -82,7 +82,7 @@ disputesRouter.post(
 disputesRouter.post(
   "/:id/resolve",
   requireAuth,
-  requireRole(["MODERATOR", "ADMIN"]),
+  requireRole(["MODERATOR", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const disputeId = getRequestParam(request.params.id);
     const payload = resolveDisputeSchema.parse(request.body);

@@ -34,7 +34,7 @@ function requireRouteParam(value: string | string[] | undefined, name: string) {
 }
 
 function canManageTournament(params: { user: AuthUser; organizerId: string }) {
-  return params.user.role === "ADMIN" || params.user.sub === params.organizerId;
+  return params.user.role === "ADMIN" || params.user.role === "SUPER_ADMIN" || params.user.sub === params.organizerId;
 }
 
 function assertCanManageTournament(user: AuthUser, organizerId: string) {
@@ -44,7 +44,7 @@ function assertCanManageTournament(user: AuthUser, organizerId: string) {
 }
 
 async function assertTeamRegistrationAllowed(teamId: string, user: AuthUser) {
-  if (user.role === "ADMIN" || user.role === "ORGANIZER") {
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "ORGANIZER") {
     return;
   }
 
@@ -98,7 +98,7 @@ async function createTournamentRegistration(params: {
   }
 
   if (tournament.type === "SOLO" && params.userId && params.userId !== params.request.user!.sub) {
-    if (!["ADMIN", "ORGANIZER"].includes(params.request.user!.role)) {
+    if (!["ADMIN", "SUPER_ADMIN", "ORGANIZER"].includes(params.request.user!.role)) {
       throw forbidden("Users can only register themselves");
     }
   }
@@ -289,7 +289,7 @@ tournamentsRouter.get(
 tournamentsRouter.post(
   "/",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const payload = tournamentSchema.parse(request.body);
     const slug = payload.slug ? slugify(payload.slug) : slugify(payload.name);
@@ -336,7 +336,7 @@ tournamentsRouter.post(
 tournamentsRouter.put(
   "/:id",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournamentId = requireRouteParam(request.params.id, "Tournament id");
     const payload = tournamentSchema.partial().parse(request.body);
@@ -348,7 +348,7 @@ tournamentsRouter.put(
 
     assertCanManageTournament(request.user!, existing.organizerId);
 
-    if (existing.status === TournamentStatus.IN_PROGRESS && request.user!.role !== "ADMIN") {
+    if (existing.status === TournamentStatus.IN_PROGRESS && !["ADMIN", "SUPER_ADMIN"].includes(request.user!.role)) {
       throw badRequest("Only admins can edit tournaments that are in progress");
     }
 
@@ -380,7 +380,7 @@ tournamentsRouter.put(
 tournamentsRouter.post(
   "/:id/publish",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournament = await updateTournamentStatus({
       request,
@@ -396,7 +396,7 @@ tournamentsRouter.post(
 tournamentsRouter.post(
   "/:id/open-registration",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournament = await updateTournamentStatus({
       request,
@@ -412,7 +412,7 @@ tournamentsRouter.post(
 tournamentsRouter.post(
   "/:id/close-registration",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournament = await updateTournamentStatus({
       request,
@@ -428,7 +428,7 @@ tournamentsRouter.post(
 tournamentsRouter.post(
   "/:id/start",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournament = await updateTournamentStatus({
       request,
@@ -444,7 +444,7 @@ tournamentsRouter.post(
 tournamentsRouter.post(
   "/:id/complete",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournament = await updateTournamentStatus({
       request,
@@ -535,6 +535,7 @@ tournamentsRouter.post(
       registration.team?.ownerId === request.user!.sub ||
       Boolean(registration.team?.members.length) ||
       request.user!.role === "ADMIN" ||
+      request.user!.role === "SUPER_ADMIN" ||
       tournament.organizerId === request.user!.sub;
 
     if (!canCheckIn) {
@@ -566,7 +567,7 @@ tournamentsRouter.post(
 tournamentsRouter.post(
   "/:id/bracket",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournamentId = requireRouteParam(request.params.id, "Tournament id");
     const tournament = await prisma.tournament.findUnique({
@@ -597,7 +598,7 @@ tournamentsRouter.post(
 tournamentsRouter.post(
   "/:id/generate-bracket",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournamentId = requireRouteParam(request.params.id, "Tournament id");
     const tournament = await prisma.tournament.findUnique({
@@ -628,7 +629,7 @@ tournamentsRouter.post(
 tournamentsRouter.post(
   "/:id/matches",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournamentId = requireRouteParam(request.params.id, "Tournament id");
     const payload = matchSchema.parse(request.body);
@@ -668,7 +669,7 @@ tournamentsRouter.post(
 tournamentsRouter.delete(
   "/:id",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const tournamentId = requireRouteParam(request.params.id, "Tournament id");
     const existing = await prisma.tournament.findUnique({ where: { id: tournamentId } });

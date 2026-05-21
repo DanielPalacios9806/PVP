@@ -13,6 +13,7 @@ enum UserRole {
   ORGANIZER
   MODERATOR
   ADMIN
+  SUPER_ADMIN
   FINANCE
 }
 

@@ -10,14 +10,14 @@ export default function AdminPage() {
         <div className="page-header">
           <div>
             <p className="page-kicker">Administracion</p>
-            <h1 className="page-title">Control operativo de torneos y economia interna</h1>
+            <h1 className="page-title">Panel interno de administracion</h1>
             <p className="page-copy mt-3">
-              Desde aqui se crean torneos, se revisan acciones criticas y se supervisa la experiencia interna de la plataforma.
+              Este espacio esta separado del dashboard de jugador. Solo perfiles administrativos pueden crear torneos, revisar auditoria y operar configuraciones internas.
             </p>
           </div>
         </div>
       </section>
-      <RoleGate allowedRoles={["ADMIN", "MODERATOR", "ORGANIZER"]} title="Administracion">
+      <RoleGate allowedRoles={["ADMIN", "SUPER_ADMIN"]} title="Administracion">
         <div className="space-y-6">
           <TournamentOpsPanel />
           <AdminTokenPanel />

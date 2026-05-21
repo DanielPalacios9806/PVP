@@ -15,7 +15,7 @@ export default function ModerationPage() {
           </div>
         </div>
       </section>
-      <RoleGate allowedRoles={["ADMIN", "MODERATOR"]} title="Moderacion">
+      <RoleGate allowedRoles={["ADMIN", "SUPER_ADMIN", "MODERATOR"]} title="Moderacion">
         <ModerationPanel />
       </RoleGate>
     </div>

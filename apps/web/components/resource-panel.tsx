@@ -37,10 +37,10 @@ function canManage(kind: ResourceKind, role: AppRole | undefined) {
   }
 
   if (kind === "tournaments") {
-    return role === "ADMIN" || role === "ORGANIZER";
+    return role === "ADMIN" || role === "SUPER_ADMIN" || role === "ORGANIZER";
   }
 
-  return role === "ADMIN" || role === "ORGANIZER" || role === "MODERATOR";
+  return role === "ADMIN" || role === "SUPER_ADMIN" || role === "ORGANIZER" || role === "MODERATOR";
 }
 
 export function ResourcePanel({ kind }: { kind: ResourceKind }) {

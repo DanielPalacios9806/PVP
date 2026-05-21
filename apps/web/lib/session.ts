@@ -1,6 +1,6 @@
 "use client";
 
-export type AppRole = "USER" | "ORGANIZER" | "MODERATOR" | "ADMIN" | "FINANCE";
+export type AppRole = "USER" | "ORGANIZER" | "MODERATOR" | "ADMIN" | "SUPER_ADMIN" | "FINANCE";
 
 export interface StoredUser {
   id: string;

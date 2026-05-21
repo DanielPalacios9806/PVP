@@ -29,7 +29,7 @@ export function NavbarTop() {
     setRole(user?.role ?? "USER");
   }, []);
 
-  const canOperate = role === "ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
+  const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
   const links = canOperate ? [...playerLinks, ...operatorLinks] : playerLinks;
 
   return (

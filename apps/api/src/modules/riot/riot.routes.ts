@@ -81,7 +81,7 @@ riotRouter.get(
 riotRouter.post(
   "/matches/:matchId/code",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const matchId = requireParam(request.params.matchId, "Match id");
     const payload = generateTournamentCodeSchema.parse(request.body);
@@ -115,7 +115,7 @@ riotRouter.post(
 riotRouter.post(
   "/mock/matches/:matchId/finish",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const matchId = requireParam(request.params.matchId, "Match id");
     const payload = finishMockMatchSchema.parse(request.body);
@@ -148,7 +148,7 @@ riotRouter.post(
 riotRouter.post(
   "/tournament/callback",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const result = await processRiotCallback({
       user: request.user,
@@ -174,7 +174,7 @@ riotRouter.post(
 riotRouter.post(
   "/matches/:matchId/resync",
   requireAuth,
-  requireRole(["ORGANIZER", "ADMIN"]),
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const matchId = requireParam(request.params.matchId, "Match id");
 

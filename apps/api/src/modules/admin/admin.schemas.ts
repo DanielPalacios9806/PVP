@@ -7,5 +7,5 @@ export const auditQuerySchema = z.object({
 });
 
 export const updateUserRoleSchema = z.object({
-  role: z.enum(["USER", "ORGANIZER", "MODERATOR", "ADMIN", "FINANCE"])
+  role: z.enum(["USER", "ORGANIZER", "MODERATOR", "ADMIN", "SUPER_ADMIN", "FINANCE"])
 });

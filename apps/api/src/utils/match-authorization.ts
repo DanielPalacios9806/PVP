@@ -151,6 +151,7 @@ export function isMatchModerator(params: {
   return (
     params.userId === params.organizerId ||
     params.role === "ADMIN" ||
+    params.role === "SUPER_ADMIN" ||
     params.role === "MODERATOR"
   );
 }

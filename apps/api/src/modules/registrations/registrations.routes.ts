@@ -15,7 +15,7 @@ export const registrationsRouter = Router();
 registrationsRouter.patch(
   "/:id/approve",
   requireAuth,
-  requireRole(["ADMIN", "ORGANIZER"]),
+  requireRole(["ADMIN", "SUPER_ADMIN", "ORGANIZER"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const registrationId = getRequestParam(request.params.id);
     if (!registrationId) {
@@ -33,7 +33,7 @@ registrationsRouter.patch(
       throw notFound("Registration not found");
     }
 
-    if (request.user!.role !== "ADMIN" && registration.tournament.organizerId !== request.user!.sub) {
+    if (!["ADMIN", "SUPER_ADMIN"].includes(request.user!.role) && registration.tournament.organizerId !== request.user!.sub) {
       throw forbidden("Forbidden");
     }
 
@@ -67,7 +67,7 @@ registrationsRouter.patch(
 registrationsRouter.patch(
   "/:id/reject",
   requireAuth,
-  requireRole(["ADMIN", "ORGANIZER"]),
+  requireRole(["ADMIN", "SUPER_ADMIN", "ORGANIZER"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const registrationId = getRequestParam(request.params.id);
     if (!registrationId) {
@@ -87,7 +87,7 @@ registrationsRouter.patch(
       throw notFound("Registration not found");
     }
 
-    if (request.user!.role !== "ADMIN" && registration.tournament.organizerId !== request.user!.sub) {
+    if (!["ADMIN", "SUPER_ADMIN"].includes(request.user!.role) && registration.tournament.organizerId !== request.user!.sub) {
       throw forbidden("Forbidden");
     }
 

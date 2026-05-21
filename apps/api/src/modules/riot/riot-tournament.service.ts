@@ -6,7 +6,7 @@ import { advanceWinnerAfterMatch } from "../brackets/brackets.service.js";
 import { getRiotAdapter, getRiotMode } from "./riot.service.js";
 
 function canOperateMatch(user: AuthUser, organizerId: string) {
-  return user.role === "ADMIN" || user.role === "ORGANIZER" || user.sub === organizerId;
+  return user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "ORGANIZER" || user.sub === organizerId;
 }
 
 export async function generateMockableTournamentCode(params: {
