@@ -196,6 +196,26 @@ export function PublicLanding() {
             <Image src={icons.menu} alt="" width={22} height={22} />
           </button>
         </div>
+
+        <div className="mx-auto grid max-w-7xl gap-3 px-5 pb-4 sm:hidden">
+          {isLoggedIn ? (
+            <Link href="/dashboard" className="ds-button-secondary inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-semibold">
+              <Image src={icons.user} alt="" width={16} height={16} />
+              Abrir panel
+            </Link>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <Link href="/auth/login" className="ds-button-secondary inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-semibold">
+                <Image src={icons.login} alt="" width={16} height={16} />
+                Login
+              </Link>
+              <Link href="/auth/register" className="ds-button-primary inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-semibold">
+                <Image src={icons.register} alt="" width={16} height={16} />
+                Registrarse
+              </Link>
+            </div>
+          )}
+        </div>
       </header>
 
       <section className="relative overflow-hidden">
