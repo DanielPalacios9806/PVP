@@ -21,10 +21,34 @@
   --cm-gold: #d6af37;
   --cm-emerald: #3ddc97;
   --cm-danger: #ff566e;
+  --ds-red-primary: #ff2438;
+  --ds-red-deep: #b90f24;
+  --ds-red-glow: #ff3a4e;
+  --ds-cyan-primary: #18e6f2;
+  --ds-cyan-deep: #0796a8;
+  --ds-gold-prize: #ffb21a;
+  --ds-bg-950: #05080c;
+  --ds-bg-900: #080d12;
+  --ds-bg-850: #0b1118;
+  --ds-surface-900: #0e151c;
+  --ds-surface-800: #121b24;
+  --ds-text-primary: #f5f7fa;
+  --ds-text-secondary: #b4bec8;
+  --ds-text-muted: #6d7886;
+  --ds-border-soft: rgba(255, 255, 255, 0.08);
+  --ds-border-red: rgba(255, 36, 56, 0.55);
+  --ds-border-cyan: rgba(24, 230, 242, 0.55);
+  --ds-radius-sm: 8px;
+  --ds-radius-md: 12px;
+  --ds-radius-lg: 16px;
+  --ds-radius-xl: 20px;
+  --ds-shadow-card: 0 16px 40px rgba(0, 0, 0, 0.35);
+  --ds-glow-red: 0 0 24px rgba(255, 36, 56, 0.35);
+  --ds-glow-cyan: 0 0 24px rgba(24, 230, 242, 0.25);
 }
 
 html {
-  scrollbar-color: rgba(123, 97, 255, 0.35) #131925;
+  scrollbar-color: rgba(24, 230, 242, 0.32) var(--ds-bg-900);
   scrollbar-width: thin;
 }
 
@@ -32,9 +56,9 @@ body {
   @apply min-h-screen text-white;
   font-family: var(--font-body);
   background:
-    radial-gradient(circle at top center, rgba(123, 97, 255, 0.16), transparent 26%),
-    radial-gradient(circle at 88% 12%, rgba(255, 111, 145, 0.12), transparent 22%),
-    linear-gradient(180deg, #121822 0%, #10151f 60%, #0d131d 100%);
+    radial-gradient(circle at top center, rgba(24, 230, 242, 0.1), transparent 26%),
+    radial-gradient(circle at 88% 12%, rgba(255, 36, 56, 0.12), transparent 22%),
+    linear-gradient(180deg, var(--ds-bg-900) 0%, var(--ds-bg-950) 60%, #03060a 100%);
   color: var(--cm-text);
 }
 
@@ -73,7 +97,7 @@ button {
 }
 
 ::selection {
-  background: rgba(123, 97, 255, 0.28);
+  background: rgba(255, 36, 56, 0.32);
 }
 
 ::-webkit-scrollbar {
@@ -82,16 +106,16 @@ button {
 }
 
 ::-webkit-scrollbar-track {
-  background: #131925;
+  background: var(--ds-bg-900);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(123, 97, 255, 0.4);
+  background: rgba(24, 230, 242, 0.38);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(123, 97, 255, 0.58);
+  background: rgba(255, 36, 56, 0.55);
 }
 
 .glass-panel {
@@ -147,14 +171,14 @@ button {
 
 .btn-primary {
   @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold;
-  background: linear-gradient(135deg, #7b61ff, #5ea7ff);
+  background: linear-gradient(135deg, var(--ds-red-primary), var(--ds-red-deep));
   color: white;
 }
 
 .btn-secondary {
   @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold;
-  border: 1px solid var(--cm-line-strong);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ds-border-cyan);
+  background: rgba(5, 8, 12, 0.65);
   color: var(--cm-text);
 }
 
@@ -187,4 +211,25 @@ button {
 .status-complete {
   background: rgba(61, 220, 151, 0.14);
   color: #91f1c4;
+}
+
+.ds-card {
+  background: rgba(14, 21, 28, 0.78);
+  border: 1px solid var(--ds-border-soft);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-card);
+  backdrop-filter: blur(16px);
+}
+
+.ds-button-primary {
+  background: linear-gradient(135deg, var(--ds-red-primary), var(--ds-red-deep));
+  color: var(--ds-text-primary);
+  border: 1px solid var(--ds-border-red);
+  box-shadow: var(--ds-glow-red);
+}
+
+.ds-button-secondary {
+  background: rgba(5, 8, 12, 0.65);
+  color: var(--ds-text-primary);
+  border: 1px solid var(--ds-border-cyan);
 }
