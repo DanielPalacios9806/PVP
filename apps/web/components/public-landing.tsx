@@ -206,11 +206,6 @@ export function PublicLanding() {
               Registrarse
             </Link>
           </div>
-          {isLoggedIn ? (
-            <Link href="/dashboard" className="text-center text-xs font-semibold text-white/48">
-              Ya tienes sesion abierta. Ir al panel
-            </Link>
-          ) : null}
         </div>
       </header>
 
