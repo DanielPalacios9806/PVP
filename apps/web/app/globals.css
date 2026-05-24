@@ -137,6 +137,59 @@ button {
   border-radius: 16px;
 }
 
+.motion-section {
+  animation: ds-fade-up 0.55s ease both;
+}
+
+.motion-card {
+  transform: translateZ(0);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    opacity 180ms ease;
+}
+
+.motion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+}
+
+.motion-press {
+  transition:
+    transform 160ms ease,
+    filter 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.motion-press:active {
+  transform: scale(0.98);
+}
+
+.stagger-1 {
+  animation-delay: 80ms;
+}
+
+.stagger-2 {
+  animation-delay: 150ms;
+}
+
+.stagger-3 {
+  animation-delay: 220ms;
+}
+
+@keyframes ds-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .page-section {
   @apply px-4 py-5 md:px-6 md:py-6;
 }
@@ -173,6 +226,10 @@ button {
   @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold;
   background: linear-gradient(135deg, var(--ds-red-primary), var(--ds-red-deep));
   color: white;
+  transition:
+    transform 160ms ease,
+    filter 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .btn-secondary {
@@ -180,6 +237,20 @@ button {
   border: 1px solid var(--ds-border-cyan);
   background: rgba(5, 8, 12, 0.65);
   color: var(--cm-text);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary:active,
+.btn-secondary:active {
+  transform: scale(0.98);
 }
 
 .stat-tile {
@@ -232,4 +303,40 @@ button {
   background: rgba(5, 8, 12, 0.65);
   color: var(--ds-text-primary);
   border: 1px solid var(--ds-border-cyan);
+}
+
+@media (max-width: 640px) {
+  .surface-panel {
+    border-radius: 20px;
+  }
+
+  .surface-tile {
+    border-radius: 16px;
+  }
+
+  .page-section {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .page-title {
+    font-size: clamp(2rem, 9vw, 2.65rem);
+    line-height: 1.08;
+  }
+
+  .page-kicker,
+  .eyebrow {
+    letter-spacing: 0.26em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

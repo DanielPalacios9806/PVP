@@ -16,7 +16,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <NavbarTop />
       <DashboardGridWrapper
         leftSidebar={<SidebarLeft />}
-        mainContent={<div className="flex flex-col pb-20 lg:pb-0">{children}</div>}
+        mainContent={<div className="flex min-w-0 flex-col overflow-x-hidden pb-28 lg:pb-0">{children}</div>}
         rightSidebar={<SidebarRight />}
       />
       <MobileBottomNav />
