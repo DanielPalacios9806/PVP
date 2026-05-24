@@ -24,6 +24,8 @@ type LandingCounts = {
   spaces: number | null;
 };
 
+type PublicDataStatus = "loading" | "ready" | "error";
+
 const gameCards = [
   {
     title: "League of Legends",
@@ -58,6 +60,14 @@ function formatCount(value: number | null, fallback: string) {
   return value === null ? fallback : new Intl.NumberFormat("es-EC").format(value);
 }
 
+function countLabel(value: number | null, status: PublicDataStatus) {
+  if (status === "loading") {
+    return "Cargando";
+  }
+
+  return formatCount(value, "0");
+}
+
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
     DRAFT: "Borrador",
@@ -76,43 +86,53 @@ function statusLabel(status: string) {
 export function PublicLanding() {
   const [counts, setCounts] = useState<LandingCounts>({ tournaments: null, teams: null, spaces: null });
   const [tournaments, setTournaments] = useState<PublicTournament[]>([]);
+  const [publicDataStatus, setPublicDataStatus] = useState<PublicDataStatus>("loading");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     setIsLoggedIn(Boolean(getStoredUser()));
 
     async function loadPublicData() {
-      const [tournamentsResponse, teamsResponse, spacesResponse] = await Promise.allSettled([
-        fetch(`${apiUrl}/tournaments`),
-        fetch(`${apiUrl}/teams`),
-        fetch(`${apiUrl}/spaces`)
-      ]);
+      try {
+        const [tournamentsResponse, teamsResponse, spacesResponse] = await Promise.allSettled([
+          fetch(`${apiUrl}/tournaments`),
+          fetch(`${apiUrl}/teams`),
+          fetch(`${apiUrl}/spaces`)
+        ]);
 
-      const nextCounts: LandingCounts = { tournaments: null, teams: null, spaces: null };
+        const nextCounts: LandingCounts = { tournaments: null, teams: null, spaces: null };
+        let hasAnySuccessfulResponse = false;
 
-      if (tournamentsResponse.status === "fulfilled" && tournamentsResponse.value.ok) {
-        const data = await tournamentsResponse.value.json();
-        if (Array.isArray(data)) {
-          nextCounts.tournaments = data.length;
-          setTournaments(data.slice(0, 3));
+        if (tournamentsResponse.status === "fulfilled" && tournamentsResponse.value.ok) {
+          const data = await tournamentsResponse.value.json();
+          if (Array.isArray(data)) {
+            hasAnySuccessfulResponse = true;
+            nextCounts.tournaments = data.length;
+            setTournaments(data.slice(0, 3));
+          }
         }
-      }
 
-      if (teamsResponse.status === "fulfilled" && teamsResponse.value.ok) {
-        const data = await teamsResponse.value.json();
-        if (Array.isArray(data)) {
-          nextCounts.teams = data.length;
+        if (teamsResponse.status === "fulfilled" && teamsResponse.value.ok) {
+          const data = await teamsResponse.value.json();
+          if (Array.isArray(data)) {
+            hasAnySuccessfulResponse = true;
+            nextCounts.teams = data.length;
+          }
         }
-      }
 
-      if (spacesResponse.status === "fulfilled" && spacesResponse.value.ok) {
-        const data = await spacesResponse.value.json();
-        if (Array.isArray(data)) {
-          nextCounts.spaces = data.length;
+        if (spacesResponse.status === "fulfilled" && spacesResponse.value.ok) {
+          const data = await spacesResponse.value.json();
+          if (Array.isArray(data)) {
+            hasAnySuccessfulResponse = true;
+            nextCounts.spaces = data.length;
+          }
         }
-      }
 
-      setCounts(nextCounts);
+        setCounts(nextCounts);
+        setPublicDataStatus(hasAnySuccessfulResponse ? "ready" : "error");
+      } catch {
+        setPublicDataStatus("error");
+      }
     }
 
     void loadPublicData();
@@ -129,6 +149,20 @@ export function PublicLanding() {
         href: `/dashboard/tournaments/${item.id}`,
         reward: "Recompensas internas"
       }));
+    }
+
+    if (publicDataStatus === "loading") {
+      return [
+        {
+          id: "loading-1",
+          title: "Cargando torneos",
+          meta: "Consultando datos reales de la plataforma",
+          status: "Sincronizando",
+          participants: "Cargando",
+          href: "/dashboard/tournaments",
+          reward: "Recompensas internas"
+        }
+      ];
     }
 
     return [
@@ -151,7 +185,7 @@ export function PublicLanding() {
         reward: "XP y beneficios no monetarios"
       }
     ];
-  }, [tournaments]);
+  }, [publicDataStatus, tournaments]);
 
   return (
     <main className="min-h-screen bg-[var(--ds-bg-950)] text-[var(--ds-text-primary)]">
@@ -242,17 +276,17 @@ export function PublicLanding() {
             <div className="ds-card mt-7 grid grid-cols-3 overflow-hidden">
               <div className="p-4">
                 <Image src={icons.trophy} alt="" width={22} height={22} />
-                <p className="font-heading text-2xl font-semibold">{formatCount(counts.tournaments, "0")}</p>
+                <p className="font-heading text-2xl font-semibold">{countLabel(counts.tournaments, publicDataStatus)}</p>
                 <p className="mt-1 text-xs text-white/56">Torneos</p>
               </div>
               <div className="border-x border-white/8 p-4">
                 <Image src={icons.users} alt="" width={22} height={22} />
-                <p className="font-heading text-2xl font-semibold">{formatCount(counts.teams, "0")}</p>
+                <p className="font-heading text-2xl font-semibold">{countLabel(counts.teams, publicDataStatus)}</p>
                 <p className="mt-1 text-xs text-white/56">Equipos</p>
               </div>
               <div className="p-4">
                 <Image src={icons.bracket} alt="" width={22} height={22} />
-                <p className="font-heading text-2xl font-semibold">{formatCount(counts.spaces, "0")}</p>
+                <p className="font-heading text-2xl font-semibold">{countLabel(counts.spaces, publicDataStatus)}</p>
                 <p className="mt-1 text-xs text-white/56">Comunidades</p>
               </div>
             </div>
@@ -270,7 +304,7 @@ export function PublicLanding() {
               <h2 className="font-heading text-xl font-bold uppercase" style={{ color: card.accent }}>{card.title}</h2>
               <p className="mt-2 max-w-sm text-sm leading-6 text-white/68">{card.copy}</p>
               <div className="mt-5 flex gap-8 text-sm text-white/58">
-                <span>{formatCount(counts.tournaments, "En preparacion")} torneos</span>
+                <span>{publicDataStatus === "loading" ? "Sincronizando" : `${formatCount(counts.tournaments, "En preparacion")} torneos`}</span>
                 <span>Riot mock listo</span>
               </div>
             </div>
