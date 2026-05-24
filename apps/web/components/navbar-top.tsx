@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AccountMenu } from "@/components/account-menu";
 import { brand } from "@/lib/brand";
 import { getStoredUser, type AppRole } from "@/lib/session";
 
@@ -20,13 +21,15 @@ const operatorLinks = [
 ];
 
 export function NavbarTop() {
-  const [name, setName] = useState("Invitado");
   const [role, setRole] = useState<AppRole>("USER");
 
-  useEffect(() => {
+  function syncRole() {
     const user = getStoredUser();
-    setName(user?.displayName || user?.username || "Invitado");
     setRole(user?.role ?? "USER");
+  }
+
+  useEffect(() => {
+    syncRole();
   }, []);
 
   const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
@@ -37,9 +40,7 @@ export function NavbarTop() {
       <div className="flex h-16 items-center gap-4 px-3 lg:px-5">
         <Link href="/dashboard" className="flex items-center gap-3">
           <Image src={brand.logoMark} alt={brand.name} width={34} height={34} className="h-8 w-8" />
-          <span className="hidden font-heading text-lg font-bold tracking-[0.02em] text-white sm:inline">
-            Darkside<span className="text-[var(--ds-cyan-primary)]">.gg</span>
-          </span>
+          <Image src={brand.logoHorizontal} alt={brand.name} width={180} height={36} className="hidden h-auto w-[160px] sm:block xl:w-[180px]" />
         </Link>
 
         <div className="hidden items-center gap-8 lg:flex">
@@ -77,13 +78,9 @@ export function NavbarTop() {
           >
             Mis tokens
           </Link>
-          <Link href="/dashboard/account" className="flex items-center gap-3 border-l border-white/10 pl-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#364055] text-xs font-semibold uppercase text-white">
-              {name.slice(0, 2)}
-            </div>
-            <span className="hidden text-sm font-semibold text-white xl:inline">{name}</span>
-            <span className="hidden text-sm text-[#93a3c0] xl:inline">v</span>
-          </Link>
+          <div className="border-l border-white/10 pl-3">
+            <AccountMenu onSessionChange={syncRole} />
+          </div>
         </div>
       </div>
     </nav>

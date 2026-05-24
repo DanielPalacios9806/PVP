@@ -69,15 +69,20 @@ export function AccountCenter() {
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/auth/login" className="btn-secondary !px-4 !py-2 !text-xs">
-              Iniciar sesion
-            </Link>
-            <Link href="/auth/register" className="btn-primary !px-4 !py-2 !text-xs">
-              Crear cuenta
-            </Link>
-            <button onClick={logout} className="btn-secondary !px-4 !py-2 !text-xs" type="button">
-              Cerrar sesion
-            </button>
+            {user ? (
+              <button onClick={logout} className="btn-secondary !px-4 !py-2 !text-xs" type="button">
+                Cerrar sesion
+              </button>
+            ) : (
+              <>
+                <Link href="/auth/login" className="btn-secondary !px-4 !py-2 !text-xs">
+                  Iniciar sesion
+                </Link>
+                <Link href="/auth/register" className="btn-primary !px-4 !py-2 !text-xs">
+                  Crear cuenta
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </SectionCard>

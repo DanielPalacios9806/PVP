@@ -48,7 +48,7 @@ export function TokenCenter() {
         </div>
       </SectionCard>
 
-      <SectionCard title="Recargar tokens" description="Vista visual de recarga para revisar la experiencia del jugador sin pagos reales.">
+      <SectionCard title="Recargar tokens internos" description="Vista demo para revisar la experiencia del jugador sin pagos reales.">
         <div className="space-y-4">
           {packs.map((pack) => (
             <button
@@ -64,8 +64,8 @@ export function TokenCenter() {
             </button>
           ))}
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-white/70">
-            En una fase posterior, este flujo se conectara a controles administrativos y validacion
-            interna. En el MVP visual no existe pago real.
+            En el MVP visual no existe pago real. Los tokens no son retirables, no representan apuestas
+            y no se convierten a dinero. Los premios de torneo futuros tendran aprobacion manual.
           </div>
           {message ? <p className="text-sm text-brand-cyan">{message}</p> : null}
         </div>

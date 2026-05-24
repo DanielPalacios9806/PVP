@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getStoredUser, getStoredWallet, type AppRole } from "@/lib/session";
+import { getStoredUser, getStoredWallet, type AppRole, type StoredUser } from "@/lib/session";
 
 export function SidebarRight() {
   const [walletBalance, setWalletBalance] = useState(100);
   const [role, setRole] = useState<AppRole>("USER");
+  const [user, setUser] = useState<StoredUser | null>(null);
 
   useEffect(() => {
+    const storedUser = getStoredUser();
+    setUser(storedUser);
     setWalletBalance(getStoredWallet().balance);
-    setRole(getStoredUser()?.role ?? "USER");
+    setRole(storedUser?.role ?? "USER");
   }, []);
 
   const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
@@ -22,17 +25,31 @@ export function SidebarRight() {
           Tu actividad
         </h3>
         <div className="rounded-2xl border border-white/6 bg-[#111722] p-5">
-          <p className="text-xs uppercase tracking-[0.18em] text-[#8eb8ff]">Siguiente paso</p>
-          <p className="mt-3 text-lg font-semibold text-white">Completa tu perfil competitivo</p>
-          <p className="mt-2 text-sm text-white/58">
-            Vincula tu Riot ID en modo mock, crea o une un equipo y revisa torneos abiertos.
+          <p className="text-xs uppercase tracking-[0.18em] text-[#8eb8ff]">{user ? "Siguiente paso" : "Cuenta invitada"}</p>
+          <p className="mt-3 text-lg font-semibold text-white">
+            {user ? "Completa tu perfil competitivo" : "Inicia sesion para competir"}
           </p>
-          <Link
-            href="/dashboard/account"
-            className="mt-5 inline-flex rounded-xl border border-white/12 px-4 py-3 text-sm font-semibold text-white"
-          >
-            Abrir perfil
-          </Link>
+          <p className="mt-2 text-sm text-white/58">
+            {user
+              ? "Vincula tu Riot ID en modo mock, crea o une un equipo y revisa torneos abiertos."
+              : "Crea tu cuenta para formar equipos, inscribirte a torneos y recibir tokens internos."}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              href={user ? "/dashboard/account" : "/auth/login"}
+              className="inline-flex rounded-xl border border-white/12 px-4 py-3 text-sm font-semibold text-white"
+            >
+              {user ? "Abrir perfil" : "Iniciar sesion"}
+            </Link>
+            {!user ? (
+              <Link
+                href="/auth/register"
+                className="inline-flex rounded-xl border border-[var(--ds-border-red)] px-4 py-3 text-sm font-semibold text-[var(--ds-red-primary)]"
+              >
+                Crear cuenta
+              </Link>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -62,7 +79,7 @@ export function SidebarRight() {
         <div className="rounded-2xl border border-white/6 bg-[#111722] p-6">
           <div className="mb-4 text-4xl font-semibold text-white">{walletBalance} TOKENS</div>
           <p className="text-sm text-white/60">
-            Disponibles para recompensas internas, beneficios visuales y futuras experiencias de plataforma.
+            Tokens internos para beneficios visuales y futuras experiencias. No son retirables ni convertibles a dinero.
           </p>
           <Link
             href="/dashboard/tokens"
