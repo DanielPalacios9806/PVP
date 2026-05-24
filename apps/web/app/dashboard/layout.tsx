@@ -6,7 +6,7 @@ import { SidebarRight } from "@/components/sidebar-right";
 import { ReactNode } from "react";
 
 export const metadata = {
-  title: "Dashboard | Darkside.gg",
+  title: "Dashboard | Darkside.cool",
   description: "Plataforma de torneos de eSports"
 };
 

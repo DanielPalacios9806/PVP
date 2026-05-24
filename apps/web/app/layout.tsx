@@ -13,7 +13,7 @@ const bodyFont = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "Darkside.gg",
+  title: "Darkside.cool",
   description: "Plataforma universitaria de torneos de eSports con gestion competitiva y tokens internos"
 };
 
