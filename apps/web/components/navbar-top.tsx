@@ -38,9 +38,15 @@ export function NavbarTop() {
   return (
     <nav className="sticky top-0 z-50 border-b border-[var(--ds-border-soft)] bg-[rgba(5,8,12,0.96)] backdrop-blur-xl">
       <div className="flex h-16 items-center gap-4 px-3 lg:px-5">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <Image src={brand.logoMark} alt={brand.name} width={34} height={34} className="h-8 w-8" />
-          <Image src={brand.logoHorizontal} alt={brand.name} width={180} height={36} className="hidden h-auto w-[160px] sm:block xl:w-[180px]" />
+        <Link href="/dashboard" className="flex items-center">
+          <Image src={brand.logoMark} alt={brand.name} width={34} height={34} className="h-8 w-8 sm:hidden" />
+          <Image
+            src={brand.logoHorizontal}
+            alt={brand.name}
+            width={180}
+            height={36}
+            className="hidden h-auto w-[160px] sm:block xl:w-[180px]"
+          />
         </Link>
 
         <div className="hidden items-center gap-8 lg:flex">

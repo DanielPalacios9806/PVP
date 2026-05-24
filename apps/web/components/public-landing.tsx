@@ -245,8 +245,8 @@ export function PublicLanding() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[var(--ds-bg-950)] text-[var(--ds-text-primary)]">
-      <header className="sticky top-0 z-50 border-b border-[var(--ds-border-soft)] bg-[rgba(3,6,10,0.92)] backdrop-blur-xl">
-        <div className="mx-auto flex h-[74px] max-w-7xl items-center gap-3 px-4 sm:h-20 sm:px-6">
+      <header className="sticky top-0 z-50 w-full border-b border-[var(--ds-border-soft)] bg-[rgba(3,6,10,0.92)] backdrop-blur-xl">
+        <div className="flex h-[74px] items-center gap-3 px-4 sm:h-20 sm:px-6">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             <span className="relative flex h-9 w-9 shrink-0 items-center justify-center sm:hidden">
               <Image src={brand.logoMark} alt={`${brand.name} logo`} fill sizes="36px" className="object-contain" />
@@ -270,8 +270,8 @@ export function PublicLanding() {
 
       <section className="relative overflow-hidden border-b border-[var(--ds-border-soft)]">
         <div className="absolute inset-0">
-          <Image src={officialAssets.heroMobile} alt="Escenario Darkside competitivo" fill priority sizes="100vw" className="object-cover object-center md:hidden" />
-          <Image src={officialAssets.heroDesktop} alt="Escenario Darkside competitivo" fill priority sizes="100vw" className="hidden object-cover object-center md:block" />
+          <Image src={officialAssets.heroMobile} alt="Escenario Darkside competitivo" fill priority sizes="100vw" className="object-cover object-right md:hidden" />
+          <Image src={officialAssets.heroDesktop} alt="Escenario Darkside competitivo" fill priority sizes="100vw" className="hidden object-cover object-right md:block" />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,6,10,0.08)_0%,rgba(3,6,10,0.74)_58%,var(--ds-bg-950)_100%)] md:bg-[linear-gradient(90deg,rgba(3,6,10,0.96)_0%,rgba(3,6,10,0.78)_34%,rgba(3,6,10,0.24)_68%,rgba(3,6,10,0.72)_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_24%,rgba(255,36,56,0.18),transparent_24%),radial-gradient(circle_at_72%_48%,rgba(24,230,242,0.14),transparent_24%)]" />
         </div>

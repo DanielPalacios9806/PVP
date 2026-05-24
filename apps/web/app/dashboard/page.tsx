@@ -11,12 +11,16 @@ const featuredMoments = [
   {
     title: "Circuito Valorant Prime",
     subtitle: "Inscripciones abiertas para escuadras tacticas.",
-    href: "/dashboard/tournaments"
+    href: "/dashboard/tournaments",
+    image: "/assets/darkside/official/game-valorant-card.jpg",
+    tag: "VALORANT"
   },
   {
     title: "Liga del Invocador",
     subtitle: "Calendario semanal, brackets y seguimiento competitivo.",
-    href: "/dashboard/tournaments"
+    href: "/dashboard/tournaments",
+    image: "/assets/darkside/official/game-lol-card.jpg",
+    tag: "LEAGUE OF LEGENDS"
   }
 ];
 
@@ -24,22 +28,22 @@ const pillars = [
   {
     title: "Competicion organizada",
     copy: "Torneos, brackets y cronogramas con una experiencia clara para jugadores y administracion.",
-    icon: "/assets/icons/mando.svg"
+    icon: "/assets/darkside/icons/icon-bracket.svg"
   },
   {
     title: "Reglas e integridad",
     copy: "Resultados auditables, disputas y trazabilidad para mantener el orden competitivo.",
-    icon: "/assets/icons/reglas-del-juego.svg"
+    icon: "/assets/darkside/icons/icon-comment.svg"
   },
   {
     title: "Economia interna",
     copy: "Cada cuenta inicia con tokens internos para recargas, beneficios y experiencias futuras.",
-    icon: "/assets/icons/monedas.svg"
+    icon: "/assets/darkside/icons/icon-trophy.svg"
   },
   {
     title: "Formatos flexibles",
     copy: "Desde 1vs1 hasta 5vs5 para circuitos casuales, clasificatorios y ligas recurrentes.",
-    icon: "/assets/icons/dados-d6.svg"
+    icon: "/assets/darkside/icons/icon-users.svg"
   }
 ];
 
@@ -56,13 +60,13 @@ export default function DashboardPage() {
         <div className="grid min-h-[420px] lg:grid-cols-[1.15fr_0.85fr]">
           <div className="relative min-h-[320px]">
             <Image
-              src="/assets/games/lol-cover.jpg"
-              alt="League of Legends"
+              src="/assets/darkside/official/hero-desktop.jpg"
+              alt="Darkside.cool arena"
               fill
               priority
               className="object-cover object-center"
             />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,17,24,0.2),rgba(13,17,24,0.9))]" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,8,12,0.05),rgba(5,8,12,0.88))]" />
             <div className="absolute inset-x-0 bottom-0 top-auto h-40 bg-[linear-gradient(180deg,rgba(13,17,24,0),rgba(13,17,24,0.92))]" />
           </div>
 
@@ -120,11 +124,16 @@ export default function DashboardPage() {
               <Link
                 key={item.title}
                 href={item.href}
-                className="surface-tile block transition hover:border-white/18"
+                className="surface-tile group relative block min-h-[170px] overflow-hidden transition hover:border-white/18"
               >
-                <p className="eyebrow">Actividad destacada</p>
-                <h3 className="mt-3 text-xl font-semibold text-white">{item.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-white/62">{item.subtitle}</p>
+                <Image src={item.image} alt="" fill className="object-cover transition duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(6,9,14,0.95),rgba(6,9,14,0.55),rgba(6,9,14,0.2))]" />
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(6,9,14,0),rgba(6,9,14,0.92))]" />
+                <div className="relative z-10">
+                  <p className="eyebrow">{item.tag}</p>
+                  <h3 className="mt-3 text-xl font-semibold text-white">{item.title}</h3>
+                  <p className="mt-3 max-w-sm text-sm leading-7 text-white/70">{item.subtitle}</p>
+                </div>
               </Link>
             ))}
           </div>
@@ -133,17 +142,28 @@ export default function DashboardPage() {
         <div className="surface-panel">
           <p className="page-kicker">Accesos directos</p>
           <div className="mt-5 grid gap-3">
-            <Link href="/dashboard/tournaments" className="surface-tile transition hover:border-white/18">
-              <strong className="text-lg text-white">Torneos</strong>
-              <p className="mt-2 text-sm text-white/58">Revisa calendarios, brackets, estados y cupos.</p>
+            <Link href="/dashboard/tournaments" className="surface-tile group relative overflow-hidden transition hover:border-white/18">
+              <Image src="/assets/darkside/official/game-lol-card.jpg" alt="" fill className="object-cover opacity-28 transition group-hover:scale-105" />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,23,34,0.96),rgba(17,23,34,0.72))]" />
+              <div className="relative z-10">
+                <strong className="text-lg text-white">Torneos</strong>
+                <p className="mt-2 text-sm text-white/62">Revisa calendarios, brackets, estados y cupos.</p>
+              </div>
             </Link>
-            <Link href="/dashboard/spaces" className="surface-tile transition hover:border-white/18">
-              <strong className="text-lg text-white">Comunidades</strong>
-              <p className="mt-2 text-sm text-white/58">Agrupa comunidades, temporadas y ligas recurrentes.</p>
+            <Link href="/dashboard/spaces" className="surface-tile group relative overflow-hidden transition hover:border-white/18">
+              <Image src="/assets/darkside/official/game-valorant-card.jpg" alt="" fill className="object-cover opacity-25 transition group-hover:scale-105" />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,23,34,0.96),rgba(17,23,34,0.72))]" />
+              <div className="relative z-10">
+                <strong className="text-lg text-white">Comunidades</strong>
+                <p className="mt-2 text-sm text-white/62">Agrupa comunidades, temporadas y ligas recurrentes.</p>
+              </div>
             </Link>
-            <Link href="/dashboard/tokens" className="surface-tile transition hover:border-white/18">
-              <strong className="text-lg text-white">Tokens</strong>
-              <p className="mt-2 text-sm text-white/58">Gestiona el saldo interno y la experiencia del jugador.</p>
+            <Link href="/dashboard/tokens" className="surface-tile relative overflow-hidden transition hover:border-white/18">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_25%,rgba(255,36,56,0.24),transparent_34%),linear-gradient(120deg,rgba(17,23,34,0.98),rgba(8,18,24,0.94))]" />
+              <div className="relative z-10">
+                <strong className="text-lg text-white">Tokens</strong>
+                <p className="mt-2 text-sm text-white/62">Gestiona el saldo interno y la experiencia del jugador.</p>
+              </div>
             </Link>
           </div>
         </div>
@@ -154,7 +174,7 @@ export default function DashboardPage() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {pillars.map((pillar) => (
           <article key={pillar.title} className="surface-panel">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-white shadow-[0_0_24px_rgba(255,36,56,0.22)]">
               <Image src={pillar.icon} alt={pillar.title} width={28} height={28} />
             </div>
             <h3 className="mt-5 text-xl font-semibold text-white">{pillar.title}</h3>
