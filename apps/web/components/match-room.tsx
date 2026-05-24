@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiUrl, getAuthHeaders } from "../lib/config";
 import { mockMatch } from "../lib/mock-data";
+import { getStoredUser, type AppRole } from "../lib/session";
 import { SectionCard } from "./section-card";
 
 function participantLabel(registration: any) {
@@ -22,6 +23,7 @@ function participantLabel(registration: any) {
 export function MatchRoom({ matchId }: { matchId: string }) {
   const [match, setMatch] = useState<any | null>(null);
   const [message, setMessage] = useState("");
+  const [role, setRole] = useState<AppRole>("USER");
 
   async function load() {
     try {
@@ -42,8 +44,11 @@ export function MatchRoom({ matchId }: { matchId: string }) {
   }
 
   useEffect(() => {
+    setRole(getStoredUser()?.role ?? "USER");
     void load();
   }, [matchId]);
+
+  const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "ORGANIZER" || role === "MODERATOR";
 
   async function reportResult(formData: FormData) {
     const payload = {
@@ -120,6 +125,63 @@ export function MatchRoom({ matchId }: { matchId: string }) {
     await load();
   }
 
+  async function simulateRiotResult() {
+    if (!match?.homeRegistration && !match?.awayRegistration) {
+      setMessage("No hay participantes suficientes para simular el resultado.");
+      return;
+    }
+
+    const winnerRegistrationId = match.homeRegistration?.id ?? match.awayRegistration?.id;
+    const payload = {
+      winnerRegistrationId,
+      homeScore: match.homeRegistration?.id === winnerRegistrationId ? 1 : 0,
+      awayScore: match.awayRegistration?.id === winnerRegistrationId ? 1 : 0,
+      riotGameId: `MOCK-${Date.now()}`
+    };
+
+    try {
+      const response = await fetch(`${apiUrl}/riot/mock/matches/${matchId}/finish`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message ?? "No se pudo simular Riot mock.");
+      }
+
+      setMessage("Resultado Riot mock simulado y bracket actualizado.");
+      await load();
+    } catch {
+      setMatch((current: any) =>
+        current
+          ? {
+              ...current,
+              status: "COMPLETED",
+              resultSource: "MOCK_RIOT",
+              winnerRegistration: current.homeRegistration,
+              results: [
+                {
+                  id: `mock-result-${Date.now()}`,
+                  status: "CONFIRMED",
+                  homeScore: 1,
+                  awayScore: 0,
+                  winnerRegistrationId,
+                  notes: "Resultado simulado en modo demo sin Riot API oficial."
+                },
+                ...(current.results ?? [])
+              ]
+            }
+          : current
+      );
+      setMessage("Resultado Riot mock simulado localmente para demo.");
+    }
+  }
+
   if (!match) {
     return (
       <SectionCard title="Sala de partida" description="Cargando datos de la partida.">
@@ -154,6 +216,19 @@ export function MatchRoom({ matchId }: { matchId: string }) {
             <div className="stat-tile">Ronda: {match.round?.name ?? "Sin asignar"}</div>
           </div>
         </SectionCard>
+
+        {canOperate ? (
+          <SectionCard title="Riot mock" description="Simula un callback de resultado sin usar Riot API oficial.">
+            <div className="rounded-[20px] border border-[#18e6f2]/20 bg-[#18e6f2]/8 p-4">
+              <p className="text-sm leading-7 text-white/68">
+                Esta acción usa el adaptador mock para validar el flujo de avance de bracket. No representa una verificación oficial de Riot.
+              </p>
+              <button onClick={simulateRiotResult} className="btn-primary mt-4 w-full">
+                Simular resultado Riot mock
+              </button>
+            </div>
+          </SectionCard>
+        ) : null}
 
         <SectionCard title="Resultados reportados" description="Historial de resultados enviados para esta partida.">
           <div className="space-y-3">

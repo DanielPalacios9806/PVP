@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type RegistrationView = {
   id?: string;
   user?: { displayName?: string | null; username: string };
@@ -23,7 +25,7 @@ type RoundView = {
 
 function registrationLabel(registration?: RegistrationView | null) {
   if (!registration) {
-    return "Pendiente";
+    return "Proximo rival";
   }
 
   if (registration.team) {
@@ -35,58 +37,80 @@ function registrationLabel(registration?: RegistrationView | null) {
   return registration.user?.displayName || registration.user?.username || "Sin definir";
 }
 
+function isWinner(match: MatchView, registration?: RegistrationView | null) {
+  return Boolean(registration?.id && match.winnerRegistration?.id === registration.id);
+}
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: "Pendiente",
+    READY: "Lista",
+    IN_PROGRESS: "En vivo",
+    RESULT_PENDING: "Resultado",
+    WAITING_RESULT: "Resultado",
+    COMPLETED: "Finalizada",
+    DISPUTED: "Disputa",
+    CANCELLED: "Cancelada",
+    ACTIVE: "Activa"
+  };
+
+  return labels[status] ?? status;
+}
+
 export function BracketBoard({ rounds }: { rounds: RoundView[] }) {
   if (!rounds.length) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/10 bg-black/20 p-8 text-sm text-white/60">
-        El bracket aun no ha sido generado.
+      <div className="rounded-[20px] border border-dashed border-white/12 bg-black/20 p-6 text-sm leading-7 text-white/62">
+        El bracket aun no ha sido generado. Cuando el organizador cierre inscripciones, aqui apareceran las rondas y partidas.
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="flex min-w-max items-start gap-8">
+    <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
+      <div className="flex min-w-max items-start gap-5">
         {rounds.map((round) => (
-          <section key={round.id} className="relative w-[320px] rounded-3xl border border-white/10 bg-white/5 p-4">
-            <div className="absolute -right-4 top-1/2 hidden h-px w-8 bg-gradient-to-r from-brand-cyan/60 to-transparent xl:block" />
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold">{round.name}</h3>
-              <p className="text-xs uppercase tracking-[0.2em] text-brand-cyan">{round.status}</p>
+          <section key={round.id} className="relative w-[255px] shrink-0 sm:w-[292px]">
+            <div className="absolute -right-5 top-[52%] hidden h-px w-5 bg-gradient-to-r from-[#18e6f2]/60 to-transparent lg:block" />
+            <div className="mb-4 border-l border-[#ff2438]/60 pl-3">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/80">{round.name}</h3>
+              <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-[#8eb8ff]">{statusLabel(round.status)}</p>
             </div>
-            <div className="space-y-5">
+
+            <div className="space-y-4">
               {round.matches.map((match) => (
                 <article
                   key={match.id}
-                  className="relative rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.18))] p-4 shadow-xl shadow-black/20"
+                  className="motion-card relative overflow-hidden rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,36,0.96),rgba(7,11,17,0.94))] p-3 shadow-[0_16px_34px_rgba(0,0,0,0.26)]"
                 >
-                  <div className="mb-3 flex items-center justify-between text-xs text-white/50">
+                  <div className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-[#18e6f2] via-[#ff2438] to-transparent" />
+                  <div className="mb-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.14em] text-white/45">
                     <span>BO{match.bestOf}</span>
-                    <span>{match.status}</span>
+                    <span>{statusLabel(match.status)}</span>
                   </div>
+
                   <div className="space-y-2">
-                    <div
-                      className={`rounded-xl px-3 py-2 text-sm ${
-                        match.winnerRegistration?.id && match.winnerRegistration.id === match.homeRegistration?.id
-                          ? "border border-brand-cyan/40 bg-brand-cyan/20 text-brand-cyan"
-                          : "border border-white/5 bg-white/5 text-white/80"
-                      }`}
-                    >
-                      {registrationLabel(match.homeRegistration)}
-                    </div>
-                    <div
-                      className={`rounded-xl px-3 py-2 text-sm ${
-                        match.winnerRegistration?.id && match.winnerRegistration.id === match.awayRegistration?.id
-                          ? "border border-brand-cyan/40 bg-brand-cyan/20 text-brand-cyan"
-                          : "border border-white/5 bg-white/5 text-white/80"
-                      }`}
-                    >
-                      {registrationLabel(match.awayRegistration)}
-                    </div>
+                    {[match.homeRegistration, match.awayRegistration].map((registration, index) => {
+                      const winner = isWinner(match, registration);
+                      return (
+                        <div
+                          key={`${match.id}-${index}`}
+                          className={`flex items-center justify-between gap-3 rounded-[12px] border px-3 py-2 text-sm ${
+                            winner
+                              ? "border-[#18e6f2]/40 bg-[#18e6f2]/10 text-white"
+                              : "border-white/10 bg-white/[0.035] text-white/70"
+                          }`}
+                        >
+                          <span className="min-w-0 truncate">{registrationLabel(registration)}</span>
+                          <span className={winner ? "text-[#40ffbb]" : "text-white/40"}>{winner ? "1" : "-"}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <a href={`/dashboard/matches/${match.id}`} className="mt-4 inline-flex text-sm text-brand-cyan">
-                    Abrir sala de partida
-                  </a>
+
+                  <Link href={`/dashboard/matches/${match.id}`} className="mt-4 inline-flex text-sm font-semibold text-[#18e6f2]">
+                    Abrir sala
+                  </Link>
                 </article>
               ))}
             </div>

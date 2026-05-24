@@ -1,4 +1,3 @@
-import { LayoutShell } from "../../../../components/layout-shell";
 import { MatchRoom } from "../../../../components/match-room";
 
 export default async function MatchDetailPage({
@@ -9,8 +8,8 @@ export default async function MatchDetailPage({
   const { id } = await params;
 
   return (
-    <LayoutShell title="Sala de partida">
+    <div className="page-section">
       <MatchRoom matchId={id} />
-    </LayoutShell>
+    </div>
   );
 }

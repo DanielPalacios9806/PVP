@@ -1,4 +1,3 @@
-import { LayoutShell } from "../../../../components/layout-shell";
 import { TournamentDetail } from "../../../../components/tournament-detail";
 
 export default async function TournamentDetailPage({
@@ -8,9 +7,5 @@ export default async function TournamentDetailPage({
 }) {
   const { id } = await params;
 
-  return (
-    <LayoutShell title="Detalle del torneo">
-      <TournamentDetail tournamentId={id} />
-    </LayoutShell>
-  );
+  return <TournamentDetail tournamentId={id} />;
 }
