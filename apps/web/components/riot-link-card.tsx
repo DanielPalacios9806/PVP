@@ -11,21 +11,32 @@ type RiotAccount = {
   platformRoute?: string | null;
   regionalRoute?: string | null;
   verified: boolean;
+  verificationStatus?: string | null;
 };
 
 export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
   const [accounts, setAccounts] = useState<RiotAccount[]>([]);
   const [message, setMessage] = useState("");
+  const [mode, setMode] = useState("mock");
   const [loading, setLoading] = useState(false);
 
   async function loadAccounts() {
     try {
-      const response = await fetch(`${apiUrl}/riot/accounts/me`, {
-        headers: getAuthHeaders()
-      });
-      const data = await response.json();
-      if (response.ok && Array.isArray(data)) {
+      const [accountsResponse, statusResponse] = await Promise.all([
+        fetch(`${apiUrl}/riot/accounts/me`, {
+          headers: getAuthHeaders()
+        }),
+        fetch(`${apiUrl}/riot/status`, {
+          headers: getAuthHeaders()
+        })
+      ]);
+      const data = await accountsResponse.json();
+      const status = await statusResponse.json();
+      if (accountsResponse.ok && Array.isArray(data)) {
         setAccounts(data);
+      }
+      if (statusResponse.ok && status.mode) {
+        setMode(status.mode);
       }
     } catch {
       setAccounts([]);
@@ -60,11 +71,11 @@ export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.message ?? "No se pudo vincular Riot ID en modo mock.");
+        setMessage(data.message ?? "No se pudo vincular Riot ID.");
         return;
       }
 
-      setMessage("Riot ID vinculado en modo mock.");
+      setMessage(mode === "mock" ? "Riot ID vinculado manualmente en modo mock." : "Riot ID verificado desde backend.");
       await loadAccounts();
     } catch {
       setMessage("No se pudo conectar con la API.");
@@ -79,17 +90,17 @@ export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
     <section className={`surface-panel ${compact ? "p-5" : "p-6"}`}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="page-kicker">Riot mock</p>
+          <p className="page-kicker">Riot ID</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">
             {primaryAccount ? "Riot ID vinculado" : "Completa tu perfil competitivo"}
           </h2>
           <p className="mt-3 max-w-xl text-sm leading-7 text-white/62">
             {primaryAccount
-              ? "Esta vinculacion es simulada para probar el flujo antes de solicitar API oficial."
-              : "Vincula un Riot ID simulado para probar perfiles, codigos mock y resultados automaticos sin exponer llaves reales."}
+              ? "Tu Riot ID queda asociado a Darkside.cool. La verificacion oficial con Riot Sign On se activara solo cuando exista aprobacion de produccion."
+              : "Vincula tu Riot ID desde backend. En modo mock es manual; en development puede consultarse Riot API sin exponer llaves en el frontend."}
           </p>
         </div>
-        <span className="status-badge status-open">RIOT_MODE=mock</span>
+        <span className="status-badge status-open">RIOT_API_MODE={mode}</span>
       </div>
 
       {primaryAccount ? (
@@ -109,7 +120,7 @@ export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
           <div className="surface-tile">
             <p className="text-xs uppercase tracking-[0.18em] text-white/38">Estado</p>
             <p className="mt-2 font-semibold text-white">
-              {primaryAccount.verified ? "Verificado mock" : "Pendiente"}
+              {primaryAccount.verificationStatus ?? (primaryAccount.verified ? "VERIFIED" : "MANUAL")}
             </p>
           </div>
         </div>

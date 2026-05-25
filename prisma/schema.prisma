@@ -121,6 +121,30 @@ enum ResultSource {
   ADMIN_OVERRIDE
 }
 
+enum RiotLinkedAccountStatus {
+  MANUAL
+  VERIFIED
+  RSO_PENDING
+  RSO_VERIFIED
+}
+
+enum RiotTournamentCodeStatus {
+  GENERATED
+  ASSIGNED
+  LOBBY_STARTED
+  CALLBACK_RECEIVED
+  COMPLETED
+  FAILED
+  REVOKED
+}
+
+enum RiotCallbackStatus {
+  RECEIVED
+  PROCESSED
+  REJECTED
+  FAILED
+}
+
 enum MatchResultStatus {
   PENDING_CONFIRMATION
   CONFIRMED
@@ -207,6 +231,9 @@ model User {
   teamInvites       TeamInvitation[]       @relation("ReceivedTeamInvitations")
   sentSpaceInvites  SpaceInvitation[]      @relation("SentSpaceInvitations")
   spaceInvites      SpaceInvitation[]      @relation("ReceivedSpaceInvitations")
+  riotApiLogs       RiotApiLog[]
+  riotProviders     RiotTournamentProvider[] @relation("RiotProviderCreator")
+  riotCodes         RiotTournamentCode[]   @relation("RiotCodeCreator")
 }
 
 model UserGameAccount {
@@ -222,6 +249,7 @@ model UserGameAccount {
   platformRoute    String?
   regionalRoute    String?
   verified         Boolean                 @default(false)
+  verificationStatus RiotLinkedAccountStatus @default(MANUAL)
   verifiedAt       DateTime?
   lastSyncedAt     DateTime?
   metadata         Json?
@@ -318,6 +346,8 @@ model Tournament {
   bracket          Bracket?
   matches          Match[]
   prizePools       PrizePool[]
+  riotTournament   RiotTournament?
+  riotApiLogs      RiotApiLog[]
 }
 
 model TournamentRegistration {
@@ -393,6 +423,122 @@ model Match {
   resultSource        ResultSource             @default(MANUAL)
   callbackReceivedAt  DateTime?
   resultSyncedAt      DateTime?
+  riotTournamentCode  RiotTournamentCode?
+  riotCallbackEvents  RiotCallbackEvent[]
+  riotApiLogs         RiotApiLog[]
+}
+
+model RiotApiLog {
+  id           String      @id @default(cuid())
+  endpoint     String
+  method       String
+  region       String?
+  platformRoute String?
+  statusCode   Int?
+  durationMs   Int
+  success      Boolean     @default(false)
+  errorType    String?
+  errorMessage String?
+  retryAfter   Int?
+  userId       String?
+  tournamentId String?
+  matchId      String?
+  requestId    String?
+  metadata     Json?
+  createdAt    DateTime    @default(now())
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tournament   Tournament? @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  match        Match?      @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([endpoint])
+  @@index([statusCode])
+  @@index([success])
+}
+
+model RiotTournamentProvider {
+  id                String           @id @default(cuid())
+  riotProviderId    String           @unique
+  region            String
+  platformRoute     String?
+  callbackUrl       String
+  active            Boolean          @default(true)
+  apiKeyFingerprint String?
+  createdByUserId   String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  createdByUser     User?            @relation("RiotProviderCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  tournaments       RiotTournament[]
+
+  @@index([active])
+  @@index([region])
+}
+
+model RiotTournament {
+  id                       String                  @id @default(cuid())
+  tournamentId             String                  @unique
+  riotTournamentProviderId String?
+  riotProviderId           String?
+  riotTournamentId         String?
+  name                     String
+  region                   String
+  status                   String                  @default("DRAFT")
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  tournament               Tournament              @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  provider                 RiotTournamentProvider? @relation(fields: [riotTournamentProviderId], references: [id], onDelete: SetNull)
+  codes                    RiotTournamentCode[]
+
+  @@index([riotTournamentId])
+  @@index([status])
+}
+
+model RiotTournamentCode {
+  id                     String                   @id @default(cuid())
+  matchId                String                   @unique
+  riotTournamentRecordId String?
+  riotTournamentId       String?
+  shortCode              String                   @unique
+  metadataNonce          String
+  mapType                String?
+  pickType               String?
+  teamSize               Int?
+  spectatorType          String?
+  allowedSummonerIds     Json?
+  status                 RiotTournamentCodeStatus @default(GENERATED)
+  generatedAt            DateTime                 @default(now())
+  usedAt                 DateTime?
+  callbackReceivedAt     DateTime?
+  createdByUserId        String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  match                  Match                    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  riotTournament         RiotTournament?          @relation(fields: [riotTournamentRecordId], references: [id], onDelete: SetNull)
+  createdByUser          User?                    @relation("RiotCodeCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  callbacks              RiotCallbackEvent[]
+
+  @@index([status])
+  @@index([generatedAt])
+}
+
+model RiotCallbackEvent {
+  id                   String             @id @default(cuid())
+  matchId              String?
+  riotTournamentCodeId String?
+  riotGameId           String?
+  metadataNonce        String?
+  status               RiotCallbackStatus @default(RECEIVED)
+  payload              Json
+  sourceIp             String?
+  receivedAt           DateTime           @default(now())
+  processedAt          DateTime?
+  errorMessage         String?
+  match                Match?             @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  riotTournamentCode   RiotTournamentCode? @relation(fields: [riotTournamentCodeId], references: [id], onDelete: SetNull)
+
+  @@index([receivedAt])
+  @@index([status])
+  @@index([metadataNonce])
 }
 
 model MatchResult {

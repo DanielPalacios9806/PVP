@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import type { AuthenticatedRequest } from "../../types.js";
@@ -7,6 +8,8 @@ import { forbidden, notFound } from "../../utils/http-error.js";
 import { getRequestIp } from "../../utils/request-ip.js";
 import { getRequestParam } from "../../utils/request-param.js";
 import { createAuditLog } from "../audit/audit.service.js";
+import { getRiotRuntimeConfig } from "../riot/riot.client.js";
+import { getRiotAdminOverview, testRiotConnection } from "../riot/riot.service.js";
 import { auditQuerySchema, updateUserRoleSchema } from "./admin.schemas.js";
 
 export const adminRouter = Router();
@@ -154,12 +157,64 @@ adminRouter.get(
   requireAuth,
   requireRole(["ADMIN", "SUPER_ADMIN", "MODERATOR", "ORGANIZER"]),
   asyncHandler(async (_request, response) => {
-    response.json({
-      mode: process.env.RIOT_MODE ?? "mock",
-      apiKeyConfigured: Boolean(process.env.RIOT_API_KEY),
-      platform: process.env.RIOT_PLATFORM ?? "LA1",
-      region: process.env.RIOT_REGION ?? "AMERICAS",
-      callbackUrlConfigured: Boolean(process.env.RIOT_CALLBACK_URL)
+    response.json(getRiotRuntimeConfig());
+  })
+);
+
+adminRouter.get(
+  "/riot/overview",
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN", "MODERATOR"]),
+  asyncHandler(async (_request, response) => {
+    const overview = await getRiotAdminOverview();
+    response.json(overview);
+  })
+);
+
+adminRouter.get(
+  "/riot/logs",
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN", "MODERATOR"]),
+  asyncHandler(async (request, response) => {
+    const limit = z.coerce.number().int().min(1).max(100).default(50).parse(request.query.limit);
+    const logs = await prisma.riotApiLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit
     });
+
+    response.json(logs);
+  })
+);
+
+adminRouter.post(
+  "/riot/test-connection",
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const payload = z
+      .object({
+        gameName: z.string().trim().min(2).max(32).optional(),
+        tagLine: z.string().trim().min(2).max(16).optional()
+      })
+      .parse(request.body ?? {});
+
+    const result = await testRiotConnection({
+      ...payload,
+      userId: request.user!.sub
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "riot.admin.test_connection",
+      entityType: "riot_api",
+      after: {
+        ok: result.ok,
+        skippedExternalRequest: result.skippedExternalRequest,
+        mode: result.config.mode
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
   })
 );

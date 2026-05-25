@@ -1,6 +1,7 @@
 import { NavbarTop } from "@/components/navbar-top";
 import { DashboardGridWrapper } from "@/components/dashboard-grid-wrapper";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { RiotLegalDisclaimer } from "@/components/riot-legal-disclaimer";
 import { SidebarLeft } from "@/components/sidebar-left";
 import { SidebarRight } from "@/components/sidebar-right";
 import { ReactNode } from "react";
@@ -16,7 +17,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <NavbarTop />
       <DashboardGridWrapper
         leftSidebar={<SidebarLeft />}
-        mainContent={<div className="flex min-w-0 flex-col overflow-x-hidden pb-28 lg:pb-0">{children}</div>}
+        mainContent={<div className="flex min-w-0 flex-col overflow-x-hidden pb-28 lg:pb-0">{children}<RiotLegalDisclaimer compact /></div>}
         rightSidebar={<SidebarRight />}
       />
       <MobileBottomNav />

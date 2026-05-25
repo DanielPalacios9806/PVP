@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
+import { createRateLimiter } from "../../middlewares/rate-limit.js";
 import type { AuthenticatedRequest } from "../../types.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { badRequest } from "../../utils/http-error.js";
@@ -7,11 +8,17 @@ import { getRequestIp } from "../../utils/request-ip.js";
 import { getRequestParam } from "../../utils/request-param.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { processRiotCallback } from "./riot-callback.service.js";
+import { getRiotRuntimeConfig } from "./riot.client.js";
 import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema } from "./riot.schemas.js";
-import { getMyRiotAccounts, getRiotMode, linkRiotAccount } from "./riot.service.js";
+import { getMyRiotAccounts, getRiotMode, linkRiotAccount, unlinkRiotAccount } from "./riot.service.js";
 import { finishMockRiotMatch, generateMockableTournamentCode } from "./riot-tournament.service.js";
 
 export const riotRouter = Router();
+const riotRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: "Too many Riot integration requests. Please try again later."
+});
 
 function requireParam(value: string | string[] | undefined, name: string) {
   const param = getRequestParam(value);
@@ -26,17 +33,13 @@ riotRouter.get(
   "/status",
   requireAuth,
   asyncHandler(async (_request, response) => {
-    response.json({
-      mode: getRiotMode(),
-      apiKeyConfigured: Boolean(process.env.RIOT_API_KEY),
-      platform: process.env.RIOT_PLATFORM ?? "LA1",
-      region: process.env.RIOT_REGION ?? "AMERICAS"
-    });
+    response.json(getRiotRuntimeConfig());
   })
 );
 
 riotRouter.post(
   "/accounts/link",
+  riotRateLimiter,
   requireAuth,
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const payload = linkRiotAccountSchema.parse(request.body);
@@ -78,8 +81,32 @@ riotRouter.get(
   })
 );
 
+riotRouter.delete(
+  "/accounts/:id",
+  requireAuth,
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const accountId = requireParam(request.params.id, "Riot account id");
+    const result = await unlinkRiotAccount({
+      userId: request.user!.sub,
+      accountId
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "riot.account.unlink",
+      entityType: "user_game_account",
+      entityId: accountId,
+      after: result,
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
+  })
+);
+
 riotRouter.post(
   "/matches/:matchId/code",
+  riotRateLimiter,
   requireAuth,
   requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
@@ -147,24 +174,11 @@ riotRouter.post(
 
 riotRouter.post(
   "/tournament/callback",
-  requireAuth,
-  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
-  asyncHandler(async (request: AuthenticatedRequest, response) => {
+  riotRateLimiter,
+  asyncHandler(async (request, response) => {
     const result = await processRiotCallback({
-      user: request.user,
-      body: request.body
-    });
-
-    await createAuditLog({
-      actorUserId: request.user!.sub,
-      action: "riot.callback.mock",
-      entityType: "match",
-      entityId: result.match.id,
-      after: {
-        resultSource: result.match.resultSource,
-        riotGameId: result.match.riotGameId
-      },
-      ipAddress: getRequestIp(request)
+      body: request.body,
+      sourceIp: getRequestIp(request)
     });
 
     response.json(result);

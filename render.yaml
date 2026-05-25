@@ -23,19 +23,23 @@ services:
         value: https://darkside.cool
       - key: FRONTEND_URL
         value: https://darkside.cool
-      - key: RIOT_MODE
+      - key: RIOT_API_MODE
         value: mock
       - key: RIOT_API_KEY
         sync: false
-      - key: RIOT_API_BASE_URL
-        value: https://americas.api.riotgames.com
-      - key: RIOT_PLATFORM
-        value: LA1
       - key: RIOT_REGION
-        value: AMERICAS
+        value: la1
+      - key: RIOT_REGIONAL_ROUTE
+        value: americas
+      - key: RIOT_API_TIMEOUT_MS
+        value: 8000
+      - key: RIOT_TOURNAMENT_API_ENABLED
+        value: false
       - key: RIOT_CALLBACK_URL
         sync: false
-      - key: RIOT_PROVIDER_ID
+      - key: RIOT_TOURNAMENT_PROVIDER_ID
+        sync: false
+      - key: RIOT_TOURNAMENT_CALLBACK_SECRET
         sync: false
       - key: RIOT_TOURNAMENT_ID
         sync: false

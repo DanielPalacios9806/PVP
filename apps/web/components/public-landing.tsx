@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { brand } from "@/lib/brand";
 import { apiUrl } from "@/lib/config";
 import { getStoredUser } from "@/lib/session";
+import { RiotLegalDisclaimer } from "./riot-legal-disclaimer";
 
 type PublicTournament = {
   id: string;
@@ -413,6 +414,8 @@ export function PublicLanding() {
           </article>
         </div>
       </section>
+
+      <RiotLegalDisclaimer />
 
       <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-[var(--ds-border-soft)] bg-[rgba(3,6,10,0.96)] px-2 py-2 backdrop-blur-xl lg:hidden">
         {[

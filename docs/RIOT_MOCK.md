@@ -2,17 +2,20 @@
 
 ## Estado actual
 
-El proyecto corre por defecto con `RIOT_MODE=mock`. En este modo no se llama a Riot Games, no se necesita API key y no se expone ningun secreto al frontend.
+El proyecto corre por defecto con `RIOT_API_MODE=mock`. En este modo no se llama a Riot Games, no se necesita API key y no se expone ningun secreto al frontend.
 
 ## Variables
 
 ```env
-RIOT_MODE=mock
+RIOT_API_MODE=mock
 RIOT_API_KEY=
-RIOT_PLATFORM=LA1
-RIOT_REGION=AMERICAS
+RIOT_REGION=la1
+RIOT_REGIONAL_ROUTE=americas
+RIOT_API_TIMEOUT_MS=8000
+RIOT_TOURNAMENT_API_ENABLED=false
 RIOT_CALLBACK_URL=
-RIOT_PROVIDER_ID=
+RIOT_TOURNAMENT_PROVIDER_ID=
+RIOT_TOURNAMENT_CALLBACK_SECRET=
 RIOT_TOURNAMENT_ID=
 ```
 
@@ -25,8 +28,10 @@ RIOT_TOURNAMENT_ID=
 - `GET /api/riot/accounts/me`: lista cuentas Riot vinculadas del usuario autenticado.
 - `POST /api/riot/matches/:matchId/code`: genera un Tournament Code mock para un match.
 - `POST /api/riot/mock/matches/:matchId/finish`: simula resultado Riot, marca match como completado y avanza ganador.
-- `POST /api/riot/tournament/callback`: callback mock protegido para pruebas internas.
+- `POST /api/riot/tournament/callback`: callback preparado con validacion de metadata/nonce.
 - `POST /api/riot/matches/:matchId/resync`: placeholder de resincronizacion futura.
+- `GET /api/admin/riot/overview`: metricas Riot para admin.
+- `POST /api/admin/riot/test-connection`: prueba segura desde backend.
 
 ## Flujo demo sin Riot API
 
@@ -48,7 +53,7 @@ RIOT_TOURNAMENT_ID=
 
 ## Pendiente para Production API Key
 
-- Implementar llamadas reales en `riot.real-adapter.ts` usando documentacion oficial vigente de Riot.
-- Validar firma, metadata y nonce del callback real.
-- Crear modelos dedicados si Riot exige guardar providers, tournament ids y codes historicos fuera de `Match`.
+- Completar activacion de provider/tournament real cuando Riot apruebe Production API Key y Tournament API.
+- Mantener firma, metadata y nonce del callback real.
+- Usar modelos dedicados para providers, tournament ids, codes historicos, callbacks y metricas.
 - Preparar evidencias del caso de uso: torneos universitarios, sin apuestas, sin cash wagering y sin tokens convertibles.

@@ -1,4 +1,5 @@
-import { MatchResultStatus, MatchStatus, ResultSource } from "@prisma/client";
+import { MatchResultStatus, MatchStatus, ResultSource, RiotTournamentCodeStatus } from "@prisma/client";
+import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
 import { badRequest, forbidden, notFound } from "../../utils/http-error.js";
 import type { AuthUser } from "../../types.js";
@@ -40,12 +41,43 @@ export async function generateMockableTournamentCode(params: {
     throw badRequest("Tournament code can only be generated for pending or ready matches");
   }
 
+  if (match.riotShortCode) {
+    throw badRequest("This match already has a Riot tournament code assigned");
+  }
+
   const code = await getRiotAdapter().generateTournamentCode({
     matchId: match.id,
     mapType: params.mapType,
     pickType: params.pickType,
     teamSize: params.teamSize,
     spectatorType: params.spectatorType
+  });
+
+  await prisma.riotTournamentCode.upsert({
+    where: { matchId: match.id },
+    update: {
+      shortCode: code.shortCode,
+      metadataNonce: code.metadataNonce,
+      mapType: params.mapType,
+      pickType: params.pickType,
+      teamSize: params.teamSize,
+      spectatorType: params.spectatorType,
+      riotTournamentId: env.RIOT_TOURNAMENT_ID,
+      status: RiotTournamentCodeStatus.GENERATED,
+      createdByUserId: params.user.sub
+    },
+    create: {
+      matchId: match.id,
+      shortCode: code.shortCode,
+      metadataNonce: code.metadataNonce,
+      mapType: params.mapType,
+      pickType: params.pickType,
+      teamSize: params.teamSize,
+      spectatorType: params.spectatorType,
+      riotTournamentId: env.RIOT_TOURNAMENT_ID,
+      status: RiotTournamentCodeStatus.GENERATED,
+      createdByUserId: params.user.sub
+    }
   });
 
   return prisma.match.update({

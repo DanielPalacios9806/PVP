@@ -167,18 +167,20 @@ Usa este usuario como super administrador inicial. El registro publico siempre c
 - Reporte, aceptacion y confirmacion manual de resultados con avance automatico de ganador.
 - Apertura y resolucion de disputas.
 - Auditoria consultable para admin y moderacion.
-- Riot mock mode para vincular Riot ID simulado, generar codigo de partida mock y simular resultados.
+- Riot API preparada de forma server-side: modo mock, development y production, logs internos, callback y panel admin inicial.
 - Frontend base para auth, dashboard, torneos, tokens, moderacion y admin con vistas separadas por rol.
 
-## Riot mock
-El MVP no llama a Riot Games todavia. Usa `RIOT_MODE=mock` para probar el flujo completo sin API oficial:
+## Riot API
+Darkside.cool mantiene `RIOT_API_MODE=mock` por defecto. En este modo no se llama a Riot Games y se puede probar el flujo competitivo sin exponer secretos. Para pruebas con Development API Key, la clave debe configurarse solo en backend/Render como `RIOT_API_KEY`.
 
 - `POST /api/riot/accounts/link`
 - `POST /api/riot/matches/:matchId/code`
 - `POST /api/riot/mock/matches/:matchId/finish`
 - `GET /api/riot/status`
+- `GET /api/admin/riot/overview`
+- `POST /api/admin/riot/test-connection`
 
-Ver [RIOT_MOCK.md](/D:/Codex/docs/RIOT_MOCK.md) para el flujo demo y checklist previo a Production API Key.
+Ver [RIOT_API_INTEGRATION.md](/D:/Codex/docs/RIOT_API_INTEGRATION.md) y [RIOT_MOCK.md](/D:/Codex/docs/RIOT_MOCK.md) para configuracion, flujo demo y checklist previo a Production API Key.
 
 ## Notas de compliance
 - No incluye apuestas, gambling ni cash wagering.
@@ -190,4 +192,5 @@ Ver [RIOT_MOCK.md](/D:/Codex/docs/RIOT_MOCK.md) para el flujo demo y checklist p
 - [GITHUB_RENDER_STRATEGY.md](/D:/Codex/docs/GITHUB_RENDER_STRATEGY.md)
 - [BACKUPS_Y_OPERACION.md](/D:/Codex/docs/BACKUPS_Y_OPERACION.md)
 - [RIOT_MOCK.md](/D:/Codex/docs/RIOT_MOCK.md)
+- [RIOT_API_INTEGRATION.md](/D:/Codex/docs/RIOT_API_INTEGRATION.md)
 - [SUPABASE_RENDER_SETUP.md](/D:/Codex/docs/SUPABASE_RENDER_SETUP.md)
