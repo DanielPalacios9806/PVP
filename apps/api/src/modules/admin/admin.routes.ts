@@ -1,50 +1,137 @@
+import { randomBytes } from "node:crypto";
+import bcrypt from "bcryptjs";
+import { Prisma, WalletType } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import type { AuthenticatedRequest } from "../../types.js";
 import { asyncHandler } from "../../utils/async-handler.js";
-import { forbidden, notFound } from "../../utils/http-error.js";
+import { conflict, forbidden, notFound } from "../../utils/http-error.js";
 import { getRequestIp } from "../../utils/request-ip.js";
 import { getRequestParam } from "../../utils/request-param.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { getRiotRuntimeConfig } from "../riot/riot.client.js";
 import { getRiotAdminOverview, testRiotConnection } from "../riot/riot.service.js";
-import { auditQuerySchema, updateUserRoleSchema } from "./admin.schemas.js";
+import { adminUsersQuerySchema, auditQuerySchema, createAdminUserSchema, updateUserRoleSchema, updateUserStatusSchema } from "./admin.schemas.js";
 
 export const adminRouter = Router();
+
+const adminUserSelect = {
+  id: true,
+  email: true,
+  username: true,
+  displayName: true,
+  role: true,
+  status: true,
+  country: true,
+  mustChangePassword: true,
+  passwordChangedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  wallets: {
+    select: {
+      id: true,
+      type: true,
+      currencyCode: true,
+      balance: true,
+      nonWithdrawable: true
+    }
+  }
+} satisfies Prisma.UserSelect;
+
+function createTemporaryPassword() {
+  return `Ds-${randomBytes(9).toString("base64url")}!9aA`;
+}
 
 adminRouter.get(
   "/users",
   requireAuth,
   requireRole(["ADMIN", "SUPER_ADMIN"]),
-  asyncHandler(async (_request, response) => {
+  asyncHandler(async (request, response) => {
+    const query = adminUsersQuerySchema.parse(request.query);
+    const where: Prisma.UserWhereInput = {
+      role: query.role,
+      status: query.status
+    };
+
+    if (query.q) {
+      where.OR = [
+        { email: { contains: query.q, mode: "insensitive" } },
+        { username: { contains: query.q, mode: "insensitive" } },
+        { displayName: { contains: query.q, mode: "insensitive" } }
+      ];
+    }
+
     const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        displayName: true,
-        role: true,
-        status: true,
-        country: true,
-        createdAt: true,
-        updatedAt: true,
+      where,
+      select: adminUserSelect,
+      orderBy: { createdAt: "desc" },
+      take: query.limit
+    });
+
+    response.json(users);
+  })
+);
+
+adminRouter.post(
+  "/users",
+  requireAuth,
+  requireRole(["SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const payload = createAdminUserSchema.parse(request.body);
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: payload.email }, { username: payload.username }]
+      }
+    });
+
+    if (existing) {
+      throw conflict("Email or username already exists");
+    }
+
+    const temporaryPassword = createTemporaryPassword();
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+    const user = await prisma.user.create({
+      data: {
+        email: payload.email,
+        username: payload.username,
+        displayName: payload.displayName,
+        passwordHash,
+        role: payload.role,
+        status: payload.status,
+        mustChangePassword: true,
         wallets: {
-          select: {
-            id: true,
-            type: true,
-            currencyCode: true,
-            balance: true,
+          create: {
+            type: WalletType.INTERNAL_REWARD,
+            currencyCode: "TOKENS",
+            balance: 100,
             nonWithdrawable: true
           }
         }
       },
-      orderBy: { createdAt: "desc" },
-      take: 200
+      select: adminUserSelect
     });
 
-    response.json(users);
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "admin.user.create",
+      entityType: "user",
+      entityId: user.id,
+      after: {
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        status: user.status,
+        mustChangePassword: user.mustChangePassword
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.status(201).json({
+      user,
+      temporaryPassword
+    });
   })
 );
 
@@ -87,6 +174,44 @@ adminRouter.patch(
       entityId: user.id,
       before: { role: existing.role },
       after: { role: user.role },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(user);
+  })
+);
+
+adminRouter.patch(
+  "/users/:id/status",
+  requireAuth,
+  requireRole(["SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const userId = getRequestParam(request.params.id);
+    const payload = updateUserStatusSchema.parse(request.body);
+
+    if (userId === request.user!.sub && payload.status !== "ACTIVE") {
+      throw forbidden("Super admin users cannot suspend or deactivate their own account");
+    }
+
+    const existing = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!existing) {
+      throw notFound("User not found");
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { status: payload.status },
+      select: adminUserSelect
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "admin.user_status.update",
+      entityType: "user",
+      entityId: user.id,
+      before: { status: existing.status },
+      after: { status: user.status },
       ipAddress: getRequestIp(request)
     });
 

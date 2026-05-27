@@ -21,7 +21,8 @@ const railItems: RailItem[] = [
   { id: "teams", href: "/dashboard/teams", label: "Equipos", icon: "/assets/darkside/icons/icon-users.svg" },
   { id: "spaces", href: "/dashboard/spaces", label: "Comunidades", icon: "/assets/darkside/icons/icon-comment.svg" },
   { id: "tokens", href: "/dashboard/tokens", label: "Tokens internos", icon: "/assets/darkside/icons/icon-trophy.svg" },
-  { id: "admin", href: "/dashboard/admin", label: "Administracion", icon: "/assets/darkside/icons/icon-bracket.svg", roles: ["ADMIN", "SUPER_ADMIN"] }
+  { id: "admin", href: "/dashboard/admin", label: "Administracion", icon: "/assets/darkside/icons/icon-bracket.svg", roles: ["ADMIN", "SUPER_ADMIN"] },
+  { id: "profiles", href: "/dashboard/admin/profiles", label: "Perfiles internos", icon: "/assets/darkside/icons/icon-user.svg", roles: ["SUPER_ADMIN"] }
 ];
 
 export function SidebarLeft() {

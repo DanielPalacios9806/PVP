@@ -20,6 +20,10 @@ const operatorLinks = [
   { label: "Admin", href: "/dashboard/admin" }
 ];
 
+const superAdminLinks = [
+  { label: "Perfiles", href: "/dashboard/admin/profiles" }
+];
+
 export function NavbarTop() {
   const [role, setRole] = useState<AppRole>("USER");
 
@@ -33,7 +37,9 @@ export function NavbarTop() {
   }, []);
 
   const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
-  const links = canOperate ? [...playerLinks, ...operatorLinks] : playerLinks;
+  const links = canOperate
+    ? [...playerLinks, ...operatorLinks, ...(role === "SUPER_ADMIN" ? superAdminLinks : [])]
+    : playerLinks;
 
   return (
     <nav className="sticky top-0 z-50 border-b border-[var(--ds-border-soft)] bg-[rgba(5,8,12,0.96)] backdrop-blur-xl">

@@ -10,6 +10,8 @@ export async function getAuthProfile(userId: string) {
       displayName: true,
       role: true,
       status: true,
+      mustChangePassword: true,
+      passwordChangedAt: true,
       createdAt: true,
       wallets: {
         select: {

@@ -3,8 +3,51 @@ import jwt, { type SignOptions } from "jsonwebtoken";
 import { UserRole, UserStatus, WalletType } from "@prisma/client";
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
-import { conflict, unauthorized } from "../../utils/http-error.js";
+import { badRequest, conflict, unauthorized } from "../../utils/http-error.js";
 import { createAuditLog } from "../audit/audit.service.js";
+
+type AuthSessionUser = {
+  id: string;
+  email: string;
+  username: string;
+  displayName: string;
+  role: UserRole;
+  mustChangePassword: boolean;
+  wallets?: Array<{
+    balance: unknown;
+    currencyCode: string;
+  }>;
+};
+
+export function createAuthSession(user: AuthSessionUser) {
+  const token = jwt.sign(
+    {
+      sub: user.id,
+      email: user.email,
+      role: user.role
+    },
+    env.JWT_SECRET,
+    {
+      expiresIn: env.JWT_EXPIRES_IN as SignOptions["expiresIn"]
+    }
+  );
+
+  return {
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword
+    },
+    wallet: {
+      balance: Number(user.wallets?.[0]?.balance ?? 100),
+      currencyCode: user.wallets?.[0]?.currencyCode ?? "TOKENS"
+    }
+  };
+}
 
 export async function registerUser(data: {
   email: string;
@@ -33,6 +76,8 @@ export async function registerUser(data: {
       passwordHash,
       role: UserRole.USER,
       status: UserStatus.ACTIVE,
+      mustChangePassword: false,
+      passwordChangedAt: new Date(),
       wallets: {
         create: {
           type: WalletType.INTERNAL_REWARD,
@@ -71,23 +116,15 @@ export async function loginUser(data: { email: string; password: string; ipAddre
     throw unauthorized("Invalid credentials");
   }
 
+  if (user.status !== UserStatus.ACTIVE) {
+    throw unauthorized("Account is not active");
+  }
+
   const valid = await bcrypt.compare(data.password, user.passwordHash);
 
   if (!valid) {
     throw unauthorized("Invalid credentials");
   }
-
-  const token = jwt.sign(
-    {
-      sub: user.id,
-      email: user.email,
-      role: user.role
-    },
-    env.JWT_SECRET,
-    {
-      expiresIn: env.JWT_EXPIRES_IN as SignOptions["expiresIn"]
-    }
-  );
 
   await createAuditLog({
     actorUserId: user.id,
@@ -98,18 +135,66 @@ export async function loginUser(data: { email: string; password: string; ipAddre
     ipAddress: data.ipAddress
   });
 
-  return {
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      displayName: user.displayName,
-      role: user.role
+  return createAuthSession(user);
+}
+
+export async function changePassword(data: {
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+  ipAddress?: string | null;
+}) {
+  const user = await prisma.user.findUnique({
+    where: { id: data.userId }
+  });
+
+  if (!user) {
+    throw unauthorized("Invalid session");
+  }
+
+  const valid = await bcrypt.compare(data.currentPassword, user.passwordHash);
+
+  if (!valid) {
+    throw unauthorized("Current password is invalid");
+  }
+
+  const samePassword = await bcrypt.compare(data.newPassword, user.passwordHash);
+
+  if (samePassword) {
+    throw badRequest("New password must be different from the current password");
+  }
+
+  const passwordHash = await bcrypt.hash(data.newPassword, 10);
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash,
+      mustChangePassword: false,
+      passwordChangedAt: new Date()
     },
-    wallet: {
-      balance: Number(user.wallets[0]?.balance ?? 100),
-      currencyCode: user.wallets[0]?.currencyCode ?? "TOKENS"
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      displayName: true,
+      role: true,
+      mustChangePassword: true,
+      passwordChangedAt: true
     }
-  };
+  });
+
+  await createAuditLog({
+    actorUserId: user.id,
+    action: "auth.password.change",
+    entityType: "user",
+    entityId: user.id,
+    before: { mustChangePassword: user.mustChangePassword },
+    after: {
+      mustChangePassword: updated.mustChangePassword,
+      passwordChangedAt: updated.passwordChangedAt
+    },
+    ipAddress: data.ipAddress
+  });
+
+  return updated;
 }

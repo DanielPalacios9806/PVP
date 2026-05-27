@@ -19,6 +19,10 @@ const adminLinks = [
   { label: "Administracion", href: "/dashboard/admin" }
 ];
 
+const superAdminLinks = [
+  { label: "Perfiles", href: "/dashboard/admin/profiles" }
+];
+
 export function AppNav() {
   const [role, setRole] = useState<AppRole>("USER");
 
@@ -30,7 +34,9 @@ export function AppNav() {
   }, []);
 
   const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
-  const links = canOperate ? [...playerLinks, ...adminLinks] : playerLinks;
+  const links = canOperate
+    ? [...playerLinks, ...adminLinks, ...(role === "SUPER_ADMIN" ? superAdminLinks : [])]
+    : playerLinks;
 
   return (
     <nav className="flex flex-wrap items-center gap-2 text-sm text-white/80">

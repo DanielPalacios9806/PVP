@@ -1,5 +1,5 @@
-import { AdminUsersPanel } from "../../../components/admin-users-panel";
 import { AdminAuditPanel } from "../../../components/admin-audit-panel";
+import { AdminQuickAccess } from "../../../components/admin-quick-access";
 import { AdminRiotPanel } from "../../../components/admin-riot-panel";
 import { AdminTokenPanel } from "../../../components/admin-token-panel";
 import { RoleGate } from "../../../components/role-gate";
@@ -21,9 +21,13 @@ export default function AdminPage() {
       </section>
       <RoleGate allowedRoles={["ADMIN", "SUPER_ADMIN"]} title="Administracion">
         <div className="space-y-6">
-          <AdminUsersPanel />
-          <AdminRiotPanel />
-          <TournamentOpsPanel />
+          <AdminQuickAccess />
+          <div id="riot-api">
+            <AdminRiotPanel />
+          </div>
+          <div id="operacion-torneos">
+            <TournamentOpsPanel />
+          </div>
           <AdminTokenPanel />
           <AdminAuditPanel />
         </div>

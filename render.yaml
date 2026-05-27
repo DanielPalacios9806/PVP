@@ -23,6 +23,20 @@ services:
         value: https://darkside.cool
       - key: FRONTEND_URL
         value: https://darkside.cool
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        value: https://api.darkside.cool/api/auth/oauth/google/callback
+      - key: FACEBOOK_CLIENT_ID
+        sync: false
+      - key: FACEBOOK_CLIENT_SECRET
+        sync: false
+      - key: FACEBOOK_CALLBACK_URL
+        value: https://api.darkside.cool/api/auth/oauth/facebook/callback
+      - key: OAUTH_STATE_SECRET
+        sync: false
       - key: RIOT_API_MODE
         value: mock
       - key: RIOT_API_KEY

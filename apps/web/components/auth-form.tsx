@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiUrl } from "../lib/config";
 import { persistSession } from "../lib/session";
 import { brand } from "@/lib/brand";
+import { OAuthButtons } from "./oauth-buttons";
 
 type Mode = "login" | "register";
 
@@ -12,6 +13,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [token, setToken] = useState("");
+
+  useEffect(() => {
+    const error = new URLSearchParams(window.location.search).get("error");
+    if (error === "oauth_failed") {
+      setMessage("No se pudo completar el acceso social. Revisa la configuracion o intenta con correo.");
+    }
+  }, []);
 
   async function onSubmit(formData: FormData) {
     const payload =
@@ -57,20 +65,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       return;
     }
 
-    persistSession({
-      user: {
-        email: payload.email,
-        username: mode === "register" ? payload.username : undefined,
-        displayName: mode === "register" ? payload.displayName : undefined,
-        role: "USER",
-        id: "local-user"
-      },
-      wallet: {
-        balance: 100,
-        currencyCode: "TOKENS"
-      }
-    });
-    setMessage("Cuenta creada correctamente. Ya puedes iniciar sesion.");
+    setMessage("La cuenta fue creada, pero el servidor no devolvio una sesion valida. Inicia sesion manualmente.");
   }
 
   return (
@@ -107,6 +102,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
           <h3 className="mt-2 text-2xl font-semibold uppercase">
             {mode === "register" ? "Registro de jugador" : "Inicio de sesion"}
           </h3>
+        </div>
+        <OAuthButtons />
+        <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-white/40">
+          <span className="h-px flex-1 bg-white/10" />
+          O usa correo
+          <span className="h-px flex-1 bg-white/10" />
         </div>
         {mode === "register" ? (
           <>

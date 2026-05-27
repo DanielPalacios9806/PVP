@@ -1,9 +1,11 @@
 import type { NextFunction, Response } from "express";
 import jwt from "jsonwebtoken";
+import { UserStatus } from "@prisma/client";
 import { env } from "../config/env.js";
+import { prisma } from "../lib/prisma.js";
 import type { AuthenticatedRequest, AuthUser } from "../types.js";
 
-export function requireAuth(request: AuthenticatedRequest, response: Response, next: NextFunction) {
+export async function requireAuth(request: AuthenticatedRequest, response: Response, next: NextFunction) {
   const header = request.headers.authorization;
 
   if (!header?.startsWith("Bearer ")) {
@@ -12,11 +14,43 @@ export function requireAuth(request: AuthenticatedRequest, response: Response, n
 
   const token = header.replace("Bearer ", "");
 
+  let decoded: AuthUser;
+
   try {
-    request.user = jwt.verify(token, env.JWT_SECRET) as AuthUser;
-    return next();
+    decoded = jwt.verify(token, env.JWT_SECRET) as AuthUser;
   } catch {
     return response.status(401).json({ message: "Invalid token" });
+  }
+
+  if (!decoded.sub) {
+    return response.status(401).json({ message: "Invalid token" });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.sub },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        status: true
+      }
+    });
+
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      return response.status(401).json({ message: "Invalid session" });
+    }
+
+    request.user = {
+      ...decoded,
+      sub: user.id,
+      email: user.email,
+      role: user.role
+    };
+
+    return next();
+  } catch (error) {
+    return next(error);
   }
 }
 

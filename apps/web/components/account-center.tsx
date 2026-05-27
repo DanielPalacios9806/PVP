@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { apiUrl, getAuthHeaders } from "../lib/config";
-import { clearSession, getStoredUser, getStoredWallet, type AppRole } from "../lib/session";
+import { clearSession, getStoredUser, getStoredWallet, persistSession, type AppRole } from "../lib/session";
+import { ConnectedOAuthAccounts } from "./connected-oauth-accounts";
 import { RiotLinkCard } from "./riot-link-card";
 import { SectionCard } from "./section-card";
 
@@ -21,6 +22,7 @@ export function AccountCenter() {
   const [user, setUser] = useState(getStoredUser());
   const [wallet, setWallet] = useState(getStoredWallet());
   const [message, setMessage] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState("");
 
   useEffect(() => {
     setUser(getStoredUser());
@@ -41,6 +43,35 @@ export function AccountCenter() {
     setUser(null);
     setWallet({ balance: 100, currencyCode: "TOKENS" });
     setMessage("Sesion cerrada correctamente en este entorno.");
+  }
+
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordMessage("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch(`${apiUrl}/auth/change-password`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify({
+        currentPassword: String(form.get("currentPassword") || ""),
+        newPassword: String(form.get("newPassword") || "")
+      })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      setPasswordMessage(data.message ?? "No se pudo cambiar la contrasena.");
+      return;
+    }
+
+    const nextUser = user ? { ...user, ...data, mustChangePassword: false } : data;
+    setUser(nextUser);
+    persistSession({ user: nextUser });
+    event.currentTarget.reset();
+    setPasswordMessage("Contrasena actualizada correctamente.");
   }
 
   return (
@@ -103,7 +134,23 @@ export function AccountCenter() {
             <p className="mt-3 text-sm leading-7 text-white/72">
               La creacion de torneos, la administracion de usuarios y la auditoria no aparecen para jugadores normales.
             </p>
+            {user ? (
+              <form onSubmit={changePassword} className="mt-5 grid gap-3">
+                {user.mustChangePassword ? (
+                  <p className="rounded-2xl border border-brand-red/30 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
+                    Tu cuenta fue creada con contrasena temporal. Cambiala antes de operar la plataforma.
+                  </p>
+                ) : null}
+                <input name="currentPassword" type="password" placeholder="Contrasena actual" required />
+                <input name="newPassword" type="password" placeholder="Nueva contrasena segura" required />
+                <button type="submit" className="btn-secondary !px-4 !py-2 !text-xs">
+                  Cambiar contrasena
+                </button>
+                {passwordMessage ? <p className="text-sm text-brand-cyan">{passwordMessage}</p> : null}
+              </form>
+            ) : null}
           </div>
+          {user ? <ConnectedOAuthAccounts /> : null}
           {message ? <p className="text-sm text-brand-cyan">{message}</p> : null}
         </div>
       </SectionCard>

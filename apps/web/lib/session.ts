@@ -8,6 +8,7 @@ export interface StoredUser {
   username?: string;
   displayName?: string;
   role: AppRole;
+  mustChangePassword?: boolean;
 }
 
 export interface StoredWallet {
