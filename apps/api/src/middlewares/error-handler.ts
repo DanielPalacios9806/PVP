@@ -10,9 +10,12 @@ export function errorHandler(
   _next: NextFunction
 ) {
   if (error instanceof ZodError) {
+    const issues = error.flatten();
+    const firstFieldError = Object.values(issues.fieldErrors).flat().find(Boolean);
+
     return response.status(400).json({
-      message: "Validation error",
-      issues: error.flatten()
+      message: firstFieldError ?? "Revisa los datos ingresados.",
+      issues
     });
   }
 

@@ -63,7 +63,7 @@ export async function registerUser(data: {
   });
 
   if (existing) {
-    throw conflict("Email or username already exists");
+    throw conflict("El correo o usuario ya esta registrado.");
   }
 
   const passwordHash = await bcrypt.hash(data.password, 10);
@@ -113,17 +113,17 @@ export async function loginUser(data: { email: string; password: string; ipAddre
   });
 
   if (!user) {
-    throw unauthorized("Invalid credentials");
+    throw unauthorized("Correo o contrasena incorrectos.");
   }
 
   if (user.status !== UserStatus.ACTIVE) {
-    throw unauthorized("Account is not active");
+    throw unauthorized("La cuenta no esta activa.");
   }
 
   const valid = await bcrypt.compare(data.password, user.passwordHash);
 
   if (!valid) {
-    throw unauthorized("Invalid credentials");
+    throw unauthorized("Correo o contrasena incorrectos.");
   }
 
   await createAuditLog({
@@ -155,13 +155,13 @@ export async function changePassword(data: {
   const valid = await bcrypt.compare(data.currentPassword, user.passwordHash);
 
   if (!valid) {
-    throw unauthorized("Current password is invalid");
+    throw unauthorized("La contrasena actual es incorrecta.");
   }
 
   const samePassword = await bcrypt.compare(data.newPassword, user.passwordHash);
 
   if (samePassword) {
-    throw badRequest("New password must be different from the current password");
+    throw badRequest("La nueva contrasena debe ser diferente de la actual.");
   }
 
   const passwordHash = await bcrypt.hash(data.newPassword, 10);
