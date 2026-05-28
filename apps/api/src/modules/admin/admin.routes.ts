@@ -14,6 +14,7 @@ import { createAuditLog } from "../audit/audit.service.js";
 import { getRiotRuntimeConfig } from "../riot/riot.client.js";
 import { getRiotAdminOverview, testRiotConnection } from "../riot/riot.service.js";
 import {
+  adjustUserTokensSchema,
   adminUsersQuerySchema,
   auditQuerySchema,
   createAdminUserSchema,
@@ -274,6 +275,220 @@ adminRouter.patch(
     response.json(user);
   })
 );
+
+
+adminRouter.get(
+  "/wallets",
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN", "FINANCE"]),
+  asyncHandler(async (request, response) => {
+    const query = adminUsersQuerySchema.parse(request.query);
+    const where: Prisma.UserWhereInput = {
+      role: query.role,
+      status: query.status
+    };
+
+    if (query.q) {
+      where.OR = [
+        { email: { contains: query.q, mode: "insensitive" } },
+        { username: { contains: query.q, mode: "insensitive" } },
+        { displayName: { contains: query.q, mode: "insensitive" } }
+      ];
+    }
+
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        displayName: true,
+        role: true,
+        status: true,
+        wallets: {
+          where: { type: WalletType.INTERNAL_REWARD },
+          select: {
+            id: true,
+            type: true,
+            currencyCode: true,
+            balance: true,
+            nonWithdrawable: true,
+            updatedAt: true
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: query.limit
+    });
+
+    response.json(
+      users.map((user) => {
+        const wallet = user.wallets[0] ?? null;
+
+        return {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          displayName: user.displayName,
+          role: user.role,
+          status: user.status,
+          wallet: wallet
+            ? {
+                ...wallet,
+                balance: Number(wallet.balance)
+              }
+            : null
+        };
+      })
+    );
+  })
+);
+
+adminRouter.patch(
+  "/users/:id/tokens",
+  requireAuth,
+  requireRole(["SUPER_ADMIN", "FINANCE"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const userId = getRequestParam(request.params.id);
+
+    if (!userId) {
+      throw notFound("User not found");
+    }
+
+    if (userId === request.user!.sub) {
+      throw forbidden("No puedes ajustar tus propios tokens desde el panel financiero.");
+    }
+
+    const payload = adjustUserTokensSchema.parse(request.body);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const targetUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          displayName: true,
+          role: true,
+          status: true,
+          wallets: {
+            where: { type: WalletType.INTERNAL_REWARD },
+            select: {
+              id: true,
+              type: true,
+              currencyCode: true,
+              balance: true,
+              nonWithdrawable: true,
+              updatedAt: true
+            }
+          }
+        }
+      });
+
+      if (!targetUser) {
+        throw notFound("User not found");
+      }
+
+      const currentWallet = targetUser.wallets[0] ?? null;
+      const currentBalance = Number(currentWallet?.balance ?? 0);
+      const nextBalance = currentBalance + payload.amount;
+
+      if (nextBalance < 0) {
+        throw conflict("El ajuste dejaria el saldo del usuario en negativo.");
+      }
+
+      const wallet = currentWallet
+        ? await tx.wallet.update({
+            where: { id: currentWallet.id },
+            data: {
+              balance: {
+                increment: payload.amount
+              }
+            },
+            select: {
+              id: true,
+              type: true,
+              currencyCode: true,
+              balance: true,
+              nonWithdrawable: true,
+              updatedAt: true
+            }
+          })
+        : await tx.wallet.create({
+            data: {
+              userId: targetUser.id,
+              type: WalletType.INTERNAL_REWARD,
+              currencyCode: "TOKENS",
+              balance: payload.amount,
+              nonWithdrawable: true
+            },
+            select: {
+              id: true,
+              type: true,
+              currencyCode: true,
+              balance: true,
+              nonWithdrawable: true,
+              updatedAt: true
+            }
+          });
+
+      const finalBalance = Number(wallet.balance);
+
+      await tx.auditLog.create({
+        data: {
+          actorUserId: request.user!.sub,
+          action: "admin.wallet.adjust",
+          entityType: "wallet",
+          entityId: wallet.id,
+          before: {
+            balance: currentBalance,
+            currencyCode: wallet.currencyCode
+          },
+          after: {
+            balance: finalBalance,
+            amount: payload.amount,
+            reason: payload.reason,
+            currencyCode: wallet.currencyCode
+          },
+          metadata: {
+            targetUserId: targetUser.id,
+            targetEmail: targetUser.email,
+            targetUsername: targetUser.username,
+            nonWithdrawable: wallet.nonWithdrawable
+          },
+          ipAddress: getRequestIp(request)
+        }
+      });
+
+      return {
+        user: {
+          id: targetUser.id,
+          email: targetUser.email,
+          username: targetUser.username,
+          displayName: targetUser.displayName,
+          role: targetUser.role,
+          status: targetUser.status
+        },
+        wallet: {
+          ...wallet,
+          balance: finalBalance
+        },
+        adjustment: {
+          amount: payload.amount,
+          reason: payload.reason,
+          previousBalance: currentBalance,
+          nextBalance: finalBalance
+        }
+      };
+    });
+
+    response.json({
+      ...result,
+      message: "Ajuste de tokens registrado correctamente."
+    });
+  })
+);
+
 
 adminRouter.get(
   "/audit-logs",

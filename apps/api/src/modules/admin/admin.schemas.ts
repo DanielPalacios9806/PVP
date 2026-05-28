@@ -37,3 +37,18 @@ export const createAdminUserSchema = z.object({
 export const updateUserStatusSchema = z.object({
   status: userStatusSchema
 });
+
+
+export const adjustUserTokensSchema = z.object({
+  amount: z.coerce
+    .number({ invalid_type_error: "Ingresa una cantidad valida de tokens." })
+    .int("El ajuste debe ser un numero entero.")
+    .min(-10000, "El ajuste minimo permitido es -10000 tokens.")
+    .max(10000, "El ajuste maximo permitido es 10000 tokens.")
+    .refine((value) => value !== 0, "El ajuste no puede ser cero."),
+  reason: z
+    .string()
+    .trim()
+    .min(8, "Escribe una justificacion de al menos 8 caracteres.")
+    .max(240, "La justificacion no debe superar 240 caracteres.")
+});
