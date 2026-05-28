@@ -125,6 +125,7 @@ export function TokenCenter() {
   const [userTransactions, setUserTransactions] = useState<TokenTransaction[]>([]);
   const [financeTransactions, setFinanceTransactions] = useState<TokenTransaction[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [financeSearch, setFinanceSearch] = useState("");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
@@ -135,6 +136,26 @@ export function TokenCenter() {
 
   const canViewFinance = canViewFinancePanel(currentUser?.role);
   const canAdjust = canAdjustTokens(currentUser?.role);
+
+  const filteredFinanceUsers = useMemo(() => {
+    const search = financeSearch.trim().toLowerCase();
+
+    if (!search) {
+      return financeUsers;
+    }
+
+    return financeUsers.filter((user) => {
+      const fields = [
+        user.displayName,
+        user.username,
+        user.email,
+        roleLabels[user.role],
+        String(user.wallet?.balance ?? 0)
+      ];
+
+      return fields.some((field) => field.toLowerCase().includes(search));
+    });
+  }, [financeSearch, financeUsers]);
 
   const selectedUser = useMemo(() => financeUsers.find((user) => user.id === selectedUserId) ?? null, [financeUsers, selectedUserId]);
 
@@ -350,14 +371,63 @@ export function TokenCenter() {
 
               {canAdjust ? (
                 <form onSubmit={adjustTokens} className="space-y-3">
-                  <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)} aria-label="Usuario para ajuste de tokens">
-                    <option value="">Selecciona usuario</option>
-                    {financeUsers.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.displayName || user.username} · {user.email} · {user.wallet?.balance ?? 0} TOKENS
-                      </option>
-                    ))}
-                  </select>
+                  <div className="space-y-3 rounded-3xl border border-white/10 bg-black/20 p-4">
+                    <label className="block text-xs font-semibold uppercase tracking-[0.26em] text-brand-cyan" htmlFor="finance-user-search">
+                      Buscar usuario
+                    </label>
+                    <input
+                      id="finance-user-search"
+                      value={financeSearch}
+                      onChange={(event) => setFinanceSearch(event.target.value)}
+                      placeholder="Buscar por nombre, usuario, correo o saldo..."
+                      aria-label="Buscar usuario para ajuste de tokens"
+                      className="w-full border-white/10 bg-slate-950/80 text-white placeholder:text-white/35 focus:border-brand-cyan"
+                    />
+
+                    <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                      {filteredFinanceUsers.length > 0 ? (
+                        filteredFinanceUsers.map((user) => {
+                          const isSelected = user.id === selectedUserId;
+                          const balance = user.wallet?.balance ?? 0;
+                          const currency = user.wallet?.currencyCode ?? "TOKENS";
+
+                          return (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => setSelectedUserId(user.id)}
+                              className={`w-full rounded-2xl border p-4 text-left transition ${
+                                isSelected
+                                  ? "border-brand-cyan bg-brand-cyan/15 shadow-[0_0_24px_rgba(0,212,255,0.12)]"
+                                  : "border-white/10 bg-slate-950/60 hover:border-white/25 hover:bg-white/5"
+                              }`}
+                              aria-pressed={isSelected}
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <p className="font-semibold text-white">{user.displayName || user.username}</p>
+                                  <p className="mt-1 text-sm text-white/60">{user.email}</p>
+                                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/40">{user.username}</p>
+                                </div>
+                                <div className="text-right">
+                                  <span className="inline-flex rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-cyan">
+                                    {roleLabels[user.role]}
+                                  </span>
+                                  <p className="mt-2 text-sm font-semibold text-white">
+                                    {balance} {currency}
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/60 p-4 text-sm text-white/60">
+                          No hay usuarios que coincidan con la busqueda.
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   <div className="grid gap-3 md:grid-cols-[0.35fr_1fr]">
                     <input
