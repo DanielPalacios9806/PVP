@@ -2,11 +2,18 @@ import { z } from "zod";
 
 export const userRoleSchema = z.enum(["USER", "ORGANIZER", "MODERATOR", "ADMIN", "SUPER_ADMIN", "FINANCE"]);
 export const userStatusSchema = z.enum(["ACTIVE", "SUSPENDED", "PENDING"]);
+export const walletTransactionTypeSchema = z.enum(["ADMIN_ADJUSTMENT", "TOURNAMENT_REWARD", "CORRECTION"]);
 
 export const auditQuerySchema = z.object({
   entityType: z.string().optional(),
   action: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100)
+});
+
+export const tokenTransactionQuerySchema = z.object({
+  userId: z.string().cuid().optional(),
+  type: walletTransactionTypeSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50)
 });
 
 export const updateUserRoleSchema = z.object({

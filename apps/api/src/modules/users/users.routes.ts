@@ -1,4 +1,7 @@
+import { WalletType } from "@prisma/client";
 import { Router } from "express";
+import { z } from "zod";
+import { prisma } from "../../lib/prisma.js";
 import { requireAuth } from "../../middlewares/auth.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { getAuthProfile } from "../../utils/auth-profile.js";
@@ -16,6 +19,58 @@ usersRouter.get(
     const user = await getAuthProfile(request.user!.sub);
 
     response.json(user);
+  })
+);
+
+usersRouter.get(
+  "/me/tokens/history",
+  requireAuth,
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const limit = z.coerce.number().int().min(1).max(100).default(25).parse(request.query.limit);
+    const transactions = await prisma.walletTransaction.findMany({
+      where: {
+        userId: request.user!.sub,
+        wallet: {
+          type: WalletType.INTERNAL_REWARD
+        }
+      },
+      include: {
+        wallet: {
+          select: {
+            id: true,
+            type: true,
+            currencyCode: true,
+            nonWithdrawable: true
+          }
+        },
+        actorUser: {
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            displayName: true,
+            role: true
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit
+    });
+
+    response.json(
+      transactions.map((transaction) => ({
+        id: transaction.id,
+        type: transaction.type,
+        amount: Number(transaction.amount),
+        balanceBefore: Number(transaction.balanceBefore),
+        balanceAfter: Number(transaction.balanceAfter),
+        reason: transaction.reason,
+        metadata: transaction.metadata,
+        createdAt: transaction.createdAt,
+        wallet: transaction.wallet,
+        actorUser: transaction.actorUser
+      }))
+    );
   })
 );
 

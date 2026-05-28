@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { Prisma, UserRole, UserStatus, WalletType } from "@prisma/client";
+import { Prisma, UserRole, UserStatus, WalletTransactionType, WalletType } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
@@ -18,6 +18,7 @@ import {
   adminUsersQuerySchema,
   auditQuerySchema,
   createAdminUserSchema,
+  tokenTransactionQuerySchema,
   updateUserRoleSchema,
   updateUserStatusSchema
 } from "./admin.schemas.js";
@@ -361,126 +362,156 @@ adminRouter.patch(
 
     const payload = adjustUserTokensSchema.parse(request.body);
 
-    const result = await prisma.$transaction(async (tx) => {
-      const targetUser = await tx.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          username: true,
-          displayName: true,
-          role: true,
-          status: true,
-          wallets: {
-            where: { type: WalletType.INTERNAL_REWARD },
-            select: {
-              id: true,
-              type: true,
-              currencyCode: true,
-              balance: true,
-              nonWithdrawable: true,
-              updatedAt: true
-            }
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        displayName: true,
+        role: true,
+        status: true,
+        wallets: {
+          where: { type: WalletType.INTERNAL_REWARD },
+          select: {
+            id: true,
+            type: true,
+            currencyCode: true,
+            balance: true,
+            nonWithdrawable: true,
+            updatedAt: true
           }
         }
-      });
-
-      if (!targetUser) {
-        throw notFound("User not found");
       }
-
-      const currentWallet = targetUser.wallets[0] ?? null;
-      const currentBalance = Number(currentWallet?.balance ?? 0);
-      const nextBalance = currentBalance + payload.amount;
-
-      if (nextBalance < 0) {
-        throw conflict("El ajuste dejaria el saldo del usuario en negativo.");
-      }
-
-      const wallet = currentWallet
-        ? await tx.wallet.update({
-            where: { id: currentWallet.id },
-            data: {
-              balance: {
-                increment: payload.amount
-              }
-            },
-            select: {
-              id: true,
-              type: true,
-              currencyCode: true,
-              balance: true,
-              nonWithdrawable: true,
-              updatedAt: true
-            }
-          })
-        : await tx.wallet.create({
-            data: {
-              userId: targetUser.id,
-              type: WalletType.INTERNAL_REWARD,
-              currencyCode: "TOKENS",
-              balance: payload.amount,
-              nonWithdrawable: true
-            },
-            select: {
-              id: true,
-              type: true,
-              currencyCode: true,
-              balance: true,
-              nonWithdrawable: true,
-              updatedAt: true
-            }
-          });
-
-      const finalBalance = Number(wallet.balance);
-
-      await tx.auditLog.create({
-        data: {
-          actorUserId: request.user!.sub,
-          action: "admin.wallet.adjust",
-          entityType: "wallet",
-          entityId: wallet.id,
-          before: {
-            balance: currentBalance,
-            currencyCode: wallet.currencyCode
-          },
-          after: {
-            balance: finalBalance,
-            amount: payload.amount,
-            reason: payload.reason,
-            currencyCode: wallet.currencyCode
-          },
-          metadata: {
-            targetUserId: targetUser.id,
-            targetEmail: targetUser.email,
-            targetUsername: targetUser.username,
-            nonWithdrawable: wallet.nonWithdrawable
-          },
-          ipAddress: getRequestIp(request)
-        }
-      });
-
-      return {
-        user: {
-          id: targetUser.id,
-          email: targetUser.email,
-          username: targetUser.username,
-          displayName: targetUser.displayName,
-          role: targetUser.role,
-          status: targetUser.status
-        },
-        wallet: {
-          ...wallet,
-          balance: finalBalance
-        },
-        adjustment: {
-          amount: payload.amount,
-          reason: payload.reason,
-          previousBalance: currentBalance,
-          nextBalance: finalBalance
-        }
-      };
     });
+
+    if (!targetUser) {
+      throw notFound("User not found");
+    }
+
+    const currentWallet = targetUser.wallets[0] ?? null;
+    const currentBalance = Number(currentWallet?.balance ?? 0);
+    const nextBalance = currentBalance + payload.amount;
+
+    if (nextBalance < 0) {
+      throw conflict("El ajuste dejaria el saldo del usuario en negativo.");
+    }
+
+    const wallet = currentWallet
+      ? await prisma.wallet.update({
+          where: { id: currentWallet.id },
+          data: {
+            balance: {
+              increment: payload.amount
+            }
+          },
+          select: {
+            id: true,
+            type: true,
+            currencyCode: true,
+            balance: true,
+            nonWithdrawable: true,
+            updatedAt: true
+          }
+        })
+      : await prisma.wallet.create({
+          data: {
+            userId: targetUser.id,
+            type: WalletType.INTERNAL_REWARD,
+            currencyCode: "TOKENS",
+            balance: payload.amount,
+            nonWithdrawable: true
+          },
+          select: {
+            id: true,
+            type: true,
+            currencyCode: true,
+            balance: true,
+            nonWithdrawable: true,
+            updatedAt: true
+          }
+        });
+
+    const finalBalance = Number(wallet.balance);
+
+    const transaction = await prisma.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        userId: targetUser.id,
+        actorUserId: request.user!.sub,
+        type: WalletTransactionType.ADMIN_ADJUSTMENT,
+        amount: payload.amount,
+        balanceBefore: currentBalance,
+        balanceAfter: finalBalance,
+        reason: payload.reason,
+        metadata: {
+          source: "admin_panel",
+          currencyCode: wallet.currencyCode,
+          nonWithdrawable: wallet.nonWithdrawable
+        }
+      },
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        balanceBefore: true,
+        balanceAfter: true,
+        reason: true,
+        createdAt: true
+      }
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "admin.wallet.adjust",
+      entityType: "wallet",
+      entityId: wallet.id,
+      before: {
+        balance: currentBalance,
+        currencyCode: wallet.currencyCode
+      },
+      after: {
+        balance: finalBalance,
+        amount: payload.amount,
+        reason: payload.reason,
+        currencyCode: wallet.currencyCode,
+        transactionId: transaction.id
+      },
+      metadata: {
+        targetUserId: targetUser.id,
+        targetEmail: targetUser.email,
+        targetUsername: targetUser.username,
+        nonWithdrawable: wallet.nonWithdrawable
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    const result = {
+      user: {
+        id: targetUser.id,
+        email: targetUser.email,
+        username: targetUser.username,
+        displayName: targetUser.displayName,
+        role: targetUser.role,
+        status: targetUser.status
+      },
+      wallet: {
+        ...wallet,
+        balance: finalBalance
+      },
+      adjustment: {
+        amount: payload.amount,
+        reason: payload.reason,
+        previousBalance: currentBalance,
+        nextBalance: finalBalance
+      },
+      transaction: {
+        ...transaction,
+        amount: Number(transaction.amount),
+        balanceBefore: Number(transaction.balanceBefore),
+        balanceAfter: Number(transaction.balanceAfter)
+      }
+    };
 
     response.json({
       ...result,
@@ -489,6 +520,70 @@ adminRouter.patch(
   })
 );
 
+
+
+adminRouter.get(
+  "/wallet-transactions",
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN", "FINANCE"]),
+  asyncHandler(async (request, response) => {
+    const query = tokenTransactionQuerySchema.parse(request.query);
+    const where: Prisma.WalletTransactionWhereInput = {
+      userId: query.userId,
+      type: query.type
+    };
+
+    const transactions = await prisma.walletTransaction.findMany({
+      where,
+      include: {
+        wallet: {
+          select: {
+            id: true,
+            type: true,
+            currencyCode: true,
+            nonWithdrawable: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            displayName: true,
+            role: true
+          }
+        },
+        actorUser: {
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            displayName: true,
+            role: true
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: query.limit
+    });
+
+    response.json(
+      transactions.map((transaction) => ({
+        id: transaction.id,
+        type: transaction.type,
+        amount: Number(transaction.amount),
+        balanceBefore: Number(transaction.balanceBefore),
+        balanceAfter: Number(transaction.balanceAfter),
+        reason: transaction.reason,
+        metadata: transaction.metadata,
+        createdAt: transaction.createdAt,
+        wallet: transaction.wallet,
+        user: transaction.user,
+        actorUser: transaction.actorUser
+      }))
+    );
+  })
+);
 
 adminRouter.get(
   "/audit-logs",
