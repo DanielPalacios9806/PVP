@@ -1,4 +1,4 @@
-export const USER_ROLES = ["USER", "ORGANIZER", "MODERATOR", "ADMIN", "FINANCE"] as const;
+export const USER_ROLES = ["USER", "ORGANIZER", "MODERATOR", "ADMIN", "SUPER_ADMIN", "FINANCE"] as const;
 export type UserRoleValue = (typeof USER_ROLES)[number];
 
 export const TOURNAMENT_TYPES = ["SOLO", "TEAM"] as const;

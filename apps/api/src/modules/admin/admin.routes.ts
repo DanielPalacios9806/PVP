@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { Prisma, WalletType } from "@prisma/client";
+import { Prisma, UserRole, UserStatus, WalletType } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
@@ -13,7 +13,13 @@ import { getRequestParam } from "../../utils/request-param.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { getRiotRuntimeConfig } from "../riot/riot.client.js";
 import { getRiotAdminOverview, testRiotConnection } from "../riot/riot.service.js";
-import { adminUsersQuerySchema, auditQuerySchema, createAdminUserSchema, updateUserRoleSchema, updateUserStatusSchema } from "./admin.schemas.js";
+import {
+  adminUsersQuerySchema,
+  auditQuerySchema,
+  createAdminUserSchema,
+  updateUserRoleSchema,
+  updateUserStatusSchema
+} from "./admin.schemas.js";
 
 export const adminRouter = Router();
 
@@ -42,6 +48,20 @@ const adminUserSelect = {
 
 function createTemporaryPassword() {
   return `Ds-${randomBytes(9).toString("base64url")}!9aA`;
+}
+
+async function ensureAnotherActiveSuperAdmin(userId: string) {
+  const otherSuperAdmins = await prisma.user.count({
+    where: {
+      id: { not: userId },
+      role: UserRole.SUPER_ADMIN,
+      status: UserStatus.ACTIVE
+    }
+  });
+
+  if (otherSuperAdmins === 0) {
+    throw forbidden("Debe existir al menos otro SUPER_ADMIN activo antes de cambiar este perfil.");
+  }
 }
 
 adminRouter.get(
@@ -92,6 +112,7 @@ adminRouter.post(
 
     const temporaryPassword = createTemporaryPassword();
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
     const user = await prisma.user.create({
       data: {
         email: payload.email,
@@ -141,16 +162,27 @@ adminRouter.patch(
   requireRole(["SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const userId = getRequestParam(request.params.id);
+
+    if (!userId) {
+      throw notFound("User not found");
+    }
+
     const payload = updateUserRoleSchema.parse(request.body);
 
-    if (userId === request.user!.sub && payload.role !== "SUPER_ADMIN") {
+    if (userId === request.user!.sub && payload.role !== UserRole.SUPER_ADMIN) {
       throw forbidden("Super admin users cannot remove their own super admin role");
     }
 
-    const existing = await prisma.user.findUnique({ where: { id: userId } });
+    const existing = await prisma.user.findUnique({
+      where: { id: userId }
+    });
 
     if (!existing) {
       throw notFound("User not found");
+    }
+
+    if (existing.role === UserRole.SUPER_ADMIN && payload.role !== UserRole.SUPER_ADMIN) {
+      await ensureAnotherActiveSuperAdmin(userId);
     }
 
     const user = await prisma.user.update({
@@ -187,16 +219,27 @@ adminRouter.patch(
   requireRole(["SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const userId = getRequestParam(request.params.id);
+
+    if (!userId) {
+      throw notFound("User not found");
+    }
+
     const payload = updateUserStatusSchema.parse(request.body);
 
-    if (userId === request.user!.sub && payload.status !== "ACTIVE") {
+    if (userId === request.user!.sub && payload.status !== UserStatus.ACTIVE) {
       throw forbidden("Super admin users cannot suspend or deactivate their own account");
     }
 
-    const existing = await prisma.user.findUnique({ where: { id: userId } });
+    const existing = await prisma.user.findUnique({
+      where: { id: userId }
+    });
 
     if (!existing) {
       throw notFound("User not found");
+    }
+
+    if (existing.role === UserRole.SUPER_ADMIN && payload.status !== UserStatus.ACTIVE) {
+      await ensureAnotherActiveSuperAdmin(userId);
     }
 
     const user = await prisma.user.update({

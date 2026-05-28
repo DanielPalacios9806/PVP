@@ -16,6 +16,38 @@ export interface StoredWallet {
   currencyCode: string;
 }
 
+export const SESSION_CHANGE_EVENT = "arena-session-change";
+
+function notifySessionChange() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
+}
+
+export function subscribeSessionChange(callback: () => void) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  window.addEventListener(SESSION_CHANGE_EVENT, callback);
+  window.addEventListener("storage", callback);
+
+  return () => {
+    window.removeEventListener(SESSION_CHANGE_EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+export function getStoredToken(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem("arena_token");
+}
+
 export function getStoredUser(): StoredUser | null {
   if (typeof window === "undefined") {
     return null;
@@ -59,7 +91,7 @@ export function getStoredWallet(): StoredWallet {
   }
 }
 
-export function persistSession(input: { token?: string; user?: StoredUser; wallet?: StoredWallet }) {
+export function persistSession(input: { token?: string; user?: StoredUser; wallet?: StoredWallet }, options?: { notify?: boolean }) {
   if (typeof window === "undefined") {
     return;
   }
@@ -75,6 +107,10 @@ export function persistSession(input: { token?: string; user?: StoredUser; walle
   if (input.wallet) {
     window.localStorage.setItem("arena_wallet", JSON.stringify(input.wallet));
   }
+
+  if (options?.notify !== false) {
+    notifySessionChange();
+  }
 }
 
 export function clearSession() {
@@ -85,4 +121,5 @@ export function clearSession() {
   window.localStorage.removeItem("arena_token");
   window.localStorage.removeItem("arena_user");
   window.localStorage.removeItem("arena_wallet");
+  notifySessionChange();
 }

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getStoredUser, type AppRole } from "../lib/session";
+import { getStoredUser, subscribeSessionChange, type AppRole } from "../lib/session";
 
 const playerLinks = [
   { label: "Inicio", href: "/" },
@@ -14,8 +14,11 @@ const playerLinks = [
   { label: "Tokens", href: "/dashboard/tokens" }
 ];
 
+const moderatorLinks = [
+  { label: "Moderacion", href: "/dashboard/moderation" }
+];
+
 const adminLinks = [
-  { label: "Moderacion", href: "/dashboard/moderation" },
   { label: "Administracion", href: "/dashboard/admin" }
 ];
 
@@ -26,17 +29,24 @@ const superAdminLinks = [
 export function AppNav() {
   const [role, setRole] = useState<AppRole>("USER");
 
-  useEffect(() => {
+  function syncRole() {
     const user = getStoredUser();
-    if (user?.role) {
-      setRole(user.role);
-    }
+    setRole(user?.role ?? "USER");
+  }
+
+  useEffect(() => {
+    syncRole();
+    return subscribeSessionChange(syncRole);
   }, []);
 
-  const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
-  const links = canOperate
-    ? [...playerLinks, ...adminLinks, ...(role === "SUPER_ADMIN" ? superAdminLinks : [])]
-    : playerLinks;
+  const canModerate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR";
+  const canAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
+  const links = [
+    ...playerLinks,
+    ...(canModerate ? moderatorLinks : []),
+    ...(canAdmin ? adminLinks : []),
+    ...(role === "SUPER_ADMIN" ? superAdminLinks : [])
+  ];
 
   return (
     <nav className="flex flex-wrap items-center gap-2 text-sm text-white/80">

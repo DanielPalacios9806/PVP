@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiUrl, getAuthHeaders } from "../lib/config";
-import { clearSession, getStoredUser, getStoredWallet, persistSession, type AppRole } from "../lib/session";
+import { clearSession, getStoredUser, getStoredWallet, persistSession, subscribeSessionChange, type AppRole } from "../lib/session";
 import { ConnectedOAuthAccounts } from "./connected-oauth-accounts";
 import { RiotLinkCard } from "./riot-link-card";
 import { SectionCard } from "./section-card";
@@ -19,14 +20,20 @@ const roleLabels: Record<AppRole, string> = {
 };
 
 export function AccountCenter() {
+  const router = useRouter();
   const [user, setUser] = useState(getStoredUser());
   const [wallet, setWallet] = useState(getStoredWallet());
   const [message, setMessage] = useState("");
   const [passwordMessage, setPasswordMessage] = useState("");
 
-  useEffect(() => {
+  function syncLocalSession() {
     setUser(getStoredUser());
     setWallet(getStoredWallet());
+  }
+
+  useEffect(() => {
+    syncLocalSession();
+    return subscribeSessionChange(syncLocalSession);
   }, []);
 
   async function logout() {
@@ -43,6 +50,7 @@ export function AccountCenter() {
     setUser(null);
     setWallet({ balance: 100, currencyCode: "TOKENS" });
     setMessage("Sesion cerrada correctamente en este entorno.");
+    router.push("/auth/login");
   }
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {

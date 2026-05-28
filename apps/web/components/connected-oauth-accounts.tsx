@@ -64,7 +64,7 @@ export function ConnectedOAuthAccounts() {
           ))
         ) : (
           <p className="text-sm leading-6 text-white/62">
-            Aun no has conectado Google o Facebook. Puedes hacerlo iniciando sesion con uno de esos proveedores usando el mismo correo.
+            Aun no has conectado Google o Facebook. Cuando los proveedores esten configurados, podras vincularlos iniciando sesion con el mismo correo.
           </p>
         )}
       </div>

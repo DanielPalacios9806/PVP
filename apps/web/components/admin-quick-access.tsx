@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getStoredUser, type AppRole } from "@/lib/session";
+import { getStoredUser, subscribeSessionChange, type AppRole } from "@/lib/session";
 
 export function AdminQuickAccess() {
   const [role, setRole] = useState<AppRole>("USER");
 
-  useEffect(() => {
+  function syncRole() {
     setRole(getStoredUser()?.role ?? "USER");
+  }
+
+  useEffect(() => {
+    syncRole();
+    return subscribeSessionChange(syncRole);
   }, []);
 
   return (

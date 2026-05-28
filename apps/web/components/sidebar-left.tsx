@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { brand } from "@/lib/brand";
-import { getStoredUser, type AppRole } from "@/lib/session";
+import { getStoredUser, subscribeSessionChange, type AppRole } from "@/lib/session";
 
 interface RailItem {
   id: string;
@@ -21,6 +21,7 @@ const railItems: RailItem[] = [
   { id: "teams", href: "/dashboard/teams", label: "Equipos", icon: "/assets/darkside/icons/icon-users.svg" },
   { id: "spaces", href: "/dashboard/spaces", label: "Comunidades", icon: "/assets/darkside/icons/icon-comment.svg" },
   { id: "tokens", href: "/dashboard/tokens", label: "Tokens internos", icon: "/assets/darkside/icons/icon-trophy.svg" },
+  { id: "moderation", href: "/dashboard/moderation", label: "Moderacion", icon: "/assets/darkside/icons/icon-bracket.svg", roles: ["MODERATOR", "ADMIN", "SUPER_ADMIN"] },
   { id: "admin", href: "/dashboard/admin", label: "Administracion", icon: "/assets/darkside/icons/icon-bracket.svg", roles: ["ADMIN", "SUPER_ADMIN"] },
   { id: "profiles", href: "/dashboard/admin/profiles", label: "Perfiles internos", icon: "/assets/darkside/icons/icon-user.svg", roles: ["SUPER_ADMIN"] }
 ];
@@ -29,9 +30,14 @@ export function SidebarLeft() {
   const pathname = usePathname();
   const [role, setRole] = useState<AppRole>("USER");
 
-  useEffect(() => {
+  function syncRole() {
     const user = getStoredUser();
     setRole(user?.role ?? "USER");
+  }
+
+  useEffect(() => {
+    syncRole();
+    return subscribeSessionChange(syncRole);
   }, []);
 
   const items = railItems.filter((item) => !item.roles || item.roles.includes(role));

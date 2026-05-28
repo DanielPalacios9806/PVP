@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AccountMenu } from "@/components/account-menu";
 import { brand } from "@/lib/brand";
-import { getStoredUser, type AppRole } from "@/lib/session";
+import { getStoredUser, subscribeSessionChange, type AppRole } from "@/lib/session";
 
 const playerLinks = [
   { label: "Inicio", href: "/dashboard" },
@@ -15,8 +15,11 @@ const playerLinks = [
   { label: "Tokens", href: "/dashboard/tokens" }
 ];
 
-const operatorLinks = [
-  { label: "Operacion", href: "/dashboard/moderation" },
+const moderatorLinks = [
+  { label: "Operacion", href: "/dashboard/moderation" }
+];
+
+const adminLinks = [
   { label: "Admin", href: "/dashboard/admin" }
 ];
 
@@ -34,12 +37,17 @@ export function NavbarTop() {
 
   useEffect(() => {
     syncRole();
+    return subscribeSessionChange(syncRole);
   }, []);
 
-  const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR" || role === "ORGANIZER";
-  const links = canOperate
-    ? [...playerLinks, ...operatorLinks, ...(role === "SUPER_ADMIN" ? superAdminLinks : [])]
-    : playerLinks;
+  const canModerate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "MODERATOR";
+  const canAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
+  const links = [
+    ...playerLinks,
+    ...(canModerate ? moderatorLinks : []),
+    ...(canAdmin ? adminLinks : []),
+    ...(role === "SUPER_ADMIN" ? superAdminLinks : [])
+  ];
 
   return (
     <nav className="sticky top-0 z-50 border-b border-[var(--ds-border-soft)] bg-[rgba(5,8,12,0.96)] backdrop-blur-xl">
