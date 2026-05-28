@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { RegistrationStatus, TeamMemberRole, TournamentStatus } from "@prisma/client";
+import { RegistrationStatus, TeamMemberRole, TeamStatus, TournamentStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import type { AuthenticatedRequest, AuthUser } from "../../types.js";
@@ -19,6 +19,190 @@ const activeRegistrationStatuses = [
   RegistrationStatus.CONFIRMED,
   RegistrationStatus.CHECKED_IN
 ];
+
+const bracketEligibleRegistrationStatuses = [
+  RegistrationStatus.CONFIRMED,
+  RegistrationStatus.CHECKED_IN
+];
+
+const checkedInRegistrationStatuses = [RegistrationStatus.CHECKED_IN];
+
+const initialTournamentStatuses: TournamentStatus[] = [
+  TournamentStatus.DRAFT,
+  TournamentStatus.PUBLISHED,
+  TournamentStatus.REGISTRATION_OPEN
+];
+
+const bracketBlockedStatuses: TournamentStatus[] = [
+  TournamentStatus.DRAFT,
+  TournamentStatus.PUBLISHED,
+  TournamentStatus.REGISTRATION_OPEN
+];
+
+const terminalTournamentStatuses: TournamentStatus[] = [TournamentStatus.COMPLETED, TournamentStatus.CANCELLED];
+
+const restrictedEditTournamentStatuses: TournamentStatus[] = [
+  TournamentStatus.IN_PROGRESS,
+  TournamentStatus.COMPLETED,
+  TournamentStatus.CANCELLED
+];
+
+const teamRegistrationManagerRoles: TeamMemberRole[] = [TeamMemberRole.OWNER, TeamMemberRole.CAPTAIN];
+
+const allowedTournamentStatusTransitions: Record<TournamentStatus, TournamentStatus[]> = {
+  [TournamentStatus.DRAFT]: [TournamentStatus.PUBLISHED, TournamentStatus.REGISTRATION_OPEN, TournamentStatus.CANCELLED],
+  [TournamentStatus.PUBLISHED]: [
+    TournamentStatus.REGISTRATION_OPEN,
+    TournamentStatus.REGISTRATION_CLOSED,
+    TournamentStatus.CANCELLED
+  ],
+  [TournamentStatus.REGISTRATION_OPEN]: [
+    TournamentStatus.REGISTRATION_CLOSED,
+    TournamentStatus.CHECK_IN,
+    TournamentStatus.IN_PROGRESS,
+    TournamentStatus.CANCELLED
+  ],
+  [TournamentStatus.REGISTRATION_CLOSED]: [
+    TournamentStatus.REGISTRATION_OPEN,
+    TournamentStatus.CHECK_IN,
+    TournamentStatus.IN_PROGRESS,
+    TournamentStatus.CANCELLED
+  ],
+  [TournamentStatus.CHECK_IN]: [
+    TournamentStatus.REGISTRATION_CLOSED,
+    TournamentStatus.IN_PROGRESS,
+    TournamentStatus.CANCELLED
+  ],
+  [TournamentStatus.IN_PROGRESS]: [TournamentStatus.COMPLETED, TournamentStatus.CANCELLED],
+  [TournamentStatus.COMPLETED]: [],
+  [TournamentStatus.CANCELLED]: []
+};
+
+function assertTournamentCapacityRules(params: { minParticipants?: number | null; maxParticipants: number }) {
+  const minParticipants = params.minParticipants ?? 1;
+
+  if (minParticipants > params.maxParticipants) {
+    throw badRequest("Minimum participants cannot be greater than maximum participants");
+  }
+}
+
+function assertTournamentScheduleRules(params: {
+  registrationClosesAt?: Date;
+  startsAt?: Date;
+  endsAt?: Date;
+}) {
+  if (params.registrationClosesAt && params.startsAt && params.registrationClosesAt > params.startsAt) {
+    throw badRequest("Registration close date must be before the tournament start date");
+  }
+
+  if (params.startsAt && params.endsAt && params.startsAt > params.endsAt) {
+    throw badRequest("Tournament start date must be before the end date");
+  }
+}
+
+function assertCreateStatusAllowed(status?: TournamentStatus) {
+  if (
+    status &&
+    !initialTournamentStatuses.includes(status)
+  ) {
+    throw badRequest("New tournaments can only start as draft, published or registration open");
+  }
+}
+
+function assertStatusTransitionAllowed(from: TournamentStatus, to: TournamentStatus) {
+  if (from === to) {
+    return;
+  }
+
+  if (!allowedTournamentStatusTransitions[from].includes(to)) {
+    throw badRequest(`Invalid tournament status transition from ${from} to ${to}`);
+  }
+}
+
+async function countEligibleRegistrations(tournamentId: string, statuses = bracketEligibleRegistrationStatuses) {
+  return prisma.tournamentRegistration.count({
+    where: {
+      tournamentId,
+      status: { in: statuses }
+    }
+  });
+}
+
+async function assertTournamentCanReceiveStatus(tournament: {
+  id: string;
+  status: TournamentStatus;
+  registrationClosesAt: Date | null;
+  startsAt: Date | null;
+  minParticipants: number | null;
+  checkInEnabled: boolean;
+}, nextStatus: TournamentStatus) {
+  assertStatusTransitionAllowed(tournament.status, nextStatus);
+
+  if (nextStatus === TournamentStatus.REGISTRATION_OPEN) {
+    if (tournament.registrationClosesAt && tournament.registrationClosesAt < new Date()) {
+      throw badRequest("Registration cannot be opened because the deadline has already passed");
+    }
+  }
+
+  if (nextStatus === TournamentStatus.CHECK_IN) {
+    if (!tournament.checkInEnabled) {
+      throw badRequest("Check-in is not enabled for this tournament");
+    }
+
+    const eligibleCount = await countEligibleRegistrations(tournament.id);
+
+    if (eligibleCount < (tournament.minParticipants ?? 1)) {
+      throw badRequest("Not enough confirmed participants to open check-in");
+    }
+  }
+
+  if (nextStatus === TournamentStatus.IN_PROGRESS) {
+    const statuses = tournament.checkInEnabled ? checkedInRegistrationStatuses : bracketEligibleRegistrationStatuses;
+    const eligibleCount = await countEligibleRegistrations(tournament.id, statuses);
+
+    if (eligibleCount < (tournament.minParticipants ?? 1)) {
+      throw badRequest("Not enough eligible participants to start the tournament");
+    }
+
+    if (tournament.startsAt && tournament.startsAt > new Date() && tournament.status !== TournamentStatus.IN_PROGRESS) {
+      throw badRequest("Tournament cannot start before its scheduled start date");
+    }
+  }
+
+  if (nextStatus === TournamentStatus.COMPLETED && tournament.status !== TournamentStatus.IN_PROGRESS) {
+    throw badRequest("Only tournaments in progress can be completed");
+  }
+}
+
+async function assertTournamentReadyForBracket(tournament: {
+  id: string;
+  status: TournamentStatus;
+  minParticipants: number | null;
+  checkInEnabled: boolean;
+}) {
+  if (bracketBlockedStatuses.includes(tournament.status)) {
+    throw badRequest("Close registration or open check-in before generating the bracket");
+  }
+
+  if (terminalTournamentStatuses.includes(tournament.status)) {
+    throw badRequest("Cannot generate a bracket for a completed or cancelled tournament");
+  }
+
+  const existingBracket = await prisma.bracket.findUnique({
+    where: { tournamentId: tournament.id }
+  });
+
+  if (existingBracket) {
+    throw conflict("A bracket has already been generated for this tournament");
+  }
+
+  const statuses = tournament.checkInEnabled ? checkedInRegistrationStatuses : bracketEligibleRegistrationStatuses;
+  const eligibleCount = await countEligibleRegistrations(tournament.id, statuses);
+
+  if (eligibleCount < (tournament.minParticipants ?? 1)) {
+    throw badRequest("Not enough eligible participants to generate a bracket");
+  }
+}
 
 function parseOptionalDate(value?: string) {
   return value ? new Date(value) : undefined;
@@ -44,19 +228,10 @@ function assertCanManageTournament(user: AuthUser, organizerId: string) {
 }
 
 async function assertTeamRegistrationAllowed(teamId: string, user: AuthUser) {
-  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "ORGANIZER") {
-    return;
-  }
-
   const team = await prisma.team.findUnique({
     where: { id: teamId },
     include: {
-      members: {
-        where: {
-          userId: user.sub,
-          role: { in: [TeamMemberRole.OWNER, TeamMemberRole.CAPTAIN] }
-        }
-      }
+      members: true
     }
   });
 
@@ -64,9 +239,27 @@ async function assertTeamRegistrationAllowed(teamId: string, user: AuthUser) {
     throw notFound("Team not found");
   }
 
-  if (team.ownerId !== user.sub && team.members.length === 0) {
+  if (team.status !== TeamStatus.ACTIVE) {
+    throw badRequest("Only active teams can register for tournaments");
+  }
+
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "ORGANIZER") {
+    return team;
+  }
+
+  const canRegisterTeam =
+    team.ownerId === user.sub ||
+    team.members.some(
+      (member) =>
+        member.userId === user.sub &&
+        teamRegistrationManagerRoles.includes(member.role)
+    );
+
+  if (!canRegisterTeam) {
     throw forbidden("Only team owners or captains can register a team");
   }
+
+  return team;
 }
 
 async function createTournamentRegistration(params: {
@@ -94,7 +287,15 @@ async function createTournamentRegistration(params: {
       throw badRequest("Team registration requires teamId");
     }
 
-    await assertTeamRegistrationAllowed(params.teamId, params.request.user!);
+    const team = await assertTeamRegistrationAllowed(params.teamId, params.request.user!);
+
+    if (tournament.teamSize && team.members.length < tournament.teamSize) {
+      throw badRequest("Team does not meet the required roster size for this tournament");
+    }
+  }
+
+  if (tournament.type === "SOLO" && params.teamId) {
+    throw badRequest("Solo tournaments do not accept team registrations");
   }
 
   if (tournament.type === "SOLO" && params.userId && params.userId !== params.request.user!.sub) {
@@ -165,6 +366,7 @@ async function updateTournamentStatus(params: {
   }
 
   assertCanManageTournament(params.request.user!, existing.organizerId);
+  await assertTournamentCanReceiveStatus(existing, params.status);
 
   const tournament = await prisma.tournament.update({
     where: { id: existing.id },
@@ -183,6 +385,33 @@ async function updateTournamentStatus(params: {
 
   return tournament;
 }
+
+async function generateBracketForTournament(params: { request: AuthenticatedRequest; tournamentId: string }) {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: params.tournamentId }
+  });
+
+  if (!tournament) {
+    throw notFound("Tournament not found");
+  }
+
+  assertCanManageTournament(params.request.user!, tournament.organizerId);
+  await assertTournamentReadyForBracket(tournament);
+
+  const bracket = await generateSingleEliminationBracket({ tournamentId: tournament.id });
+
+  await createAuditLog({
+    actorUserId: params.request.user!.sub,
+    action: "bracket.generate",
+    entityType: "bracket",
+    entityId: bracket?.id,
+    after: bracket,
+    ipAddress: getRequestIp(params.request)
+  });
+
+  return bracket;
+}
+
 
 tournamentsRouter.get(
   "/",
@@ -293,6 +522,20 @@ tournamentsRouter.post(
   asyncHandler(async (request: AuthenticatedRequest, response) => {
     const payload = tournamentSchema.parse(request.body);
     const slug = payload.slug ? slugify(payload.slug) : slugify(payload.name);
+    const registrationClosesAt = parseOptionalDate(payload.registrationClosesAt);
+    const startsAt = parseOptionalDate(payload.startsAt);
+    const endsAt = parseOptionalDate(payload.endsAt);
+
+    assertCreateStatusAllowed(payload.status);
+    assertTournamentCapacityRules({
+      minParticipants: payload.minParticipants,
+      maxParticipants: payload.maxParticipants
+    });
+    assertTournamentScheduleRules({
+      registrationClosesAt,
+      startsAt,
+      endsAt
+    });
 
     const tournament = await prisma.tournament.create({
       data: {
@@ -313,10 +556,10 @@ tournamentsRouter.post(
         maxParticipants: payload.maxParticipants,
         minParticipants: payload.minParticipants,
         checkInEnabled: payload.checkInEnabled,
-        registrationClosesAt: parseOptionalDate(payload.registrationClosesAt),
-        startsAt: parseOptionalDate(payload.startsAt),
-        endsAt: parseOptionalDate(payload.endsAt),
-        status: payload.status
+        registrationClosesAt,
+        startsAt,
+        endsAt,
+        status: payload.status ?? TournamentStatus.DRAFT
       }
     });
 
@@ -348,8 +591,29 @@ tournamentsRouter.put(
 
     assertCanManageTournament(request.user!, existing.organizerId);
 
-    if (existing.status === TournamentStatus.IN_PROGRESS && !["ADMIN", "SUPER_ADMIN"].includes(request.user!.role)) {
-      throw badRequest("Only admins can edit tournaments that are in progress");
+    if (
+      restrictedEditTournamentStatuses.includes(existing.status) &&
+      !["ADMIN", "SUPER_ADMIN"].includes(request.user!.role)
+    ) {
+      throw badRequest("Only admins can edit tournaments that are in progress, completed or cancelled");
+    }
+
+    const registrationClosesAt = parseOptionalDate(payload.registrationClosesAt);
+    const startsAt = parseOptionalDate(payload.startsAt);
+    const endsAt = parseOptionalDate(payload.endsAt);
+
+    assertTournamentCapacityRules({
+      minParticipants: payload.minParticipants ?? existing.minParticipants,
+      maxParticipants: payload.maxParticipants ?? existing.maxParticipants
+    });
+    assertTournamentScheduleRules({
+      registrationClosesAt: registrationClosesAt ?? existing.registrationClosesAt ?? undefined,
+      startsAt: startsAt ?? existing.startsAt ?? undefined,
+      endsAt: endsAt ?? existing.endsAt ?? undefined
+    });
+
+    if (payload.status) {
+      await assertTournamentCanReceiveStatus(existing, payload.status);
     }
 
     const tournament = await prisma.tournament.update({
@@ -357,9 +621,9 @@ tournamentsRouter.put(
       data: {
         ...payload,
         slug: payload.slug ? slugify(payload.slug) : existing.slug,
-        registrationClosesAt: parseOptionalDate(payload.registrationClosesAt),
-        startsAt: parseOptionalDate(payload.startsAt),
-        endsAt: parseOptionalDate(payload.endsAt)
+        registrationClosesAt,
+        startsAt,
+        endsAt
       }
     });
 
@@ -530,6 +794,18 @@ tournamentsRouter.post(
       throw notFound("Tournament registration not found");
     }
 
+    if (!tournament.checkInEnabled) {
+      throw badRequest("Check-in is not enabled for this tournament");
+    }
+
+    if (tournament.status !== TournamentStatus.CHECK_IN) {
+      throw badRequest("Tournament is not in check-in status");
+    }
+
+    if (registration.status !== RegistrationStatus.CONFIRMED) {
+      throw badRequest("Only confirmed registrations can check in");
+    }
+
     const canCheckIn =
       registration.userId === request.user!.sub ||
       registration.team?.ownerId === request.user!.sub ||
@@ -569,26 +845,9 @@ tournamentsRouter.post(
   requireAuth,
   requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
-    const tournamentId = requireRouteParam(request.params.id, "Tournament id");
-    const tournament = await prisma.tournament.findUnique({
-      where: { id: tournamentId }
-    });
-
-    if (!tournament) {
-      throw notFound("Tournament not found");
-    }
-
-    assertCanManageTournament(request.user!, tournament.organizerId);
-
-    const bracket = await generateSingleEliminationBracket({ tournamentId: tournament.id });
-
-    await createAuditLog({
-      actorUserId: request.user!.sub,
-      action: "bracket.generate",
-      entityType: "bracket",
-      entityId: bracket?.id,
-      after: bracket,
-      ipAddress: getRequestIp(request)
+    const bracket = await generateBracketForTournament({
+      request,
+      tournamentId: requireRouteParam(request.params.id, "Tournament id")
     });
 
     response.status(201).json(bracket);
@@ -600,26 +859,9 @@ tournamentsRouter.post(
   requireAuth,
   requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request: AuthenticatedRequest, response) => {
-    const tournamentId = requireRouteParam(request.params.id, "Tournament id");
-    const tournament = await prisma.tournament.findUnique({
-      where: { id: tournamentId }
-    });
-
-    if (!tournament) {
-      throw notFound("Tournament not found");
-    }
-
-    assertCanManageTournament(request.user!, tournament.organizerId);
-
-    const bracket = await generateSingleEliminationBracket({ tournamentId: tournament.id });
-
-    await createAuditLog({
-      actorUserId: request.user!.sub,
-      action: "bracket.generate",
-      entityType: "bracket",
-      entityId: bracket?.id,
-      after: bracket,
-      ipAddress: getRequestIp(request)
+    const bracket = await generateBracketForTournament({
+      request,
+      tournamentId: requireRouteParam(request.params.id, "Tournament id")
     });
 
     response.status(201).json(bracket);
@@ -640,6 +882,10 @@ tournamentsRouter.post(
     }
 
     assertCanManageTournament(request.user!, tournament.organizerId);
+
+    if (terminalTournamentStatuses.includes(tournament.status)) {
+      throw badRequest("Cannot create matches for completed or cancelled tournaments");
+    }
 
     const match = await prisma.match.create({
       data: {
@@ -679,6 +925,10 @@ tournamentsRouter.delete(
     }
 
     assertCanManageTournament(request.user!, existing.organizerId);
+
+    if (terminalTournamentStatuses.includes(existing.status)) {
+      throw badRequest("Completed or already cancelled tournaments cannot be cancelled");
+    }
 
     const tournament = await prisma.tournament.update({
       where: { id: tournamentId },
