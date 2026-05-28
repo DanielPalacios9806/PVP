@@ -103,11 +103,19 @@ adminRouter.post(
     const existing = await prisma.user.findFirst({
       where: {
         OR: [{ email: payload.email }, { username: payload.username }]
+      },
+      select: {
+        email: true,
+        username: true
       }
     });
 
-    if (existing) {
-      throw conflict("Email or username already exists");
+    if (existing?.email === payload.email) {
+      throw conflict("Ese correo ya esta registrado. Usa otro correo o busca el perfil existente.");
+    }
+
+    if (existing?.username === payload.username) {
+      throw conflict("Ese nombre de usuario ya existe. Elige otro usuario interno.");
     }
 
     const temporaryPassword = createTemporaryPassword();
@@ -146,12 +154,17 @@ adminRouter.post(
         status: user.status,
         mustChangePassword: user.mustChangePassword
       },
+      metadata: {
+        temporaryPasswordIssued: true,
+        createdFrom: "admin-users-panel"
+      },
       ipAddress: getRequestIp(request)
     });
 
     response.status(201).json({
       user,
-      temporaryPassword
+      temporaryPassword,
+      message: "Cuenta interna creada correctamente. Entrega la contrasena temporal por un canal seguro."
     });
   })
 );

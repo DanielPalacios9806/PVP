@@ -21,13 +21,15 @@ export const adminUsersQuerySchema = z.object({
 });
 
 export const createAdminUserSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email("Ingresa un correo valido."),
   username: z
     .string()
-    .min(3)
-    .max(24)
-    .regex(/^[a-zA-Z0-9._-]+$/, "Username contains invalid characters"),
-  displayName: z.string().min(2).max(50),
+    .trim()
+    .toLowerCase()
+    .min(3, "El usuario debe tener al menos 3 caracteres.")
+    .max(24, "El usuario no debe superar 24 caracteres.")
+    .regex(/^[a-zA-Z0-9._-]+$/, "El usuario solo puede usar letras, numeros, punto, guion o guion bajo."),
+  displayName: z.string().trim().min(2, "El nombre visible debe tener al menos 2 caracteres.").max(50, "El nombre visible no debe superar 50 caracteres."),
   role: z.enum(["USER", "ORGANIZER", "MODERATOR", "ADMIN", "FINANCE"]),
   status: userStatusSchema.default("ACTIVE")
 });
