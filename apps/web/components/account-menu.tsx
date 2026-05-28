@@ -4,7 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { apiUrl, getAuthHeaders } from "@/lib/config";
-import { clearSession, getStoredUser, getStoredWallet, type AppRole, type StoredUser, type StoredWallet } from "@/lib/session";
+import {
+  clearSession,
+  getStoredUser,
+  getStoredWallet,
+  subscribeSessionChange,
+  type AppRole,
+  type StoredUser,
+  type StoredWallet
+} from "@/lib/session";
 
 const roleLabels: Record<AppRole, string> = {
   USER: "Jugador",
@@ -15,13 +23,84 @@ const roleLabels: Record<AppRole, string> = {
   FINANCE: "Finanzas"
 };
 
-const accountLinks = [
-  { label: "Mi perfil", href: "/dashboard/account" },
-  { label: "Riot ID mock", href: "/dashboard/account" },
-  { label: "Mis equipos", href: "/dashboard/teams" },
-  { label: "Mis torneos", href: "/dashboard/tournaments" },
-  { label: "Mis tokens", href: "/dashboard/tokens" }
+const roleDescriptions: Record<AppRole, string> = {
+  USER: "Participa en torneos, equipos y comunidades.",
+  ORGANIZER: "Opera torneos, equipos y espacios competitivos.",
+  MODERATOR: "Revisa reportes, disputas y actividad operativa.",
+  ADMIN: "Supervisa administracion, auditoria y operacion interna.",
+  SUPER_ADMIN: "Control total de usuarios, roles y perfiles internos.",
+  FINANCE: "Gestiona tokens internos, saldos y reportes operativos."
+};
+
+type AccountLink = {
+  label: string;
+  href: string;
+  description: string;
+  roles?: AppRole[];
+};
+
+const accountSections: Array<{ title: string; links: AccountLink[] }> = [
+  {
+    title: "Cuenta y jugador",
+    links: [
+      { label: "Mi perfil", href: "/dashboard/account", description: "Datos de cuenta, seguridad y sesiones." },
+      { label: "Riot ID mock", href: "/dashboard/account", description: "Vinculacion Riot en modo demo." },
+      { label: "Mis equipos", href: "/dashboard/teams", description: "Equipos donde participas o administras." },
+      { label: "Mis torneos", href: "/dashboard/tournaments", description: "Inscripciones, brackets y partidas." },
+      { label: "Mis tokens", href: "/dashboard/tokens", description: "Saldo interno no monetario." }
+    ]
+  },
+  {
+    title: "Operacion por rol",
+    links: [
+      {
+        label: "Gestionar torneos",
+        href: "/dashboard/tournaments",
+        description: "Crear, revisar y operar competencias.",
+        roles: ["ORGANIZER", "ADMIN", "SUPER_ADMIN"]
+      },
+      {
+        label: "Comunidades y spaces",
+        href: "/dashboard/spaces",
+        description: "Gestionar espacios competitivos.",
+        roles: ["ORGANIZER", "ADMIN", "SUPER_ADMIN"]
+      },
+      {
+        label: "Moderacion",
+        href: "/dashboard/moderation",
+        description: "Reportes, disputas y revision operativa.",
+        roles: ["MODERATOR", "ADMIN", "SUPER_ADMIN"]
+      },
+      {
+        label: "Panel interno",
+        href: "/dashboard/admin",
+        description: "Usuarios, auditoria y estado de servicios.",
+        roles: ["ADMIN", "SUPER_ADMIN"]
+      },
+      {
+        label: "Perfiles internos",
+        href: "/dashboard/admin/profiles",
+        description: "Roles, estados y cuentas internas.",
+        roles: ["SUPER_ADMIN"]
+      },
+      {
+        label: "Tokens y finanzas",
+        href: "/dashboard/tokens",
+        description: "Gestion y revision de tokens internos.",
+        roles: ["FINANCE", "SUPER_ADMIN"]
+      }
+    ]
+  }
 ];
+
+function getVisibleSections(role: AppRole) {
+  return accountSections
+    .map((section) => ({
+      ...section,
+      links: section.links.filter((link) => !link.roles || link.roles.includes(role))
+    }))
+    .filter((section) => section.links.length > 0);
+}
 
 type AccountMenuProps = {
   onSessionChange?: () => void;
@@ -33,9 +112,14 @@ export function AccountMenu({ onSessionChange }: AccountMenuProps) {
   const [wallet, setWallet] = useState<StoredWallet>({ balance: 100, currencyCode: "TOKENS" });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  function syncSession() {
     setUser(getStoredUser());
     setWallet(getStoredWallet());
+  }
+
+  useEffect(() => {
+    syncSession();
+    return subscribeSessionChange(syncSession);
   }, []);
 
   useEffect(() => {
@@ -75,11 +159,14 @@ export function AccountMenu({ onSessionChange }: AccountMenuProps) {
     setWallet({ balance: 100, currencyCode: "TOKENS" });
     setIsOpen(false);
     onSessionChange?.();
-    window.location.href = "/";
+    window.location.href = "/auth/login";
   }
 
   const displayName = user?.displayName || user?.username || "Invitado";
   const initials = displayName.slice(0, 2).toUpperCase();
+  const role = user?.role ?? "USER";
+  const visibleSections = getVisibleSections(role);
+  const tokenActionLabel = role === "FINANCE" || role === "SUPER_ADMIN" ? "Revisar tokens internos" : "Recargar en modo demo";
 
   return (
     <div ref={containerRef} className="relative">
@@ -100,7 +187,7 @@ export function AccountMenu({ onSessionChange }: AccountMenuProps) {
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 top-[calc(100%+12px)] z-[70] w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-[20px] border border-white/10 bg-[rgba(5,8,12,0.98)] shadow-[0_24px_70px_rgba(0,0,0,0.58)] backdrop-blur-xl">
+        <div className="absolute right-0 top-[calc(100%+12px)] z-[70] max-h-[calc(100vh-5.5rem)] w-[min(24rem,calc(100vw-1.5rem))] overflow-y-auto rounded-[20px] border border-white/10 bg-[rgba(5,8,12,0.98)] shadow-[0_24px_70px_rgba(0,0,0,0.58)] backdrop-blur-xl">
           {user ? (
             <>
               <div className="border-b border-white/8 p-5">
@@ -126,18 +213,29 @@ export function AccountMenu({ onSessionChange }: AccountMenuProps) {
                     </p>
                   </div>
                 </div>
+                <p className="mt-3 rounded-[14px] border border-white/8 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-white/58">
+                  {roleDescriptions[user.role]}
+                </p>
               </div>
 
-              <div className="grid gap-2 p-3">
-                {accountLinks.map((link) => (
-                  <Link
-                    key={link.label}
-                    href={link.href}
-                    onClick={() => setIsOpen(false)}
-                    className="rounded-[14px] px-4 py-3 text-sm font-semibold text-white/78 transition hover:bg-white/[0.06] hover:text-white"
-                  >
-                    {link.label}
-                  </Link>
+              <div className="grid gap-4 p-3">
+                {visibleSections.map((section) => (
+                  <div key={section.title}>
+                    <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/36">{section.title}</p>
+                    <div className="grid gap-1">
+                      {section.links.map((link) => (
+                        <Link
+                          key={`${section.title}-${link.label}`}
+                          href={link.href}
+                          onClick={() => setIsOpen(false)}
+                          className="group rounded-[14px] px-4 py-3 transition hover:bg-white/[0.06]"
+                        >
+                          <span className="block text-sm font-semibold text-white/82 group-hover:text-white">{link.label}</span>
+                          <span className="mt-1 block text-xs leading-5 text-white/42 group-hover:text-white/58">{link.description}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
 
@@ -147,7 +245,7 @@ export function AccountMenu({ onSessionChange }: AccountMenuProps) {
                   onClick={() => setIsOpen(false)}
                   className="mb-3 flex items-center justify-between rounded-[14px] border border-[var(--ds-border-cyan)] bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white"
                 >
-                  Recargar en modo demo
+                  {tokenActionLabel}
                   <Image src="/assets/darkside/icons/icon-arrow-right.svg" alt="" width={14} height={14} />
                 </Link>
                 <p className="mb-3 text-xs leading-5 text-white/45">
