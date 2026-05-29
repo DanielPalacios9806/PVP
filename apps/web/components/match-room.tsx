@@ -46,6 +46,190 @@ const statusTone: Record<string, string> = {
   CANCELLED: "border-white/10 bg-white/5 text-white/45"
 };
 
+const flowSteps = [
+  { id: "READY", label: "Sala lista", description: "Participantes listos" },
+  { id: "IN_PROGRESS", label: "En juego", description: "Partida activa" },
+  { id: "RESULT_PENDING", label: "Resultado", description: "Reporte enviado" },
+  { id: "REVIEW", label: "Validacion", description: "Aceptacion o staff" },
+  { id: "COMPLETED", label: "Cierre", description: "Ganador confirmado" }
+];
+
+const actionTone: Record<"cyan" | "amber" | "red" | "green" | "muted", string> = {
+  cyan: "border-[#18e6f2]/25 bg-[#18e6f2]/10 text-[#bffaff]",
+  amber: "border-amber-300/25 bg-amber-300/10 text-amber-100",
+  red: "border-[#ff4f63]/30 bg-[#ff4f63]/10 text-[#ffb0ba]",
+  green: "border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
+  muted: "border-white/10 bg-white/[0.045] text-white/58"
+};
+
+function flowIndexForStatus(status: string) {
+  if (status === "COMPLETED") {
+    return 4;
+  }
+
+  if (status === "DISPUTED") {
+    return 3;
+  }
+
+  if (status === "RESULT_PENDING") {
+    return 2;
+  }
+
+  if (status === "IN_PROGRESS") {
+    return 1;
+  }
+
+  if (status === "READY") {
+    return 0;
+  }
+
+  return -1;
+}
+
+function matchActionSummary(match: any, pendingResult: any, activeDispute: any, canOperate: boolean, latestWinner: any) {
+  if (match.status === "COMPLETED") {
+    return {
+      title: "Resultado confirmado",
+      description: latestWinner
+        ? `${participantLabel(latestWinner)} ya fue confirmado como ganador. El bracket debe reflejar su avance.`
+        : "La partida esta finalizada y el resultado fue validado.",
+      tone: "green" as const
+    };
+  }
+
+  if (match.status === "CANCELLED") {
+    return {
+      title: "Partida cancelada",
+      description: "Esta sala esta cerrada y no acepta reportes nuevos.",
+      tone: "muted" as const
+    };
+  }
+
+  if (activeDispute) {
+    return {
+      title: canOperate ? "Disputa pendiente de resolucion" : "Disputa en revision",
+      description: canOperate
+        ? "El staff debe revisar evidencias y decidir si confirma, rechaza o cierra el reporte."
+        : "Un moderador u organizador revisara el caso antes de cerrar la partida.",
+      tone: "red" as const
+    };
+  }
+
+  if (pendingResult) {
+    return {
+      title: canOperate ? "Resultado esperando validacion" : "Resultado reportado",
+      description: canOperate
+        ? "Puedes confirmar el resultado, rechazarlo o abrir una revision si la evidencia no es suficiente."
+        : "El rival o el staff debe aceptar o validar el marcador antes de avanzar el bracket.",
+      tone: "amber" as const
+    };
+  }
+
+  if (match.status === "IN_PROGRESS") {
+    return {
+      title: "Partida en juego",
+      description: "Cuando termine la partida, reporta el marcador y adjunta una evidencia si es posible.",
+      tone: "cyan" as const
+    };
+  }
+
+  if (match.status === "READY") {
+    return {
+      title: "Esperando reporte de resultado",
+      description: "La sala esta lista. Los participantes pueden jugar y reportar el resultado al finalizar.",
+      tone: "cyan" as const
+    };
+  }
+
+  return {
+    title: "Sala pendiente",
+    description: "Aun falta que el bracket o el organizador habiliten esta partida.",
+    tone: "muted" as const
+  };
+}
+
+function MatchTimeline({ status }: { status: string }) {
+  const activeIndex = flowIndexForStatus(status);
+
+  return (
+    <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(0,0,0,0.24))] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#18e6f2]">Timeline competitivo</p>
+          <h2 className="mt-1 text-xl font-black text-white">Progreso de la partida</h2>
+        </div>
+        <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] ${statusTone[status] ?? statusTone.PENDING}`}>
+          {matchStatusLabel[status] ?? status}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-5">
+        {flowSteps.map((step, index) => {
+          const done = activeIndex > index;
+          const active = activeIndex === index;
+          const disputed = status === "DISPUTED" && step.id === "REVIEW";
+
+          return (
+            <div
+              key={step.id}
+              className={`relative rounded-2xl border p-3 transition ${
+                done
+                  ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
+                  : active || disputed
+                    ? "border-[#18e6f2]/35 bg-[#18e6f2]/10 text-[#bffaff] shadow-[0_0_24px_rgba(24,230,242,0.10)]"
+                    : "border-white/10 bg-white/[0.035] text-white/45"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={`grid h-7 w-7 place-items-center rounded-full border text-[11px] font-black ${
+                    done
+                      ? "border-emerald-300/35 bg-emerald-300/12 text-emerald-100"
+                      : active || disputed
+                        ? "border-[#18e6f2]/45 bg-[#18e6f2]/15 text-white"
+                        : "border-white/10 bg-black/25 text-white/35"
+                  }`}
+                >
+                  {done ? "✓" : index + 1}
+                </span>
+                <strong className="text-sm text-white">{step.label}</strong>
+              </div>
+              <p className="mt-2 text-xs leading-5 opacity-75">{step.description}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ActionSummaryCard({ summary }: { summary: ReturnType<typeof matchActionSummary> }) {
+  return (
+    <div className={`rounded-[28px] border p-4 ${actionTone[summary.tone]}`}>
+      <p className="text-xs font-black uppercase tracking-[0.22em] opacity-75">Accion pendiente</p>
+      <h2 className="mt-2 text-xl font-black text-white">{summary.title}</h2>
+      <p className="mt-3 text-sm leading-7 opacity-85">{summary.description}</p>
+    </div>
+  );
+}
+
+function WinnerSummaryCard({ winner }: { winner: any }) {
+  return (
+    <div className={`rounded-[28px] border p-4 ${winner ? "border-emerald-300/25 bg-emerald-300/10" : "border-white/10 bg-white/[0.04]"}`}>
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-white/45">Ganador</p>
+      <div className="mt-3 flex items-center gap-3">
+        <span className="grid h-12 w-12 place-items-center rounded-2xl border border-[#18e6f2]/35 bg-[#18e6f2]/12 text-sm font-black text-[#d9fdff]">
+          {winner ? participantInitials(winner) : "?"}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-base font-black text-white">{winner ? participantLabel(winner) : "Pendiente"}</p>
+          <p className="mt-1 text-xs text-white/45">{winner ? "Confirmado o reportado" : "Esperando validacion"}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function participantLabel(registration: any) {
   if (!registration) {
     return "Pendiente";
@@ -414,6 +598,7 @@ export function MatchRoom({ matchId }: { matchId: string }) {
   const winnerOptions = winnerOptionsFromMatch(match);
   const latestWinner = findRegistrationById(match, latestResult?.winnerRegistrationId);
   const tournamentHref = `/dashboard/tournaments/${match.tournament.id}`;
+  const actionSummary = matchActionSummary(match, pendingResult, activeDispute, canOperate, latestWinner);
 
   return (
     <div className="space-y-6">
@@ -443,6 +628,14 @@ export function MatchRoom({ matchId }: { matchId: string }) {
           </a>
         </div>
       </section>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <MatchTimeline status={match.status} />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+          <ActionSummaryCard summary={actionSummary} />
+          <WinnerSummaryCard winner={latestWinner} />
+        </div>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <div className="space-y-6">
