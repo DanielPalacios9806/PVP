@@ -313,6 +313,34 @@ function canOperate(role?: AppRole) {
   return role === "ADMIN" || role === "SUPER_ADMIN" || role === "ORGANIZER" || role === "MODERATOR";
 }
 
+function canManageTournamentUi(user: StoredUser | null, tournament: any) {
+  if (!user || !tournament) {
+    return false;
+  }
+
+  return (
+    user.role === "ADMIN" ||
+    user.role === "SUPER_ADMIN" ||
+    tournament.organizerId === user.id ||
+    tournament.organizer?.id === user.id
+  );
+}
+
+function operationStatusCopy(status?: string) {
+  const copy: Record<string, string> = {
+    DRAFT: "Prepara datos, reglas y premios antes de publicar.",
+    PUBLISHED: "El torneo es visible, pero las inscripciones aún no están abiertas.",
+    REGISTRATION_OPEN: "Los jugadores pueden registrarse. Cierra el registro cuando estés listo.",
+    REGISTRATION_CLOSED: "Registro cerrado. Puedes abrir check-in o generar bracket.",
+    CHECK_IN: "Check-in abierto. Los confirmados deben validar asistencia.",
+    IN_PROGRESS: "Torneo en marcha. Controla resultados y disputas.",
+    COMPLETED: "Torneo finalizado. Mantén historial y resultados.",
+    CANCELLED: "Torneo cancelado. Las acciones operativas están bloqueadas."
+  };
+
+  return copy[status ?? ""] ?? "Estado operativo sin descripción.";
+}
+
 function flattenMatches(tournament: any) {
   const bracketMatches = tournament.bracket?.rounds?.flatMap((round: any) =>
     (round.matches ?? []).map((match: any) => ({
@@ -342,6 +370,8 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const [ownedTeams, setOwnedTeams] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [operationMessage, setOperationMessage] = useState("");
+  const [operatingAction, setOperatingAction] = useState("");
 
   const isMockTournament = tournamentId.startsWith("mock-") || tournament?.id?.startsWith("mock-");
   const game = gameAssets[normalizeGameKey(tournament?.game)] ?? gameAssets.VALORANT;
@@ -384,6 +414,8 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     selectedTeamMissingRoster,
     isSubmitting
   });
+
+  const canManageTournament = canManageTournamentUi(user, tournament);
 
   async function load() {
     try {
@@ -542,6 +574,66 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     }
 
     await register();
+  }
+
+
+  async function runTournamentOperation(action: string, path: string, successMessage: string, method = "POST") {
+    if (!tournament || isMockTournament) {
+      setOperationMessage("Esta acción operativa solo está disponible para torneos reales publicados en la API.");
+      return;
+    }
+
+    try {
+      setOperatingAction(action);
+      setOperationMessage("");
+      const response = await fetch(`${apiUrl}${path}`, {
+        method,
+        headers: getAuthHeaders()
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(translateTournamentError(data?.message ?? "No se pudo completar la acción operativa."));
+      }
+
+      setOperationMessage(successMessage);
+      await load();
+    } catch (error) {
+      setOperationMessage(error instanceof Error ? error.message : "No se pudo completar la acción operativa.");
+    } finally {
+      setOperatingAction("");
+    }
+  }
+
+  async function decideRegistration(registrationId: string, decision: "approve" | "reject") {
+    if (!tournament) {
+      return;
+    }
+
+    try {
+      setOperatingAction(`${decision}-${registrationId}`);
+      setOperationMessage("");
+      const response = await fetch(`${apiUrl}/tournaments/${tournament.id}/registrations/${registrationId}/${decision}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: decision === "reject" ? JSON.stringify({ reason: "Rechazado desde panel operativo" }) : undefined
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(translateTournamentError(data?.message ?? "No se pudo actualizar la inscripción."));
+      }
+
+      setOperationMessage(decision === "approve" ? "Inscripción aprobada correctamente." : "Inscripción rechazada correctamente.");
+      await load();
+    } catch (error) {
+      setOperationMessage(error instanceof Error ? error.message : "No se pudo actualizar la inscripción.");
+    } finally {
+      setOperatingAction("");
+    }
   }
 
   if (!tournament) {
@@ -778,6 +870,15 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
         </div>
 
         <aside className="space-y-5">
+          {canManageTournament ? (
+            <TournamentOperationsPanel
+              tournament={tournament}
+              operatingAction={operatingAction}
+              operationMessage={operationMessage}
+              onAction={runTournamentOperation}
+              onRegistrationDecision={decideRegistration}
+            />
+          ) : null}
           <InfoPanel tournament={tournament} game={game.label} registeredCount={registeredCount} maxParticipants={maxParticipants} />
           <RewardPanel />
           <OrganizerPanel />
@@ -1029,6 +1130,175 @@ function TeamScore({ registration, score, alignRight = false }: { registration: 
       <span className={`mt-3 inline-grid h-9 min-w-9 place-items-center rounded-xl border border-white/10 bg-black/30 px-3 text-xl font-black text-white ${alignRight ? "ml-auto" : ""}`}>
         {score}
       </span>
+    </div>
+  );
+}
+
+
+function TournamentOperationsPanel({
+  tournament,
+  operatingAction,
+  operationMessage,
+  onAction,
+  onRegistrationDecision
+}: {
+  tournament: any;
+  operatingAction: string;
+  operationMessage: string;
+  onAction: (action: string, path: string, successMessage: string, method?: string) => void;
+  onRegistrationDecision: (registrationId: string, decision: "approve" | "reject") => void;
+}) {
+  const registrations = tournament.registrations ?? [];
+  const pendingRegistrations = registrations.filter((registration: any) => registration.status === "PENDING");
+  const confirmedRegistrations = registrations.filter((registration: any) => registration.status === "CONFIRMED" || registration.status === "CHECKED_IN");
+  const hasBracket = Boolean(tournament.bracket?.id);
+  const terminal = tournament.status === "COMPLETED" || tournament.status === "CANCELLED";
+  const actions = [
+    {
+      id: "publish",
+      label: "Publicar",
+      path: `/tournaments/${tournament.id}/publish`,
+      disabled: tournament.status !== "DRAFT",
+      help: "Hace visible el torneo sin abrir inscripciones."
+    },
+    {
+      id: "open-registration",
+      label: "Abrir registro",
+      path: `/tournaments/${tournament.id}/open-registration`,
+      disabled: !["DRAFT", "PUBLISHED", "REGISTRATION_CLOSED"].includes(tournament.status),
+      help: "Permite que jugadores o equipos se inscriban."
+    },
+    {
+      id: "close-registration",
+      label: "Cerrar registro",
+      path: `/tournaments/${tournament.id}/close-registration`,
+      disabled: tournament.status !== "REGISTRATION_OPEN",
+      help: "Bloquea nuevas inscripciones."
+    },
+    {
+      id: "open-check-in",
+      label: "Abrir check-in",
+      path: `/tournaments/${tournament.id}/open-check-in`,
+      disabled: !tournament.checkInEnabled || !["REGISTRATION_OPEN", "REGISTRATION_CLOSED"].includes(tournament.status),
+      help: "Activa validación de asistencia para confirmados."
+    },
+    {
+      id: "generate-bracket",
+      label: hasBracket ? "Bracket generado" : "Generar bracket",
+      path: `/tournaments/${tournament.id}/generate-bracket`,
+      disabled: hasBracket || !["REGISTRATION_CLOSED", "CHECK_IN"].includes(tournament.status),
+      help: "Crea las llaves con participantes elegibles."
+    },
+    {
+      id: "start",
+      label: "Iniciar torneo",
+      path: `/tournaments/${tournament.id}/start`,
+      disabled: !["REGISTRATION_CLOSED", "CHECK_IN"].includes(tournament.status),
+      help: "Pasa el torneo a competencia activa."
+    },
+    {
+      id: "complete",
+      label: "Finalizar",
+      path: `/tournaments/${tournament.id}/complete`,
+      disabled: tournament.status !== "IN_PROGRESS",
+      help: "Cierra el torneo y conserva resultados."
+    },
+    {
+      id: "cancel",
+      label: "Cancelar",
+      path: `/tournaments/${tournament.id}`,
+      method: "DELETE",
+      disabled: terminal,
+      help: "Cancela el evento. Úsalo solo en casos necesarios."
+    }
+  ];
+
+  return (
+    <div className="surface-panel border-[#ff2438]/20 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="page-kicker">Panel operativo</p>
+          <h3 className="mt-2 text-xl font-semibold text-white">Control del torneo</h3>
+          <p className="mt-2 text-sm leading-6 text-white/55">{operationStatusCopy(tournament.status)}</p>
+        </div>
+        <span className="rounded-full border border-[#18e6f2]/30 bg-[#18e6f2]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#bffaff]">
+          {statusLabel(tournament.status)}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-2">
+        {actions.map((action) => (
+          <button
+            key={action.id}
+            type="button"
+            disabled={action.disabled || operatingAction === action.id}
+            onClick={() => onAction(action.id, action.path, `${action.label} ejecutado correctamente.`, action.method)}
+            className={`rounded-[14px] border px-4 py-3 text-left transition ${
+              action.disabled
+                ? "cursor-not-allowed border-white/8 bg-white/[0.025] text-white/30"
+                : "border-white/10 bg-white/[0.045] text-white hover:border-[#18e6f2]/35 hover:bg-[#18e6f2]/10"
+            }`}
+          >
+            <span className="block text-sm font-semibold">{operatingAction === action.id ? "Procesando..." : action.label}</span>
+            <span className="mt-1 block text-xs leading-5 text-white/45">{action.help}</span>
+          </button>
+        ))}
+      </div>
+
+      {operationMessage ? (
+        <p className="mt-4 rounded-[12px] border border-[#18e6f2]/25 bg-[#18e6f2]/10 px-3 py-2 text-xs leading-5 text-[#bffaff]">
+          {operationMessage}
+        </p>
+      ) : null}
+
+      <div className="mt-5 rounded-[16px] border border-white/10 bg-black/25 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/40">Inscripciones</p>
+            <p className="mt-1 text-sm text-white/65">{confirmedRegistrations.length} confirmadas · {pendingRegistrations.length} pendientes</p>
+          </div>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/55">
+            {(tournament.registrations ?? []).length}/{tournament.maxParticipants}
+          </span>
+        </div>
+
+        <div className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
+          {registrations.length ? registrations.map((registration: any) => (
+            <article key={registration.id} className="rounded-[12px] border border-white/10 bg-white/[0.035] p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <strong className="block truncate text-sm text-white">{registrationLabel(registration)}</strong>
+                  <span className="mt-1 block text-[11px] uppercase tracking-[0.12em] text-white/40">{registrationStatusLabel(registration.status)}</span>
+                </div>
+                {registration.status === "PENDING" ? (
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onRegistrationDecision(registration.id, "approve")}
+                      disabled={operatingAction === `approve-${registration.id}`}
+                      className="rounded-lg border border-[#40ff91]/30 bg-[#40ff91]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#d7ffe8]"
+                    >
+                      OK
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRegistrationDecision(registration.id, "reject")}
+                      disabled={operatingAction === `reject-${registration.id}`}
+                      className="rounded-lg border border-[#ff5868]/30 bg-[#ff2438]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#ffc7cc]"
+                    >
+                      NO
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </article>
+          )) : (
+            <p className="rounded-[12px] border border-white/10 bg-white/[0.035] p-3 text-sm text-white/45">
+              Aún no hay inscritos para operar.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

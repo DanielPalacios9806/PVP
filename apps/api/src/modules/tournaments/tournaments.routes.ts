@@ -481,6 +481,76 @@ async function updateTournamentStatus(params: {
   return tournament;
 }
 
+async function updateRegistrationDecision(params: {
+  request: AuthenticatedRequest;
+  tournamentId: string;
+  registrationId: string;
+  status: RegistrationStatus.CONFIRMED | RegistrationStatus.REJECTED;
+  reason?: string;
+}) {
+  const registration = await prisma.tournamentRegistration.findUnique({
+    where: { id: params.registrationId },
+    include: {
+      tournament: true,
+      team: { select: { id: true, name: true, tag: true } },
+      user: { select: { id: true, username: true, displayName: true } }
+    }
+  });
+
+  if (!registration || registration.tournamentId !== params.tournamentId) {
+    throw notFound("Tournament registration not found");
+  }
+
+  assertCanManageTournament(params.request.user!, registration.tournament.organizerId);
+
+  if (terminalTournamentStatuses.includes(registration.tournament.status)) {
+    throw badRequest("Cannot modify registrations for completed or cancelled tournaments");
+  }
+
+  if (registration.status === RegistrationStatus.CHECKED_IN) {
+    throw badRequest("Checked-in registrations cannot be changed from the operations panel");
+  }
+
+  if (params.status === RegistrationStatus.CONFIRMED && registration.status !== RegistrationStatus.CONFIRMED) {
+    const activeCount = await prisma.tournamentRegistration.count({
+      where: {
+        tournamentId: registration.tournamentId,
+        status: { in: activeRegistrationStatuses }
+      }
+    });
+
+    if (!activeRegistrationStatuses.includes(registration.status) && activeCount >= registration.tournament.maxParticipants) {
+      throw badRequest("Tournament registration capacity has been reached");
+    }
+  }
+
+  const updated = await prisma.tournamentRegistration.update({
+    where: { id: registration.id },
+    data: {
+      status: params.status,
+      approvedByUserId: params.status === RegistrationStatus.CONFIRMED ? params.request.user!.sub : registration.approvedByUserId,
+      approvedAt: params.status === RegistrationStatus.CONFIRMED ? new Date() : registration.approvedAt,
+      rejectedReason: params.status === RegistrationStatus.REJECTED ? params.reason?.trim() || "Rechazado desde panel operativo" : null
+    },
+    include: {
+      team: { select: { id: true, name: true, tag: true } },
+      user: { select: { id: true, username: true, displayName: true } }
+    }
+  });
+
+  await createAuditLog({
+    actorUserId: params.request.user!.sub,
+    action: params.status === RegistrationStatus.CONFIRMED ? "tournament.registration.approve" : "tournament.registration.reject",
+    entityType: "tournament_registration",
+    entityId: updated.id,
+    before: registration,
+    after: updated,
+    ipAddress: getRequestIp(params.request)
+  });
+
+  return updated;
+}
+
 async function generateBracketForTournament(params: { request: AuthenticatedRequest; tournamentId: string }) {
   const tournament = await prisma.tournament.findUnique({
     where: { id: params.tournamentId }
@@ -785,6 +855,22 @@ tournamentsRouter.post(
 );
 
 tournamentsRouter.post(
+  "/:id/open-check-in",
+  requireAuth,
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const tournament = await updateTournamentStatus({
+      request,
+      tournamentId: requireRouteParam(request.params.id, "Tournament id"),
+      status: TournamentStatus.CHECK_IN,
+      action: "tournament.check_in.open"
+    });
+
+    response.json(tournament);
+  })
+);
+
+tournamentsRouter.post(
   "/:id/start",
   requireAuth,
   requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
@@ -859,6 +945,40 @@ tournamentsRouter.post(
     });
 
     response.status(201).json(registration);
+  })
+);
+
+tournamentsRouter.post(
+  "/:id/registrations/:registrationId/approve",
+  requireAuth,
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const updated = await updateRegistrationDecision({
+      request,
+      tournamentId: requireRouteParam(request.params.id, "Tournament id"),
+      registrationId: requireRouteParam(request.params.registrationId, "Registration id"),
+      status: RegistrationStatus.CONFIRMED
+    });
+
+    response.json(updated);
+  })
+);
+
+tournamentsRouter.post(
+  "/:id/registrations/:registrationId/reject",
+  requireAuth,
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const reason = typeof request.body?.reason === "string" ? request.body.reason : undefined;
+    const updated = await updateRegistrationDecision({
+      request,
+      tournamentId: requireRouteParam(request.params.id, "Tournament id"),
+      registrationId: requireRouteParam(request.params.registrationId, "Registration id"),
+      status: RegistrationStatus.REJECTED,
+      reason
+    });
+
+    response.json(updated);
   })
 );
 
