@@ -10,6 +10,13 @@ export const riotAccountLookupSchema = z.object({
 
 export const linkRiotAccountSchema = riotAccountLookupSchema;
 
+export const riotCapabilitiesCheckSchema = riotAccountLookupSchema.pick({
+  gameName: true,
+  tagLine: true,
+  platformRoute: true,
+  regionalRoute: true
+});
+
 export const generateTournamentCodeSchema = z.object({
   mapType: z.string().default("SUMMONERS_RIFT"),
   pickType: z.string().default("TOURNAMENT_DRAFT"),

@@ -136,3 +136,16 @@ Checklist de pruebas para validar que Darkside.cool funciona correctamente antes
 - [ ] Un torneo que no es LoL/VALORANT no exige Riot ID.
 - [ ] En torneos por equipo, todos los miembros deben tener Riot ID validado técnicamente.
 - [ ] El backend bloquea la inscripción aunque el usuario intente llamar el endpoint manualmente.
+
+
+## 11. Riot API compatibility spike
+
+- [ ] El panel admin muestra el bloque “Compatibility spike”.
+- [ ] `POST /api/riot/capabilities/check` solo responde para ADMIN/SUPER_ADMIN.
+- [ ] Account-V1 devuelve estado OK para un Riot ID real.
+- [ ] Summoner-V4 muestra nivel e ícono cuando están disponibles.
+- [ ] League-V4 muestra SoloQ/Flex cuando la cuenta tiene ranked.
+- [ ] Match-V5 devuelve historial reciente.
+- [ ] Match detail muestra campeón, resultado, KDA y posición de una partida de muestra.
+- [ ] RSO aparece como pendiente/requiere aprobación y no se presenta como vinculación oficial.
+- [ ] Tournament Codes aparecen como futuro/no configurado si falta provider/callback.

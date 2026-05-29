@@ -9,8 +9,8 @@ import { getRequestParam } from "../../utils/request-param.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { processRiotCallback } from "./riot-callback.service.js";
 import { getRiotRuntimeConfig } from "./riot.client.js";
-import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema, riotAccountLookupSchema } from "./riot.schemas.js";
-import { checkRiotAccount, getMyRiotAccounts, getRiotMode, getRiotRsoStatus, linkRiotAccount, startRiotRso, unlinkRiotAccount } from "./riot.service.js";
+import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema, riotAccountLookupSchema, riotCapabilitiesCheckSchema } from "./riot.schemas.js";
+import { checkRiotAccount, checkRiotCapabilities, getMyRiotAccounts, getRiotMode, getRiotRsoStatus, linkRiotAccount, startRiotRso, unlinkRiotAccount } from "./riot.service.js";
 import { finishMockRiotMatch, generateMockableTournamentCode } from "./riot-tournament.service.js";
 
 export const riotRouter = Router();
@@ -72,6 +72,42 @@ riotRouter.post(
         ownershipVerified: false,
         verificationMethod: "LOOKUP_ONLY",
         mode: getRiotMode()
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
+  })
+);
+
+
+riotRouter.post(
+  "/capabilities/check",
+  riotRateLimiter,
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const payload = riotCapabilitiesCheckSchema.parse(request.body);
+    const result = await checkRiotCapabilities({
+      gameName: payload.gameName,
+      tagLine: payload.tagLine,
+      platformRoute: payload.platformRoute,
+      regionalRoute: payload.regionalRoute,
+      userId: request.user!.sub
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "riot.capabilities.check",
+      entityType: "riot_api",
+      entityId: `${payload.gameName}#${payload.tagLine}`,
+      after: {
+        mode: getRiotMode(),
+        accountV1: (result as Record<string, unknown>).accountV1,
+        summonerV4: (result as Record<string, unknown>).summonerV4,
+        leagueV4: (result as Record<string, unknown>).leagueV4,
+        matchV5: (result as Record<string, unknown>).matchV5,
+        matchDetailV5: (result as Record<string, unknown>).matchDetailV5
       },
       ipAddress: getRequestIp(request)
     });

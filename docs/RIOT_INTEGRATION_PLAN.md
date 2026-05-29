@@ -103,3 +103,23 @@ Regla actual de MVP:
 Regla futura para producción competitiva:
 
 - Cuando Riot apruebe RSO, los torneos oficiales podrán exigir `RSO_VERIFIED` para confirmar propiedad real de la cuenta.
+
+
+## Fase 6.4.5 — Riot API Compatibility Spike
+
+Antes de automatizar torneos con Riot, Darkside debe comprobar qué endpoints responde realmente la key activa.
+
+Endpoint interno recomendado:
+
+- `POST /api/riot/capabilities/check`
+
+Capacidades revisadas:
+
+- `account-v1`: valida Riot ID y PUUID.
+- `summoner-v4`: obtiene `profileIconId`, `summonerLevel` y datos básicos LoL.
+- `league-v4`: obtiene colas rankeadas por PUUID, tier, división, LP, wins/losses y winrate.
+- `match-v5`: obtiene historial reciente y una partida de muestra.
+- RSO: queda marcado como requisito de Production Key/aprobación Riot.
+- Tournament Codes: queda marcado como futuro mientras no exista provider/callback aprobado.
+
+Esta fase no confirma propiedad de cuenta. Solo documenta compatibilidad técnica de la API y ayuda a decidir qué partes pueden alimentar el dashboard competitivo.
