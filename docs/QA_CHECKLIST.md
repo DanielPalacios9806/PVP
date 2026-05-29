@@ -125,3 +125,14 @@ Checklist de pruebas para validar que Darkside.cool funciona correctamente antes
 - [ ] `https://darkside.cool/dashboard/moderation` carga solo para moderación/admin.
 - [ ] `https://darkside.cool/dashboard/tournaments` carga.
 - [ ] `https://darkside.cool/dashboard/tokens` carga según rol.
+
+
+## 10. Requisitos Riot para torneos LoL/VALORANT
+
+- [ ] Un torneo LoL/VALORANT muestra visualmente “Riot ID requerido”.
+- [ ] Un usuario sin Riot ID no puede inscribirse y es guiado a `/dashboard/account`.
+- [ ] Un usuario con Riot ID validado técnicamente puede inscribirse en modo MVP.
+- [ ] La UI aclara que la validación técnica no confirma propiedad oficial.
+- [ ] Un torneo que no es LoL/VALORANT no exige Riot ID.
+- [ ] En torneos por equipo, todos los miembros deben tener Riot ID validado técnicamente.
+- [ ] El backend bloquea la inscripción aunque el usuario intente llamar el endpoint manualmente.

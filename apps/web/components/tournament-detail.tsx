@@ -42,6 +42,83 @@ function normalizeGameKey(value?: string | null) {
   return "VALORANT";
 }
 
+
+function tournamentRequiresRiotAccount(game?: string | null) {
+  const normalized = normalizeGameKey(game);
+  return normalized === "LEAGUE OF LEGENDS" || normalized === "VALORANT";
+}
+
+function riotGameKeysForTournament(game?: string | null) {
+  const normalized = normalizeGameKey(game);
+
+  if (normalized === "VALORANT") {
+    return ["VALORANT"];
+  }
+
+  return ["LEAGUE_OF_LEGENDS", "LEAGUE OF LEGENDS", "LOL"];
+}
+
+function findRiotAccountForTournament(accounts: any[], tournament: any) {
+  const keys = riotGameKeysForTournament(tournament?.game);
+  return accounts.find((account) =>
+    String(account?.provider || "RIOT").toUpperCase() === "RIOT" &&
+    keys.includes(String(account?.game || "LEAGUE_OF_LEGENDS").toUpperCase().replaceAll("-", "_")) &&
+    (account?.puuid || account?.externalPlayerId || account?.riotGameName)
+  );
+}
+
+function buildRiotRequirement(tournament: any, accounts: any[]) {
+  const required = tournamentRequiresRiotAccount(tournament?.game);
+
+  if (!required) {
+    return {
+      required: false,
+      canRegister: true,
+      status: "NOT_REQUIRED",
+      title: "Riot ID opcional",
+      description: "Este torneo no exige Riot ID para inscribirse.",
+      tone: "border-white/10 bg-white/[0.035] text-white/58",
+      account: null as any
+    };
+  }
+
+  const account = findRiotAccountForTournament(accounts, tournament);
+
+  if (!account) {
+    return {
+      required: true,
+      canRegister: false,
+      status: "MISSING",
+      title: "Riot ID requerido",
+      description: "Este torneo requiere Riot ID validado técnicamente. Valida tu Riot ID en Mi cuenta antes de inscribirte.",
+      tone: "border-[#ffb347]/30 bg-[#ffb347]/10 text-[#ffe0b0]",
+      account: null as any
+    };
+  }
+
+  if (account.verified && account.verificationStatus === "RSO_VERIFIED") {
+    return {
+      required: true,
+      canRegister: true,
+      status: "RSO_VERIFIED",
+      title: "Riot vinculado oficialmente",
+      description: `${account.riotGameName}#${account.riotTagLine} fue verificado con Riot Sign On.`,
+      tone: "border-[#40ff91]/30 bg-[#40ff91]/10 text-[#d7ffe8]",
+      account
+    };
+  }
+
+  return {
+    required: true,
+    canRegister: true,
+    status: "LOOKUP_ONLY",
+    title: "Riot ID validado técnicamente",
+    description: `${account.riotGameName}#${account.riotTagLine} existe y puede usarse en modo MVP. La propiedad oficial requiere Riot Sign On.`,
+    tone: "border-[#18e6f2]/25 bg-[#18e6f2]/10 text-[#bffaff]",
+    account
+  };
+}
+
 function tournamentHeroImage(tournament: any, game: { bg: string }) {
   const explicitHero =
     tournament?.heroImageUrl ||
@@ -141,6 +218,10 @@ function translateTournamentError(message?: string) {
 
   if (normalized.includes("roster") || normalized.includes("team does not meet")) {
     return "Tu equipo todavía no cumple el número de integrantes requerido para este torneo.";
+  }
+
+  if (normalized.includes("riot id") || normalized.includes("riot sign on")) {
+    return message;
   }
 
   if (normalized.includes("already registered")) {
@@ -368,6 +449,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const [activeTab, setActiveTab] = useState("Bracket");
   const [localRegistered, setLocalRegistered] = useState(false);
   const [ownedTeams, setOwnedTeams] = useState<any[]>([]);
+  const [riotAccounts, setRiotAccounts] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [operationMessage, setOperationMessage] = useState("");
@@ -397,7 +479,8 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   );
   const needsTeam = Boolean(tournament?.type === "TEAM" && user && !ownedTeams.length && !hasRegistration);
   const countdownParts = useMemo(() => getCountdownParts(tournament?.startsAt), [tournament?.startsAt]);
-  const actionLabel = primaryActionLabel({
+  const riotRequirement = useMemo(() => buildRiotRequirement(tournament, riotAccounts), [tournament, riotAccounts]);
+  const baseActionLabel = primaryActionLabel({
     user,
     tournament,
     hasRegistration,
@@ -406,6 +489,9 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     capacityFull,
     needsTeam
   });
+  const actionLabel = user && !hasRegistration && riotRequirement.required && !riotRequirement.canRegister
+    ? "Validar Riot ID"
+    : baseActionLabel;
   const actionDisabled = primaryActionDisabled({
     user,
     hasRegistration,
@@ -464,11 +550,35 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     }
   }
 
+  async function loadRiotAccounts(currentUser: StoredUser | null) {
+    if (!currentUser) {
+      setRiotAccounts([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/riot/accounts/me`, {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+
+      if (response.ok && Array.isArray(data)) {
+        setRiotAccounts(data);
+        return;
+      }
+
+      setRiotAccounts([]);
+    } catch {
+      setRiotAccounts([]);
+    }
+  }
+
   useEffect(() => {
     const storedUser = getStoredUser();
     setUser(storedUser);
     void load();
     void loadTeams(storedUser);
+    void loadRiotAccounts(storedUser);
   }, [tournamentId]);
 
   async function register() {
@@ -490,6 +600,12 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
 
     if (capacityFull) {
       setMessage("Los cupos de este torneo ya están completos.");
+      return;
+    }
+
+    if (riotRequirement.required && !riotRequirement.canRegister) {
+      setMessage("Este torneo requiere Riot ID validado técnicamente. Te redirigiremos a Mi cuenta para validar Riot ID antes de inscribirte.");
+      window.location.href = "/dashboard/account";
       return;
     }
 
@@ -873,6 +989,8 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
                 />
               ) : null}
 
+              <RiotRequirementPanel requirement={riotRequirement} />
+
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={handlePrimaryAction}
@@ -894,6 +1012,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
                 capacityFull={capacityFull}
                 needsTeam={needsTeam}
                 selectedTeamMissingRoster={selectedTeamMissingRoster}
+                riotRequirement={riotRequirement}
               />
               {(message || checkInMessage) ? (
                 <p className="mt-4 max-w-2xl rounded-[14px] border border-[#18e6f2]/25 bg-[#18e6f2]/10 px-4 py-3 text-sm text-[#bffaff]">
@@ -980,7 +1099,8 @@ function EligibilityHint({
   registrationOpen,
   capacityFull,
   needsTeam,
-  selectedTeamMissingRoster
+  selectedTeamMissingRoster,
+  riotRequirement
 }: {
   user: StoredUser | null;
   tournament: any;
@@ -990,6 +1110,7 @@ function EligibilityHint({
   capacityFull: boolean;
   needsTeam: boolean;
   selectedTeamMissingRoster: boolean;
+  riotRequirement: ReturnType<typeof buildRiotRequirement>;
 }) {
   let title = "Listo para competir";
   let copy = "Puedes inscribirte si cumples las reglas del torneo y no tienes otro evento en el mismo horario.";
@@ -1021,12 +1142,43 @@ function EligibilityHint({
     title = "Equipo incompleto";
     copy = `El equipo seleccionado no cumple el tamaño requerido de ${tournament.teamSize} integrantes.`;
     tone = "border-[#ffb347]/30 bg-[#ffb347]/10 text-[#ffe0b0]";
+  } else if (riotRequirement.required && !riotRequirement.canRegister) {
+    title = "Riot ID requerido";
+    copy = "Antes de inscribirte debes validar técnicamente tu Riot ID en Mi cuenta. La vinculación oficial seguirá pendiente hasta Riot Sign On.";
+    tone = "border-[#ffb347]/30 bg-[#ffb347]/10 text-[#ffe0b0]";
   }
 
   return (
     <div className={`mt-4 rounded-[16px] border px-4 py-3 text-sm leading-6 ${tone}`}>
       <strong className="block text-white">{title}</strong>
       <span>{copy}</span>
+    </div>
+  );
+}
+
+function RiotRequirementPanel({ requirement }: { requirement: ReturnType<typeof buildRiotRequirement> }) {
+  if (!requirement.required) {
+    return null;
+  }
+
+  return (
+    <div className={`mt-6 rounded-[18px] border p-4 text-sm leading-6 ${requirement.tone}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Requisito Riot</p>
+          <strong className="mt-1 block text-white">{requirement.title}</strong>
+          <p className="mt-1 max-w-2xl">{requirement.description}</p>
+          <p className="mt-2 text-xs text-white/45">
+            Validar Riot ID confirma existencia de cuenta. La propiedad oficial requiere Riot Sign On aprobado por Riot.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/account"
+          className="inline-flex shrink-0 justify-center rounded-[12px] border border-[#18e6f2]/35 bg-[#18e6f2]/10 px-4 py-2 text-xs font-semibold text-[#bffaff] transition hover:border-[#18e6f2]/70"
+        >
+          {requirement.canRegister ? "Revisar Riot ID" : "Validar Riot ID"}
+        </Link>
+      </div>
     </div>
   );
 }

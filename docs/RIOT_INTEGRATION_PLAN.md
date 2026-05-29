@@ -83,3 +83,23 @@ Para torneos serios, la inscripción debería exigir `RSO_VERIFIED` cuando Riot 
 8. Darkside guarda Riot ID, PUUID y marca `ownershipVerified=true`.
 
 No se debe usar iframe para el login oficial. Para MVP, se recomienda redirección completa; una ventana emergente puede implementarse después.
+
+
+## Fase 6.4 — Requisitos Riot para inscripción
+
+Para torneos de League of Legends y VALORANT, Darkside debe revisar el estado Riot antes de permitir inscripción.
+
+Estados permitidos en MVP:
+
+- `LOOKUP_ONLY` / `RSO_PENDING`: el Riot ID existe y puede usarse en pruebas internas, pero la propiedad oficial no está confirmada.
+- `RSO_VERIFIED`: estado futuro para cuenta oficialmente vinculada con Riot Sign On.
+
+Regla actual de MVP:
+
+- Si el torneo es LoL/VALORANT y el usuario no tiene Riot ID validado técnicamente, se bloquea la inscripción y se redirige a Mi cuenta.
+- Si el usuario tiene Riot ID validado técnicamente, se permite inscripción con advertencia visual.
+- Para equipos, todos los miembros del equipo deben tener Riot ID validado técnicamente antes de inscribir el roster.
+
+Regla futura para producción competitiva:
+
+- Cuando Riot apruebe RSO, los torneos oficiales podrán exigir `RSO_VERIFIED` para confirmar propiedad real de la cuenta.
