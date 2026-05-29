@@ -69,6 +69,32 @@ function statusLabel(status: string) {
   return labels[status] ?? status;
 }
 
+function statusTone(status: string) {
+  if (status === "IN_PROGRESS" || status === "READY" || status === "ACTIVE") {
+    return "border-[#40ff91]/35 bg-[#40ff91]/10 text-[#b8ffd7]";
+  }
+
+  if (status === "COMPLETED") {
+    return "border-[#18e6f2]/35 bg-[#18e6f2]/10 text-[#bffaff]";
+  }
+
+  if (status === "DISPUTED" || status === "CANCELLED") {
+    return "border-[#ff5868]/35 bg-[#ff2438]/10 text-[#ffc7cc]";
+  }
+
+  return "border-white/10 bg-white/[0.045] text-white/55";
+}
+
+function roundLabel(sequence: number, fallback: string) {
+  const labels: Record<number, string> = {
+    1: "Apertura",
+    2: "Semifinal",
+    3: "Final"
+  };
+
+  return labels[sequence] ?? fallback;
+}
+
 function teamInitials(label: string) {
   return label
     .split(" ")
@@ -170,21 +196,34 @@ function TeamLine({ registration, score, winner }: { registration?: Registration
 
   return (
     <div
-      className={`flex items-center justify-between gap-3 rounded-[12px] border px-3 py-2 text-sm ${
+      className={`group flex items-center justify-between gap-3 rounded-[14px] border px-3 py-2.5 text-sm transition ${
         winner
-          ? "border-[#18e6f2]/40 bg-[#18e6f2]/10 text-white"
-          : "border-white/10 bg-white/[0.035] text-white/70"
+          ? "border-[#18e6f2]/50 bg-[#18e6f2]/12 text-white shadow-[0_0_24px_rgba(24,230,242,0.12)]"
+          : "border-white/10 bg-white/[0.035] text-white/70 hover:border-white/20 hover:bg-white/[0.055]"
       }`}
     >
-      <span className="flex min-w-0 items-center gap-2">
-        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[10px] font-black ${
-          winner ? "border-[#18e6f2]/45 bg-[#18e6f2]/15 text-[#bffaff]" : "border-white/10 bg-black/35 text-white/48"
-        }`}>
+      <span className="flex min-w-0 items-center gap-2.5">
+        <span
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-[10px] font-black ${
+            winner
+              ? "border-[#18e6f2]/55 bg-[#18e6f2]/18 text-[#d9fdff]"
+              : "border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),rgba(0,0,0,0.35))] text-white/58"
+          }`}
+        >
           {teamInitials(label)}
         </span>
-        <span className="min-w-0 truncate">{label}</span>
+        <span className="min-w-0">
+          <span className="block truncate font-semibold">{label}</span>
+          <span className="block text-[10px] uppercase tracking-[0.14em] text-white/32">Equipo</span>
+        </span>
       </span>
-      <span className={winner ? "text-[#40ffbb]" : "text-white/40"}>{score}</span>
+      <span
+        className={`grid h-7 min-w-7 place-items-center rounded-lg border px-2 text-xs font-black ${
+          winner ? "border-[#40ff91]/40 bg-[#40ff91]/12 text-[#b8ffd7]" : "border-white/10 bg-black/25 text-white/42"
+        }`}
+      >
+        {score}
+      </span>
     </div>
   );
 }
@@ -200,7 +239,19 @@ export function BracketBoard({
   const visibleRounds = hasRealRounds ? rounds : buildPreviewRounds(previewRegistrations);
 
   return (
-    <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
+    <div className="relative overflow-hidden rounded-[22px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(24,230,242,0.12),transparent_28%),linear-gradient(180deg,rgba(10,16,25,0.92),rgba(4,7,11,0.98))] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.36)] sm:p-5">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#18e6f2]">Mapa competitivo</p>
+          <h3 className="mt-2 text-2xl font-semibold text-white">Llaves del torneo</h3>
+        </div>
+        <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.14em] text-white/48">
+          <span className="rounded-full border border-[#40ff91]/25 bg-[#40ff91]/8 px-3 py-1 text-[#b8ffd7]">Ganador</span>
+          <span className="rounded-full border border-[#18e6f2]/25 bg-[#18e6f2]/8 px-3 py-1 text-[#bffaff]">Sala</span>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">BO</span>
+        </div>
+      </div>
+
       {!hasRealRounds ? (
         <div className="mb-5 flex flex-col gap-3 rounded-[18px] border border-[#18e6f2]/20 bg-[#18e6f2]/8 px-4 py-3 text-sm leading-6 text-[#bffaff] sm:flex-row sm:items-center sm:justify-between">
           <span>Bracket simulado para vista previa. Cuando el organizador genere las llaves reales, se reemplazara automaticamente.</span>
@@ -208,54 +259,86 @@ export function BracketBoard({
         </div>
       ) : null}
 
-      <div className="flex min-w-max items-start gap-7 py-2">
-        {visibleRounds.map((round, roundIndex) => (
-          <section
-            key={round.id}
-            className="relative w-[250px] shrink-0 sm:w-[286px]"
-            style={{ paddingTop: roundIndex === 0 ? 0 : `${Math.min(roundIndex * 42, 132)}px` }}
-          >
-            <div className="absolute -right-7 top-[52%] hidden h-px w-7 bg-gradient-to-r from-[#18e6f2]/60 to-transparent lg:block" />
-            <div className="mb-4 border-l border-[#ff2438]/60 pl-3">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/80">{round.name}</h3>
-              <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-[#8eb8ff]">{statusLabel(round.status)}</p>
-            </div>
+      <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
+        <div className="flex min-w-max items-start gap-9 py-2">
+          {visibleRounds.map((round, roundIndex) => (
+            <section
+              key={round.id}
+              className="relative w-[265px] shrink-0 sm:w-[300px]"
+              style={{ paddingTop: roundIndex === 0 ? 0 : `${Math.min(roundIndex * 50, 150)}px` }}
+            >
+              {roundIndex < visibleRounds.length - 1 ? (
+                <div className="pointer-events-none absolute -right-9 top-[52%] hidden h-px w-9 bg-gradient-to-r from-[#18e6f2]/60 via-[#18e6f2]/25 to-transparent lg:block" />
+              ) : null}
 
-            <div className="space-y-4">
-              {round.matches.map((match) => {
-                const homeWinner = isWinner(match, match.homeRegistration);
-                const awayWinner = isWinner(match, match.awayRegistration);
+              <div className="mb-4 rounded-[16px] border border-white/10 bg-white/[0.035] px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#ff5868]">
+                      {roundLabel(round.sequence, round.name)}
+                    </p>
+                    <h3 className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-white/86">{round.name}</h3>
+                  </div>
+                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${statusTone(round.status)}`}>
+                    {statusLabel(round.status)}
+                  </span>
+                </div>
+              </div>
 
-                return (
-                  <article
-                    key={match.id}
-                    className="motion-card relative overflow-hidden rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,36,0.98),rgba(7,11,17,0.96))] p-3 shadow-[0_18px_36px_rgba(0,0,0,0.32)] after:absolute after:-right-7 after:top-1/2 after:hidden after:h-px after:w-7 after:bg-[#18e6f2]/45 lg:after:block"
-                  >
-                    <div className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-[#18e6f2] via-[#ff2438] to-transparent" />
-                    <div className="mb-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.14em] text-white/45">
-                      <span>BO{match.bestOf}</span>
-                      <span>{statusLabel(match.status)}</span>
-                    </div>
+              <div className="space-y-5">
+                {round.matches.map((match, matchIndex) => {
+                  const homeWinner = isWinner(match, match.homeRegistration);
+                  const awayWinner = isWinner(match, match.awayRegistration);
 
-                    <div className="space-y-2">
-                      <TeamLine registration={match.homeRegistration} score={homeWinner ? "1" : hasRealRounds ? "-" : "0"} winner={homeWinner} />
-                      <TeamLine registration={match.awayRegistration} score={awayWinner ? "1" : hasRealRounds ? "-" : "0"} winner={awayWinner} />
-                    </div>
+                  return (
+                    <article
+                      key={match.id}
+                      className={`motion-card relative overflow-visible rounded-[18px] border bg-[linear-gradient(180deg,rgba(17,24,36,0.98),rgba(7,11,17,0.96))] p-3.5 shadow-[0_18px_36px_rgba(0,0,0,0.32)] ${
+                        match.status === "IN_PROGRESS"
+                          ? "border-[#40ff91]/32"
+                          : roundIndex === visibleRounds.length - 1
+                            ? "border-[#ff2438]/30 shadow-[0_0_40px_rgba(255,36,56,0.12)]"
+                            : "border-white/10"
+                      }`}
+                    >
+                      {roundIndex < visibleRounds.length - 1 ? (
+                        <div className="pointer-events-none absolute -right-9 top-1/2 hidden h-px w-9 bg-[#18e6f2]/42 lg:block" />
+                      ) : null}
+                      <div className="absolute inset-y-0 left-0 w-[3px] rounded-l-[18px] bg-gradient-to-b from-[#18e6f2] via-[#ff2438] to-transparent" />
+                      <div className="mb-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.14em]">
+                        <span className="text-white/42">Match {matchIndex + 1}</span>
+                        <span className={`rounded-full border px-2.5 py-1 font-semibold ${statusTone(match.status)}`}>
+                          {statusLabel(match.status)}
+                        </span>
+                      </div>
 
-                    {hasRealRounds ? (
-                      <Link href={`/dashboard/matches/${match.id}`} className="mt-4 inline-flex text-sm font-semibold text-[#18e6f2]">
-                        Abrir sala
-                      </Link>
-                    ) : (
-                      <p className="mt-4 text-sm font-semibold text-white/40">Sala pendiente</p>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-        ))}
+                      <div className="space-y-2">
+                        <TeamLine registration={match.homeRegistration} score={homeWinner ? "1" : hasRealRounds ? "-" : "0"} winner={homeWinner} />
+                        <TeamLine registration={match.awayRegistration} score={awayWinner ? "1" : hasRealRounds ? "-" : "0"} winner={awayWinner} />
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between gap-3">
+                        <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                          BO{match.bestOf}
+                        </span>
+                        {hasRealRounds ? (
+                          <Link href={`/dashboard/matches/${match.id}`} className="text-sm font-semibold text-[#18e6f2] hover:text-white">
+                            Abrir sala
+                          </Link>
+                        ) : (
+                          <p className="text-sm font-semibold text-white/40">Sala pendiente</p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
       </div>
     </div>
   );
+
+
 }

@@ -235,6 +235,47 @@ function registrationLabel(registration: any) {
   return registration?.user?.displayName || registration?.user?.username || "Sin definir";
 }
 
+function teamInitials(label: string) {
+  return label
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+}
+
+function matchStatusLabel(status?: string) {
+  const labels: Record<string, string> = {
+    PENDING: "Pendiente",
+    READY: "Sala lista",
+    IN_PROGRESS: "En vivo",
+    RESULT_PENDING: "Resultado pendiente",
+    WAITING_RESULT: "Resultado pendiente",
+    COMPLETED: "Finalizado",
+    DISPUTED: "Disputa",
+    CANCELLED: "Cancelado"
+  };
+
+  return labels[status ?? ""] ?? status ?? "Pendiente";
+}
+
+function matchStatusTone(status?: string) {
+  if (status === "IN_PROGRESS" || status === "READY") {
+    return "border-[#40ff91]/35 bg-[#40ff91]/10 text-[#b8ffd7]";
+  }
+
+  if (status === "COMPLETED") {
+    return "border-[#18e6f2]/35 bg-[#18e6f2]/10 text-[#bffaff]";
+  }
+
+  if (status === "DISPUTED" || status === "CANCELLED") {
+    return "border-[#ff5868]/35 bg-[#ff2438]/10 text-[#ffc7cc]";
+  }
+
+  return "border-white/10 bg-white/[0.045] text-white/55";
+}
+
 function formatMode(tournament: any) {
   const size = tournament.teamSize ? `${tournament.teamSize}v${tournament.teamSize}` : tournament.type === "TEAM" ? "5v5" : "1v1";
   return `${size} · ${String(tournament.format || "Single elimination").replaceAll("_", " ")}`;
@@ -900,35 +941,57 @@ function FeaturedMatches({ matches }: { matches: any[] }) {
   const rows = matches.length ? matches : [{ ...mockMatch }];
 
   return (
-    <section className="surface-panel motion-section p-4 sm:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="page-kicker">Partidos destacados</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Resultados y salas</h2>
+    <section className="surface-panel motion-section overflow-hidden p-0">
+      <div className="border-b border-white/10 bg-[linear-gradient(90deg,rgba(24,230,242,0.08),transparent_42%,rgba(255,36,56,0.08))] p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="page-kicker">Partidos destacados</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">Salas, resultados y próximos cruces</h2>
+          </div>
+          <span className="rounded-full border border-[#18e6f2]/25 bg-[#18e6f2]/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#bffaff]">
+            Match rooms
+          </span>
         </div>
-        <Link href="/dashboard/matches/mock-match-1" className="hidden text-sm font-semibold text-[#18e6f2] sm:inline-flex">
-          Ver sala demo
-        </Link>
       </div>
-      <div className="grid gap-3 xl:grid-cols-2">
-        {rows.slice(0, 4).map((match: any, index: number) => (
-          <Link
-            key={match.id ?? `match-${index}`}
-            href={`/dashboard/matches/${match.id ?? "mock-match-1"}`}
-            className="motion-card relative overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(120deg,rgba(17,24,36,0.96),rgba(7,11,17,0.94))] p-4"
-          >
-            <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.14em] text-white/45">
-              <span>{match.round?.name ?? "Partida"}</span>
-              <span>{match.status ?? "READY"}</span>
-            </div>
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-              <TeamScore registration={match.homeRegistration} score={matchScore(match, match.homeRegistration)} />
-              <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1 text-sm text-white/62">vs</span>
-              <TeamScore registration={match.awayRegistration} score={matchScore(match, match.awayRegistration)} alignRight />
-            </div>
-            <p className="mt-4 text-sm font-semibold text-[#18e6f2]">Abrir sala</p>
-          </Link>
-        ))}
+
+      <div className="grid gap-0 divide-y divide-white/10 xl:grid-cols-2 xl:divide-x xl:divide-y-0">
+        {rows.slice(0, 4).map((match: any, index: number) => {
+          const href = `/dashboard/matches/${match.id ?? "mock-match-1"}`;
+
+          return (
+            <Link
+              key={match.id ?? `match-${index}`}
+              href={href}
+              className="group relative overflow-hidden p-4 transition hover:bg-white/[0.035] sm:p-5"
+            >
+              <div className="absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-[#ff2438]/8 blur-2xl transition group-hover:bg-[#18e6f2]/10" />
+              <div className="relative z-10 mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/40">
+                    {match.round?.name ?? `Partida ${index + 1}`}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white/75">Best of {match.bestOf ?? 1}</p>
+                </div>
+                <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${matchStatusTone(match.status)}`}>
+                  {matchStatusLabel(match.status)}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <TeamScore registration={match.homeRegistration} score={matchScore(match, match.homeRegistration)} />
+                <div className="grid h-12 w-12 place-items-center rounded-full border border-white/10 bg-black/35 text-xs font-black uppercase tracking-[0.12em] text-white/50">
+                  vs
+                </div>
+                <TeamScore registration={match.awayRegistration} score={matchScore(match, match.awayRegistration)} alignRight />
+              </div>
+
+              <div className="mt-5 flex items-center justify-between gap-3 text-sm">
+                <span className="text-white/42">Sala preparada para reporte manual y evidencia.</span>
+                <span className="shrink-0 font-semibold text-[#18e6f2] transition group-hover:text-white">Abrir sala</span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -943,10 +1006,29 @@ function matchScore(match: any, registration: any) {
 }
 
 function TeamScore({ registration, score, alignRight = false }: { registration: any; score: string; alignRight?: boolean }) {
+  const label = registrationLabel(registration);
+
   return (
-    <div className={alignRight ? "text-right" : ""}>
-      <strong className="block truncate text-white">{registrationLabel(registration)}</strong>
-      <span className="mt-2 block text-3xl font-semibold text-white">{score}</span>
+    <div className={`min-w-0 ${alignRight ? "text-right" : ""}`}>
+      <div className={`flex items-center gap-2.5 ${alignRight ? "justify-end" : ""}`}>
+        {!alignRight ? (
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(24,230,242,0.28),rgba(0,0,0,0.45))] text-[11px] font-black text-white">
+            {teamInitials(label)}
+          </span>
+        ) : null}
+        <div className="min-w-0">
+          <strong className="block truncate text-sm text-white">{label}</strong>
+          <span className="mt-1 block text-[10px] uppercase tracking-[0.14em] text-white/32">Participante</span>
+        </div>
+        {alignRight ? (
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(255,36,56,0.28),rgba(0,0,0,0.45))] text-[11px] font-black text-white">
+            {teamInitials(label)}
+          </span>
+        ) : null}
+      </div>
+      <span className={`mt-3 inline-grid h-9 min-w-9 place-items-center rounded-xl border border-white/10 bg-black/30 px-3 text-xl font-black text-white ${alignRight ? "ml-auto" : ""}`}>
+        {score}
+      </span>
     </div>
   );
 }
