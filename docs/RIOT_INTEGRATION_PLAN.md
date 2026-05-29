@@ -123,3 +123,41 @@ Capacidades revisadas:
 - Tournament Codes: queda marcado como futuro mientras no exista provider/callback aprobado.
 
 Esta fase no confirma propiedad de cuenta. Solo documenta compatibilidad técnica de la API y ayuda a decidir qué partes pueden alimentar el dashboard competitivo.
+
+## Fase 6.4.6 — Capa visual Riot/Data Dragon
+
+Objetivo: mejorar el dashboard competitivo con datos visuales reales de League of Legends sin afirmar una afiliación oficial con Riot.
+
+Implementaciones previstas:
+
+- Uso de Data Dragon para íconos de perfil, campeones e items.
+- Uso de League-V4 por PUUID para mostrar SoloQ/Flex, LP, victorias y derrotas.
+- Uso de Match-V5 para historial reciente, campeón, KDA, posición y resultado.
+- Uso de Recharts para radar de rendimiento.
+- Uso de assets propios de Darkside para shields, placeholders y badges.
+
+Reglas:
+
+- No usar logos oficiales de Riot como marca principal de Darkside.
+- Mantener la advertencia de que la propiedad oficial de cuenta requiere Riot Sign On.
+- Mantener un fallback si Riot API falla, vence la development key o hay rate limit.
+
+## Fase 6.4.7 — RSO readiness y solicitud Riot
+
+Objetivo: preparar Darkside.cool para solicitar Production Key y Riot Sign On sin ejecutar OAuth real antes de la aprobacion.
+
+Endpoints internos:
+
+- `GET /api/riot/rso/status`: estado de RSO y variables faltantes.
+- `GET /api/riot/rso/start`: placeholder seguro; no redirige si falta aprobacion.
+- `GET /api/riot/rso/callback-preview`: contrato esperado del callback OAuth.
+- `GET /api/riot/compliance/readiness`: checklist operativo para Riot review.
+
+Reglas:
+
+- No afirmar propiedad oficial hasta `RSO_VERIFIED`.
+- Mantener `LOOKUP_ONLY` solo como validacion tecnica interna.
+- No activar Tournament Codes reales antes de provider/callback aprobado.
+- Mantener politica de privacidad, terminos, eliminacion de datos y disclaimer Riot visibles.
+
+El objetivo de esta fase es que el panel admin muestre claramente que Darkside tiene MVP funcional, politicas, seguridad de API key, auditoria, separacion lookup/ownership y callback RSO preparado.

@@ -149,3 +149,26 @@ Checklist de pruebas para validar que Darkside.cool funciona correctamente antes
 - [ ] Match detail muestra campeón, resultado, KDA y posición de una partida de muestra.
 - [ ] RSO aparece como pendiente/requiere aprobación y no se presenta como vinculación oficial.
 - [ ] Tournament Codes aparecen como futuro/no configurado si falta provider/callback.
+
+## 10. Riot visual dashboard
+
+- [ ] El dashboard carga aunque Riot API no responda.
+- [ ] Si existe Riot ID validado, se muestra ícono de perfil por Data Dragon.
+- [ ] Si League-V4 responde, se muestra ranking SoloQ/Flex.
+- [ ] Si Match-V5 responde, se muestra historial reciente con campeón y KDA.
+- [ ] Si no hay Riot ID, el dashboard muestra CTA hacia `/dashboard/account`.
+- [ ] El panel no afirma propiedad oficial sin Riot Sign On.
+- [ ] Las imágenes remotas de Data Dragon cargan correctamente.
+
+## 12. RSO readiness y solicitud Riot
+
+- [ ] `GET /api/riot/rso/status` responde sin exponer secretos.
+- [ ] `GET /api/riot/rso/start` no intenta OAuth real sin Production Key.
+- [ ] `GET /api/riot/rso/callback-preview` muestra redirect URI objetivo y controles de seguridad.
+- [ ] `GET /api/riot/compliance/readiness` solo responde para ADMIN/SUPER_ADMIN.
+- [ ] Panel admin Riot muestra checklist RSO readiness.
+- [ ] Se ve el estado de credenciales RSO faltantes.
+- [ ] Se listan Terms, Privacy y Data Deletion como rutas visibles.
+- [ ] La UI sigue diferenciando lookup tecnico de propiedad oficial.
+- [ ] El texto legal indica no gambling y tokens no monetarios.
+- [ ] El sistema no afirma afiliacion oficial con Riot.

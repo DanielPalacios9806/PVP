@@ -10,7 +10,7 @@ import { createAuditLog } from "../audit/audit.service.js";
 import { processRiotCallback } from "./riot-callback.service.js";
 import { getRiotRuntimeConfig } from "./riot.client.js";
 import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema, riotAccountLookupSchema, riotCapabilitiesCheckSchema } from "./riot.schemas.js";
-import { checkRiotAccount, checkRiotCapabilities, getMyRiotAccounts, getRiotMode, getRiotRsoStatus, linkRiotAccount, startRiotRso, unlinkRiotAccount } from "./riot.service.js";
+import { checkRiotAccount, checkRiotCapabilities, getMyRiotAccounts, getMyRiotCompetitiveSummary, getRiotComplianceReadiness, getRiotMode, getRiotRsoCallbackPreview, getRiotRsoStatus, linkRiotAccount, startRiotRso, unlinkRiotAccount } from "./riot.service.js";
 import { finishMockRiotMatch, generateMockableTournamentCode } from "./riot-tournament.service.js";
 
 export const riotRouter = Router();
@@ -141,6 +141,24 @@ riotRouter.get(
   })
 );
 
+
+riotRouter.get(
+  "/rso/callback-preview",
+  requireAuth,
+  asyncHandler(async (_request, response) => {
+    response.json(getRiotRsoCallbackPreview());
+  })
+);
+
+riotRouter.get(
+  "/compliance/readiness",
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (_request, response) => {
+    response.json(getRiotComplianceReadiness());
+  })
+);
+
 riotRouter.post(
   "/accounts/link",
   riotRateLimiter,
@@ -175,6 +193,17 @@ riotRouter.post(
     });
 
     response.status(201).json(account);
+  })
+);
+
+
+riotRouter.get(
+  "/profile/summary",
+  riotRateLimiter,
+  requireAuth,
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const summary = await getMyRiotCompetitiveSummary(request.user!.sub);
+    response.json(summary);
   })
 );
 

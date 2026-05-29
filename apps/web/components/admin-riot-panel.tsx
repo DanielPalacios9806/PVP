@@ -65,9 +65,45 @@ type RiotCapabilities = {
   tournamentCodes?: CapabilityBlock;
 };
 
+type ReadinessStatus = "ready" | "pending" | "warning";
+
+type RiotReadiness = {
+  ok: boolean;
+  mode: string;
+  status: string;
+  publicBaseUrl: string;
+  legalUrls: {
+    terms: string;
+    privacy: string;
+    dataDeletion: string;
+  };
+  summary: {
+    total: number;
+    ready: number;
+    pending: number;
+    warning: number;
+  };
+  items: {
+    key: string;
+    label: string;
+    status: ReadinessStatus;
+    description: string;
+    action?: string;
+  }[];
+  nextActions: string[];
+  callbackPreview?: {
+    expectedRedirectUri?: string;
+    readyForOfficialRso?: boolean;
+    recommendedFlow?: string;
+    requiredQueryParams?: string[];
+    securityControls?: string[];
+  };
+};
+
 export function AdminRiotPanel() {
   const [overview, setOverview] = useState<RiotOverview | null>(null);
   const [capabilities, setCapabilities] = useState<RiotCapabilities | null>(null);
+  const [readiness, setReadiness] = useState<RiotReadiness | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [checkingCapabilities, setCheckingCapabilities] = useState(false);
@@ -84,6 +120,14 @@ export function AdminRiotPanel() {
       }
 
       setOverview(data);
+
+      const readinessResponse = await fetch(`${apiUrl}/riot/compliance/readiness`, {
+        headers: getAuthHeaders()
+      });
+
+      if (readinessResponse.ok) {
+        setReadiness(await readinessResponse.json());
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo cargar Riot API.");
     }
@@ -190,6 +234,62 @@ export function AdminRiotPanel() {
           <span className="mt-2 block text-xs text-amber-100/70">Pendiente: {overview.config.missingRequirements.join(", ")}</span>
         ) : null}
       </div>
+
+
+      {readiness ? (
+        <div className="mt-6 rounded-[26px] border border-[#18e6f2]/18 bg-[#07131f]/85 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.34)]">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="page-kicker">RSO readiness</p>
+              <h3 className="mt-2 text-2xl font-black text-white">Preparación para Production Key y Riot Sign On</h3>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
+                Este panel no ejecuta OAuth real todavía. Verifica que Darkside tenga dominio, políticas, callback y separación entre lookup técnico y propiedad oficial.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-black/20 p-2 text-center text-xs">
+              <ReadinessCounter label="Listo" value={readiness.summary.ready} tone="ready" />
+              <ReadinessCounter label="Pendiente" value={readiness.summary.pending} tone="pending" />
+              <ReadinessCounter label="Advert." value={readiness.summary.warning} tone="warning" />
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+            <RiotMetric label="Estado" value={readiness.status.replace(/_/g, " ")} />
+            <RiotMetric label="Dominio base" value={readiness.publicBaseUrl} />
+            <RiotMetric label="Redirect URI" value={readiness.callbackPreview?.expectedRedirectUri ?? "Pendiente"} />
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {readiness.items.map((item) => (
+              <article key={item.key} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <strong className="text-sm text-white">{item.label}</strong>
+                  <ReadinessBadge status={item.status} />
+                </div>
+                <p className="mt-3 text-xs leading-5 text-white/58">{item.description}</p>
+                {item.action ? <p className="mt-2 text-xs leading-5 text-[#18e6f2]/80">{item.action}</p> : null}
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-[#7bb7ff]">Legal visible</p>
+              <div className="mt-3 space-y-2 text-sm text-white/68">
+                <a className="block text-[#18e6f2] hover:text-white" href="/legal/terms">Términos del servicio</a>
+                <a className="block text-[#18e6f2] hover:text-white" href="/legal/privacy">Política de privacidad</a>
+                <a className="block text-[#18e6f2] hover:text-white" href="/legal/data-deletion">Eliminación de datos</a>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-amber-100/75">Siguientes acciones</p>
+              <ul className="mt-3 space-y-2 text-xs leading-5 text-amber-50/80">
+                {readiness.nextActions.slice(0, 5).map((action) => <li key={action}>• {action}</li>)}
+              </ul>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <form onSubmit={testConnection} className="mt-5 grid gap-3 md:grid-cols-[1fr_0.55fr_auto]">
         <input name="gameName" placeholder="Riot game name para prueba segura" />
@@ -321,5 +421,35 @@ function CapabilityCard({ title, block, detail }: { title: string; block?: Capab
       <strong className="mt-2 block text-lg uppercase">{status.replace(/_/g, " ")}</strong>
       <p className="mt-1 text-xs opacity-75">{block?.message ?? detail}</p>
     </article>
+  );
+}
+
+
+function ReadinessCounter({ label, value, tone }: { label: string; value: number; tone: ReadinessStatus }) {
+  const className = tone === "ready"
+    ? "text-emerald-200"
+    : tone === "warning"
+      ? "text-amber-200"
+      : "text-rose-200";
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+      <strong className={`block text-lg ${className}`}>{value}</strong>
+      <span className="text-[10px] uppercase tracking-[0.18em] text-white/45">{label}</span>
+    </div>
+  );
+}
+
+function ReadinessBadge({ status }: { status: ReadinessStatus }) {
+  const className = status === "ready"
+    ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
+    : status === "warning"
+      ? "border-amber-400/25 bg-amber-400/10 text-amber-100"
+      : "border-rose-400/25 bg-rose-400/10 text-rose-100";
+
+  return (
+    <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${className}`}>
+      {status}
+    </span>
   );
 }

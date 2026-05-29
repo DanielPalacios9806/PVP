@@ -261,6 +261,178 @@ export function startRiotRso() {
   };
 }
 
+
+function getPublicBaseUrl() {
+  return env.FRONTEND_URL ?? env.CORS_ALLOWED_ORIGINS[0] ?? "http://localhost:3000";
+}
+
+function buildReadinessItem(params: {
+  key: string;
+  label: string;
+  status: "ready" | "pending" | "warning";
+  description: string;
+  action?: string;
+}) {
+  return params;
+}
+
+export function getRiotRsoCallbackPreview() {
+  const config = getRiotRuntimeConfig();
+  const publicBaseUrl = getPublicBaseUrl().replace(/\/$/, "");
+  const expectedRedirectUri = env.RIOT_RSO_REDIRECT_URI || `${publicBaseUrl}/api/riot/rso/callback`;
+
+  return {
+    ok: true,
+    mode: config.mode,
+    readyForOfficialRso: config.readyForOfficialRso,
+    callbackImplemented: false,
+    status: config.readyForOfficialRso ? "READY_FOR_RIOT_REVIEW" : "WAITING_FOR_PRODUCTION_KEY_AND_RSO_CLIENT",
+    expectedRedirectUri,
+    recommendedFlow: "full_page_redirect",
+    requiredQueryParams: ["code", "state"],
+    securityControls: [
+      "state parameter generated server-side",
+      "authorization code exchanged only by backend",
+      "Riot tokens never exposed to browser storage",
+      "ownershipVerified remains false until Riot Sign On succeeds"
+    ],
+    futureCallbackBehavior: [
+      "validate state and current Darkside session",
+      "exchange authorization code with Riot OAuth token endpoint",
+      "call Riot account endpoint for authenticated player identity",
+      "upsert UserGameAccount as RSO_VERIFIED with ownershipVerified=true",
+      "audit riot.rso.link_success or riot.rso.link_failure"
+    ],
+    currentBehavior:
+      "This preview does not perform OAuth. It documents the exact callback contract needed for Riot production review."
+  };
+}
+
+export function getRiotComplianceReadiness() {
+  const config = getRiotRuntimeConfig();
+  const publicBaseUrl = getPublicBaseUrl().replace(/\/$/, "");
+  const legalUrls = {
+    terms: `${publicBaseUrl}/legal/terms`,
+    privacy: `${publicBaseUrl}/legal/privacy`,
+    dataDeletion: `${publicBaseUrl}/legal/data-deletion`
+  };
+
+  const items = [
+    buildReadinessItem({
+      key: "functional_mvp",
+      label: "MVP funcional",
+      status: "ready",
+      description: "Auth, roles, torneos, brackets, matches, disputas, auditoria y paneles admin ya existen.",
+      action: "Mantener una demo estable en darkside.cool."
+    }),
+    buildReadinessItem({
+      key: "backend_only_key",
+      label: "API key server-side",
+      status: config.apiKeyConfigured || config.mode === "mock" ? "ready" : "pending",
+      description: "RIOT_API_KEY se consume solo desde apps/api; el frontend usa endpoints internos.",
+      action: config.apiKeyConfigured ? "OK" : "Configurar RIOT_API_KEY en Render API, no en Web."
+    }),
+    buildReadinessItem({
+      key: "lookup_vs_ownership",
+      label: "Lookup separado de ownership",
+      status: "ready",
+      description: "Darkside diferencia validacion tecnica LOOKUP_ONLY de vinculacion oficial por Riot Sign On.",
+      action: "Conservar mensajes de RSO pendiente hasta aprobacion Riot."
+    }),
+    buildReadinessItem({
+      key: "rso_credentials",
+      label: "Credenciales RSO",
+      status: config.readyForOfficialRso ? "ready" : "pending",
+      description: "RSO requiere RIOT_RSO_CLIENT_ID, RIOT_RSO_CLIENT_SECRET y RIOT_RSO_REDIRECT_URI aprobados.",
+      action: config.readyForOfficialRso ? "Validar callback real con Riot." : "Solicitar Production Key y RSO client a Riot."
+    }),
+    buildReadinessItem({
+      key: "rso_callback_contract",
+      label: "Contrato de callback RSO",
+      status: env.RIOT_RSO_REDIRECT_URI ? "ready" : "warning",
+      description: `Redirect URI objetivo: ${env.RIOT_RSO_REDIRECT_URI || `${publicBaseUrl}/api/riot/rso/callback`}`,
+      action: "Registrar exactamente el mismo redirect URI en Riot Developer Portal cuando se apruebe RSO."
+    }),
+    buildReadinessItem({
+      key: "legal_terms",
+      label: "Terminos visibles",
+      status: "ready",
+      description: `Terminos publicados en ${legalUrls.terms}.`,
+      action: "Revisar que incluyan tokens no monetarios y no gambling."
+    }),
+    buildReadinessItem({
+      key: "privacy_policy",
+      label: "Privacidad y datos Riot",
+      status: "ready",
+      description: `Politica publicada en ${legalUrls.privacy}.`,
+      action: "Mantener detalle de datos Riot usados: Riot ID, PUUID, ranking e historial competitivo."
+    }),
+    buildReadinessItem({
+      key: "data_deletion",
+      label: "Eliminacion de datos",
+      status: "ready",
+      description: `Politica de eliminacion publicada en ${legalUrls.dataDeletion}.`,
+      action: "Asegurar que solicitudes de borrado puedan eliminar/desvincular cuentas Riot."
+    }),
+    buildReadinessItem({
+      key: "riot_disclaimer",
+      label: "Disclaimer Riot",
+      status: "ready",
+      description: "La plataforma debe indicar que no esta afiliada, patrocinada ni respaldada por Riot Games.",
+      action: "Agregar este disclaimer en docs y superficies publicas relevantes."
+    }),
+    buildReadinessItem({
+      key: "no_gambling",
+      label: "No gambling / tokens internos",
+      status: "ready",
+      description: "DS_TOKEN es interno, no retirable y no convertible a dinero real.",
+      action: "Mantenerlo claro en terminos y UI de tokens."
+    }),
+    buildReadinessItem({
+      key: "riot_capabilities",
+      label: "Compatibilidad API validada",
+      status: "ready",
+      description: "Account-V1, Summoner-V4, League-V4 por PUUID y Match-V5 fueron probados con endpoint admin.",
+      action: "Usar /api/riot/capabilities/check para evidencias de demo."
+    }),
+    buildReadinessItem({
+      key: "tournament_codes",
+      label: "Tournament Codes",
+      status: config.readyForTournamentCodes ? "ready" : "pending",
+      description: "Tournament Codes requieren provider, callback URL, secreto y aprobacion Riot.",
+      action: "Mantener simulacion/manual hasta aprobacion."
+    })
+  ];
+
+  const summary = items.reduce(
+    (acc, item) => {
+      acc.total += 1;
+      acc[item.status] += 1;
+      return acc;
+    },
+    { total: 0, ready: 0, pending: 0, warning: 0 }
+  );
+
+  return {
+    ok: true,
+    mode: config.mode,
+    status: summary.pending === 0 ? "READY_FOR_RIOT_REVIEW" : "PREPARING_RIOT_REVIEW",
+    publicBaseUrl,
+    legalUrls,
+    rso: getRiotRsoStatus(),
+    callbackPreview: getRiotRsoCallbackPreview(),
+    summary,
+    items,
+    nextActions: [
+      "Mantener deploy estable en darkside.cool.",
+      "Verificar dominio cuando Riot solicite site verification.",
+      "Preparar solicitud Production Key describiendo torneos universitarios, no gambling y moderacion.",
+      "Solicitar RSO para ownership verification antes de torneos oficiales.",
+      "No activar Tournament Codes reales hasta tener provider/callback aprobado."
+    ]
+  };
+}
+
 export async function unlinkRiotAccount(params: { userId: string; accountId: string }) {
   const existing = await prisma.userGameAccount.findFirst({
     where: {
@@ -524,6 +696,230 @@ export async function checkRiotCapabilities(params: {
   }
 
   return response;
+}
+
+
+function buildQueueSummary(entries: RiotLeagueEntryDto[]) {
+  return entries.map((entry) => {
+    const totalGames = entry.wins + entry.losses;
+    return {
+      queueType: entry.queueType,
+      label: queueLabel(entry.queueType),
+      tier: entry.tier,
+      rank: entry.rank,
+      leaguePoints: entry.leaguePoints,
+      wins: entry.wins,
+      losses: entry.losses,
+      winRate: totalGames ? Math.round((entry.wins / totalGames) * 100) : 0,
+      hotStreak: Boolean(entry.hotStreak),
+      inactive: Boolean(entry.inactive)
+    };
+  });
+}
+
+function summarizeMatch(match: RiotMatchDto, matchId: string, puuid: string) {
+  const participant = match.info?.participants?.find((item) => item.puuid === puuid);
+  const deaths = participant?.deaths ?? 0;
+  const kda = deaths > 0
+    ? Number((((participant?.kills ?? 0) + (participant?.assists ?? 0)) / deaths).toFixed(2))
+    : (participant?.kills ?? 0) + (participant?.assists ?? 0);
+
+  return {
+    matchId: match.metadata?.matchId ?? matchId,
+    gameMode: match.info?.gameMode ?? null,
+    gameType: match.info?.gameType ?? null,
+    durationSeconds: match.info?.gameDuration ?? null,
+    endedAt: match.info?.gameEndTimestamp ? new Date(match.info.gameEndTimestamp).toISOString() : null,
+    championName: participant?.championName ?? null,
+    championId: participant?.championId ?? null,
+    position: participant?.teamPosition || participant?.individualPosition || null,
+    result: participant?.win ? "win" : "loss",
+    kills: participant?.kills ?? null,
+    deaths: participant?.deaths ?? null,
+    assists: participant?.assists ?? null,
+    kda
+  };
+}
+
+async function loadRiotCompetitiveData(params: { puuid: string; userId: string; metadataOperation: string }) {
+  const context = {
+    userId: params.userId,
+    metadata: { operation: params.metadataOperation }
+  };
+
+  const summary: Record<string, unknown> = {
+    summoner: { status: "skipped" },
+    ranked: { status: "skipped", queues: [] },
+    recentMatches: { status: "skipped", matches: [] }
+  };
+
+  try {
+    const summoner = await riotRequest<RiotSummonerDto>({
+      route: "platform",
+      path: `/lol/summoner/v4/summoners/by-puuid/${encodeURIComponent(params.puuid)}`,
+      retries: 0,
+      ...context
+    });
+
+    summary.summoner = {
+      status: "ok",
+      profileIconId: summoner.profileIconId ?? null,
+      summonerLevel: summoner.summonerLevel ?? null,
+      revisionDate: summoner.revisionDate ?? null
+    };
+  } catch (error) {
+    summary.summoner = capabilityError(error);
+  }
+
+  try {
+    const entries = await riotRequest<RiotLeagueEntryDto[]>({
+      route: "platform",
+      path: `/lol/league/v4/entries/by-puuid/${encodeURIComponent(params.puuid)}`,
+      retries: 0,
+      ...context
+    });
+
+    const queues = buildQueueSummary(entries);
+    summary.ranked = {
+      status: queues.length ? "ok" : "empty",
+      queues
+    };
+  } catch (error) {
+    summary.ranked = capabilityError(error);
+  }
+
+  try {
+    const matchIds = await riotRequest<string[]>({
+      route: "regional",
+      path: `/lol/match/v5/matches/by-puuid/${encodeURIComponent(params.puuid)}/ids?start=0&count=5`,
+      retries: 0,
+      ...context
+    });
+
+    const details = await Promise.all(
+      matchIds.slice(0, 5).map(async (matchId) => {
+        try {
+          const match = await riotRequest<RiotMatchDto>({
+            route: "regional",
+            path: `/lol/match/v5/matches/${encodeURIComponent(matchId)}`,
+            retries: 0,
+            ...context
+          });
+
+          return summarizeMatch(match, matchId, params.puuid);
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    summary.recentMatches = {
+      status: matchIds.length ? "ok" : "empty",
+      sampleMatchIds: matchIds,
+      matches: details.filter(Boolean)
+    };
+  } catch (error) {
+    summary.recentMatches = capabilityError(error);
+  }
+
+  return summary;
+}
+
+export async function getMyRiotCompetitiveSummary(userId: string) {
+  const config = getRiotRuntimeConfig();
+  const account = await prisma.userGameAccount.findFirst({
+    where: {
+      userId,
+      provider: ExternalAccountProvider.RIOT
+    },
+    orderBy: { updatedAt: "desc" }
+  });
+
+  if (!account) {
+    return {
+      ok: false,
+      mode: config.mode,
+      message: "No Riot ID has been saved for this Darkside profile yet.",
+      account: null,
+      summoner: { status: "skipped" },
+      ranked: { status: "skipped", queues: [] },
+      recentMatches: { status: "skipped", matches: [] }
+    };
+  }
+
+  const accountSummary = {
+    id: account.id,
+    game: account.game,
+    gameName: account.riotGameName,
+    tagLine: account.riotTagLine,
+    platformRoute: account.platformRoute,
+    regionalRoute: account.regionalRoute,
+    verified: account.verified,
+    verificationStatus: account.verificationStatus,
+    ownershipVerified: Boolean((account.metadata as Record<string, unknown> | null)?.ownershipVerified),
+    puuidPresent: Boolean(account.puuid),
+    lastSyncedAt: account.lastSyncedAt
+  };
+
+  if (!account.puuid) {
+    return {
+      ok: false,
+      mode: config.mode,
+      message: "Saved Riot account does not have PUUID metadata yet. Re-run technical validation.",
+      account: accountSummary,
+      summoner: { status: "skipped" },
+      ranked: { status: "skipped", queues: [] },
+      recentMatches: { status: "skipped", matches: [] }
+    };
+  }
+
+  if (config.mode === "mock") {
+    return {
+      ok: true,
+      mode: config.mode,
+      account: accountSummary,
+      summoner: { status: "ok", profileIconId: 654, summonerLevel: 247, revisionDate: Date.now() },
+      ranked: {
+        status: "ok",
+        queues: [
+          { queueType: "RANKED_SOLO_5x5", label: "SoloQ", tier: "GOLD", rank: "II", leaguePoints: 63, wins: 179, losses: 145, winRate: 55 },
+          { queueType: "RANKED_FLEX_SR", label: "Flex", tier: "SILVER", rank: "I", leaguePoints: 32, wins: 10, losses: 7, winRate: 59 }
+        ]
+      },
+      recentMatches: {
+        status: "ok",
+        matches: [
+          { matchId: "LA1_MOCK_1", championName: "Rumble", result: "loss", kills: 2, deaths: 11, assists: 8, kda: 0.91, position: "TOP", durationSeconds: 1789 },
+          { matchId: "LA1_MOCK_2", championName: "Ashe", result: "win", kills: 9, deaths: 4, assists: 12, kda: 5.25, position: "BOTTOM", durationSeconds: 1650 }
+        ]
+      }
+    };
+  }
+
+  if (!config.readyForAccountLookup) {
+    return {
+      ok: false,
+      mode: config.mode,
+      message: "Riot API is not configured for real competitive data.",
+      account: accountSummary,
+      summoner: { status: "not_configured" },
+      ranked: { status: "not_configured", queues: [] },
+      recentMatches: { status: "not_configured", matches: [] }
+    };
+  }
+
+  const competitive = await loadRiotCompetitiveData({
+    puuid: account.puuid,
+    userId,
+    metadataOperation: "competitiveSummary"
+  });
+
+  return {
+    ok: true,
+    mode: config.mode,
+    account: accountSummary,
+    ...competitive
+  };
 }
 
 export async function getRiotAdminOverview() {
