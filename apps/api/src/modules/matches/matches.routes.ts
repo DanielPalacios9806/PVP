@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { DisputeStatus, MatchResultStatus, MatchStatus, ResultSource } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
-import { requireAuth } from "../../middlewares/auth.js";
+import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import type { AuthenticatedRequest } from "../../types.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import {
@@ -63,6 +63,167 @@ matchesRouter.get(
     });
 
     response.json(matches);
+  })
+);
+
+
+
+matchesRouter.get(
+  "/moderation/cases",
+  requireAuth,
+  requireRole(["MODERATOR", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request, response) => {
+    const statusFilter = typeof request.query.status === "string" ? request.query.status : "all";
+    const tournamentId = typeof request.query.tournamentId === "string" ? request.query.tournamentId : "";
+    const query = typeof request.query.q === "string" ? request.query.q.trim() : "";
+    const parsedLimit = Number(typeof request.query.limit === "string" ? request.query.limit : "50");
+    const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 10), 100) : 50;
+
+    const baseWhere = (() => {
+      switch (statusFilter) {
+        case "pending":
+          return {
+            OR: [
+              { status: MatchStatus.RESULT_PENDING },
+              { results: { some: { status: MatchResultStatus.PENDING_CONFIRMATION } } }
+            ]
+          };
+        case "disputed":
+          return {
+            OR: [
+              { status: MatchStatus.DISPUTED },
+              { disputes: { some: { status: { in: [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW] } } } }
+            ]
+          };
+        case "completed":
+          return { status: MatchStatus.COMPLETED };
+        case "open":
+          return { status: { in: [MatchStatus.READY, MatchStatus.IN_PROGRESS, MatchStatus.RESULT_PENDING, MatchStatus.DISPUTED] } };
+        default:
+          return {
+            OR: [
+              { status: { in: [MatchStatus.RESULT_PENDING, MatchStatus.DISPUTED, MatchStatus.IN_PROGRESS, MatchStatus.READY] } },
+              { results: { some: { status: MatchResultStatus.PENDING_CONFIRMATION } } },
+              { disputes: { some: { status: { in: [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW] } } } }
+            ]
+          };
+      }
+    })();
+
+    const matches = await prisma.match.findMany({
+      where: {
+        AND: [
+          baseWhere,
+          tournamentId ? { tournamentId } : {},
+          query
+            ? {
+                OR: [
+                  { tournament: { name: { contains: query } } },
+                  { tournament: { game: { contains: query } } },
+                  { homeRegistration: { team: { name: { contains: query } } } },
+                  { awayRegistration: { team: { name: { contains: query } } } },
+                  { homeRegistration: { user: { username: { contains: query } } } },
+                  { awayRegistration: { user: { username: { contains: query } } } },
+                  { homeRegistration: { user: { displayName: { contains: query } } } },
+                  { awayRegistration: { user: { displayName: { contains: query } } } }
+                ]
+              }
+            : {}
+        ]
+      },
+      take: limit,
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      include: {
+        tournament: { select: { id: true, name: true, game: true, status: true, organizerId: true } },
+        round: { select: { id: true, name: true } },
+        homeRegistration: {
+          include: {
+            user: { select: { id: true, username: true, displayName: true, email: true } },
+            team: { select: { id: true, name: true, tag: true } }
+          }
+        },
+        awayRegistration: {
+          include: {
+            user: { select: { id: true, username: true, displayName: true, email: true } },
+            team: { select: { id: true, name: true, tag: true } }
+          }
+        },
+        winnerRegistration: {
+          include: {
+            user: { select: { id: true, username: true, displayName: true } },
+            team: { select: { id: true, name: true, tag: true } }
+          }
+        },
+        results: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            reportedByUser: { select: { id: true, username: true, displayName: true, email: true } },
+            confirmedByUser: { select: { id: true, username: true, displayName: true } },
+            winnerRegistration: {
+              include: {
+                user: { select: { id: true, username: true, displayName: true } },
+                team: { select: { id: true, name: true, tag: true } }
+              }
+            }
+          }
+        },
+        disputes: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            openedByUser: { select: { id: true, username: true, displayName: true, email: true } },
+            resolvedByUser: { select: { id: true, username: true, displayName: true } }
+          }
+        }
+      }
+    });
+
+    const cases = matches.map((match) => {
+      const pendingResult = match.results.find((result) => result.status === MatchResultStatus.PENDING_CONFIRMATION) ?? null;
+      const openDispute = match.disputes.find((dispute) => dispute.status === DisputeStatus.OPEN || dispute.status === DisputeStatus.UNDER_REVIEW) ?? null;
+      const severity = openDispute ? "critical" : pendingResult ? "warning" : match.status === MatchStatus.IN_PROGRESS ? "info" : "neutral";
+      const actionNeeded = openDispute
+        ? "Resolver disputa"
+        : pendingResult
+          ? "Validar resultado pendiente"
+          : match.status === MatchStatus.READY
+            ? "Esperando reporte"
+            : match.status === MatchStatus.IN_PROGRESS
+              ? "Monitorear partida"
+              : match.status === MatchStatus.COMPLETED
+                ? "Caso cerrado"
+                : "Revisar estado";
+
+      return {
+        id: match.id,
+        status: match.status,
+        scheduledAt: match.scheduledAt,
+        updatedAt: match.updatedAt,
+        tournament: match.tournament,
+        round: match.round,
+        homeRegistration: match.homeRegistration,
+        awayRegistration: match.awayRegistration,
+        winnerRegistration: match.winnerRegistration,
+        pendingResult,
+        openDispute,
+        latestResult: match.results[0] ?? null,
+        latestDispute: match.disputes[0] ?? null,
+        resultsCount: match.results.length,
+        disputesCount: match.disputes.length,
+        severity,
+        actionNeeded
+      };
+    });
+
+    response.json({
+      cases,
+      summary: {
+        total: cases.length,
+        pendingResults: cases.filter((item) => item.pendingResult).length,
+        openDisputes: cases.filter((item) => item.openDispute).length,
+        inProgress: cases.filter((item) => item.status === MatchStatus.IN_PROGRESS).length,
+        completed: cases.filter((item) => item.status === MatchStatus.COMPLETED).length
+      }
+    });
   })
 );
 
@@ -605,4 +766,5 @@ matchesRouter.post(
     response.json({ dispute: resolvedDispute, result: resolvedResult });
   })
 );
+
 
