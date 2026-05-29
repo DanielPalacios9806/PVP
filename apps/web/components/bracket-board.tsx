@@ -23,6 +23,17 @@ type RoundView = {
   matches: MatchView[];
 };
 
+const demoTeamNames = [
+  "Nova Esports",
+  "Red Sentinel",
+  "Lunaris",
+  "Spectre Team",
+  "Void Reapers",
+  "Black Dragons",
+  "Eclipse Gaming",
+  "Inferno Squad"
+];
+
 function registrationLabel(registration?: RegistrationView | null) {
   if (!registration) {
     return "Proximo rival";
@@ -51,25 +62,153 @@ function statusLabel(status: string) {
     COMPLETED: "Finalizada",
     DISPUTED: "Disputa",
     CANCELLED: "Cancelada",
-    ACTIVE: "Activa"
+    ACTIVE: "Activa",
+    SIMULATED: "Vista previa"
   };
 
   return labels[status] ?? status;
 }
 
-export function BracketBoard({ rounds }: { rounds: RoundView[] }) {
-  if (!rounds.length) {
-    return (
-      <div className="rounded-[20px] border border-dashed border-white/12 bg-black/20 p-6 text-sm leading-7 text-white/62">
-        El bracket aun no ha sido generado. Cuando el organizador cierre inscripciones, aqui apareceran las rondas y partidas.
-      </div>
-    );
+function teamInitials(label: string) {
+  return label
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+}
+
+function buildPreviewRegistrations(registrations?: RegistrationView[]) {
+  const realRegistrations = registrations?.filter((registration) => registration?.id) ?? [];
+
+  if (realRegistrations.length >= 2) {
+    return realRegistrations.slice(0, 8);
   }
+
+  return demoTeamNames.map((name, index) => ({
+    id: `preview-${index}`,
+    team: {
+      name
+    }
+  }));
+}
+
+function buildPreviewRounds(registrations?: RegistrationView[]): RoundView[] {
+  const entries = buildPreviewRegistrations(registrations);
+  const firstRoundMatches: MatchView[] = [];
+
+  for (let index = 0; index < entries.length; index += 2) {
+    firstRoundMatches.push({
+      id: `preview-r1-${index}`,
+      status: "SIMULATED",
+      bestOf: 1,
+      homeRegistration: entries[index],
+      awayRegistration: entries[index + 1] ?? null,
+      winnerRegistration: index % 4 === 0 ? entries[index] : undefined
+    });
+  }
+
+  const secondRoundEntries = firstRoundMatches.map((match, index) => match.winnerRegistration ?? {
+    id: `preview-winner-${index}`,
+    team: {
+      name: "Ganador pendiente"
+    }
+  });
+
+  const secondRoundMatches: MatchView[] = [];
+  for (let index = 0; index < secondRoundEntries.length; index += 2) {
+    secondRoundMatches.push({
+      id: `preview-r2-${index}`,
+      status: "SIMULATED",
+      bestOf: 1,
+      homeRegistration: secondRoundEntries[index],
+      awayRegistration: secondRoundEntries[index + 1] ?? null,
+      winnerRegistration: index === 0 ? secondRoundEntries[index] : undefined
+    });
+  }
+
+  const finalHome = secondRoundMatches[0]?.winnerRegistration ?? secondRoundMatches[0]?.homeRegistration;
+  const finalAway = secondRoundMatches[1]?.winnerRegistration ?? secondRoundMatches[1]?.homeRegistration ?? null;
+
+  return [
+    {
+      id: "preview-round-1",
+      name: "Ronda 1",
+      sequence: 1,
+      status: "SIMULATED",
+      matches: firstRoundMatches
+    },
+    {
+      id: "preview-round-2",
+      name: "Semifinales",
+      sequence: 2,
+      status: "SIMULATED",
+      matches: secondRoundMatches
+    },
+    {
+      id: "preview-final",
+      name: "Gran final",
+      sequence: 3,
+      status: "SIMULATED",
+      matches: [
+        {
+          id: "preview-final-match",
+          status: "SIMULATED",
+          bestOf: 3,
+          homeRegistration: finalHome ?? null,
+          awayRegistration: finalAway,
+          winnerRegistration: undefined
+        }
+      ]
+    }
+  ];
+}
+
+function TeamLine({ registration, score, winner }: { registration?: RegistrationView | null; score: string; winner: boolean }) {
+  const label = registrationLabel(registration);
+
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 rounded-[12px] border px-3 py-2 text-sm ${
+        winner
+          ? "border-[#18e6f2]/40 bg-[#18e6f2]/10 text-white"
+          : "border-white/10 bg-white/[0.035] text-white/70"
+      }`}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[10px] font-black ${
+          winner ? "border-[#18e6f2]/45 bg-[#18e6f2]/15 text-[#bffaff]" : "border-white/10 bg-black/35 text-white/48"
+        }`}>
+          {teamInitials(label)}
+        </span>
+        <span className="min-w-0 truncate">{label}</span>
+      </span>
+      <span className={winner ? "text-[#40ffbb]" : "text-white/40"}>{score}</span>
+    </div>
+  );
+}
+
+export function BracketBoard({
+  rounds,
+  previewRegistrations
+}: {
+  rounds: RoundView[];
+  previewRegistrations?: RegistrationView[];
+}) {
+  const hasRealRounds = rounds.length > 0;
+  const visibleRounds = hasRealRounds ? rounds : buildPreviewRounds(previewRegistrations);
 
   return (
     <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
+      {!hasRealRounds ? (
+        <div className="mb-5 rounded-[18px] border border-[#18e6f2]/20 bg-[#18e6f2]/8 px-4 py-3 text-sm leading-6 text-[#bffaff]">
+          Bracket simulado para vista previa. Cuando el organizador genere las llaves reales, se reemplazara automaticamente.
+        </div>
+      ) : null}
+
       <div className="flex min-w-max items-start gap-5">
-        {rounds.map((round) => (
+        {visibleRounds.map((round) => (
           <section key={round.id} className="relative w-[255px] shrink-0 sm:w-[292px]">
             <div className="absolute -right-5 top-[52%] hidden h-px w-5 bg-gradient-to-r from-[#18e6f2]/60 to-transparent lg:block" />
             <div className="mb-4 border-l border-[#ff2438]/60 pl-3">
@@ -78,41 +217,36 @@ export function BracketBoard({ rounds }: { rounds: RoundView[] }) {
             </div>
 
             <div className="space-y-4">
-              {round.matches.map((match) => (
-                <article
-                  key={match.id}
-                  className="motion-card relative overflow-hidden rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,36,0.96),rgba(7,11,17,0.94))] p-3 shadow-[0_16px_34px_rgba(0,0,0,0.26)]"
-                >
-                  <div className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-[#18e6f2] via-[#ff2438] to-transparent" />
-                  <div className="mb-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.14em] text-white/45">
-                    <span>BO{match.bestOf}</span>
-                    <span>{statusLabel(match.status)}</span>
-                  </div>
+              {round.matches.map((match) => {
+                const homeWinner = isWinner(match, match.homeRegistration);
+                const awayWinner = isWinner(match, match.awayRegistration);
 
-                  <div className="space-y-2">
-                    {[match.homeRegistration, match.awayRegistration].map((registration, index) => {
-                      const winner = isWinner(match, registration);
-                      return (
-                        <div
-                          key={`${match.id}-${index}`}
-                          className={`flex items-center justify-between gap-3 rounded-[12px] border px-3 py-2 text-sm ${
-                            winner
-                              ? "border-[#18e6f2]/40 bg-[#18e6f2]/10 text-white"
-                              : "border-white/10 bg-white/[0.035] text-white/70"
-                          }`}
-                        >
-                          <span className="min-w-0 truncate">{registrationLabel(registration)}</span>
-                          <span className={winner ? "text-[#40ffbb]" : "text-white/40"}>{winner ? "1" : "-"}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                return (
+                  <article
+                    key={match.id}
+                    className="motion-card relative overflow-hidden rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,36,0.96),rgba(7,11,17,0.94))] p-3 shadow-[0_16px_34px_rgba(0,0,0,0.26)]"
+                  >
+                    <div className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-[#18e6f2] via-[#ff2438] to-transparent" />
+                    <div className="mb-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.14em] text-white/45">
+                      <span>BO{match.bestOf}</span>
+                      <span>{statusLabel(match.status)}</span>
+                    </div>
 
-                  <Link href={`/dashboard/matches/${match.id}`} className="mt-4 inline-flex text-sm font-semibold text-[#18e6f2]">
-                    Abrir sala
-                  </Link>
-                </article>
-              ))}
+                    <div className="space-y-2">
+                      <TeamLine registration={match.homeRegistration} score={homeWinner ? "1" : hasRealRounds ? "-" : "0"} winner={homeWinner} />
+                      <TeamLine registration={match.awayRegistration} score={awayWinner ? "1" : hasRealRounds ? "-" : "0"} winner={awayWinner} />
+                    </div>
+
+                    {hasRealRounds ? (
+                      <Link href={`/dashboard/matches/${match.id}`} className="mt-4 inline-flex text-sm font-semibold text-[#18e6f2]">
+                        Abrir sala
+                      </Link>
+                    ) : (
+                      <p className="mt-4 text-sm font-semibold text-white/40">Sala pendiente</p>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           </section>
         ))}

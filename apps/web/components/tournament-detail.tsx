@@ -23,6 +23,107 @@ const gameAssets: Record<string, { bg: string; logo: string; label: string }> = 
   }
 };
 
+function tournamentHeroImage(tournament: any, game: { bg: string }) {
+  if (tournament?.slug) {
+    return `/images/tournaments/${tournament.slug}.webp`;
+  }
+
+  return game.bg;
+}
+
+function getCountdownParts(value?: string | Date | null) {
+  if (!value) {
+    return [
+      ["--", "dias"],
+      ["--", "horas"],
+      ["--", "min"],
+      ["--", "seg"]
+    ];
+  }
+
+  const diff = Math.max(new Date(value).getTime() - Date.now(), 0);
+  const days = Math.floor(diff / 86_400_000);
+  const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  const seconds = Math.floor((diff % 60_000) / 1_000);
+
+  return [
+    [String(days).padStart(2, "0"), "dias"],
+    [String(hours).padStart(2, "0"), "horas"],
+    [String(minutes).padStart(2, "0"), "min"],
+    [String(seconds).padStart(2, "0"), "seg"]
+  ];
+}
+
+function isUserRegistration(registration: any, user: StoredUser | null, ownedTeams: any[]) {
+  if (!registration || !user) {
+    return false;
+  }
+
+  if (registration.user?.id === user.id || registration.userId === user.id) {
+    return true;
+  }
+
+  if (registration.team?.id) {
+    return ownedTeams.some((team) => team.id === registration.team.id);
+  }
+
+  return false;
+}
+
+function isActiveParticipantStatus(status?: string) {
+  return status === "PENDING" || status === "CONFIRMED" || status === "CHECKED_IN";
+}
+
+function primaryActionLabel(params: {
+  user: StoredUser | null;
+  tournament: any;
+  hasRegistration: boolean;
+  myRegistration?: any;
+  registrationOpen: boolean;
+  capacityFull: boolean;
+  needsTeam: boolean;
+}) {
+  if (!params.user) {
+    return "Iniciar sesion para inscribirme";
+  }
+
+  if (params.hasRegistration) {
+    if (params.tournament.status === "CHECK_IN" && params.myRegistration?.status === "CONFIRMED") {
+      return "Hacer check-in";
+    }
+
+    return "Ver mi inscripcion";
+  }
+
+  if (params.capacityFull) {
+    return "Cupos completos";
+  }
+
+  if (!params.registrationOpen) {
+    return "Registro cerrado";
+  }
+
+  if (params.needsTeam) {
+    return "Crear o unirme a un equipo";
+  }
+
+  return "Inscribirse ahora";
+}
+
+function primaryActionDisabled(params: {
+  user: StoredUser | null;
+  hasRegistration: boolean;
+  registrationOpen: boolean;
+  capacityFull: boolean;
+}) {
+  if (!params.user || params.hasRegistration) {
+    return false;
+  }
+
+  return !params.registrationOpen || params.capacityFull;
+}
+
 function registrationLabel(registration: any) {
   if (!registration) {
     return "Próximo rival";
@@ -101,6 +202,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const [activeTab, setActiveTab] = useState("Bracket");
   const [localRegistered, setLocalRegistered] = useState(false);
   const [ownedTeams, setOwnedTeams] = useState<any[]>([]);
+  const [heroSrc, setHeroSrc] = useState("/assets/darkside/official/hero-desktop.jpg");
 
   const isMockTournament = tournamentId.startsWith("mock-") || tournament?.id?.startsWith("mock-");
   const game = gameAssets[String(tournament?.game || "").toUpperCase()] ?? gameAssets.VALORANT;
@@ -109,6 +211,29 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const registrationOpen = tournament?.status === "REGISTRATION_OPEN" || isMockTournament;
   const registeredCount = (tournament?.registrations?.length ?? 0) + (localRegistered ? 1 : 0);
   const maxParticipants = tournament?.maxParticipants ?? 8;
+  const myRegistration = useMemo(
+    () => tournament?.registrations?.find((registration: any) => isUserRegistration(registration, user, ownedTeams)),
+    [tournament, user, ownedTeams]
+  );
+  const hasRegistration = Boolean(localRegistered || (myRegistration && isActiveParticipantStatus(myRegistration.status)));
+  const capacityFull = registeredCount >= maxParticipants;
+  const needsTeam = Boolean(tournament?.type === "TEAM" && user && !ownedTeams.length && !hasRegistration);
+  const countdownParts = useMemo(() => getCountdownParts(tournament?.startsAt), [tournament?.startsAt]);
+  const actionLabel = primaryActionLabel({
+    user,
+    tournament,
+    hasRegistration,
+    myRegistration,
+    registrationOpen,
+    capacityFull,
+    needsTeam
+  });
+  const actionDisabled = primaryActionDisabled({
+    user,
+    hasRegistration,
+    registrationOpen,
+    capacityFull
+  });
 
   async function load() {
     try {
@@ -162,14 +287,31 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     void loadTeams(storedUser);
   }, [tournamentId]);
 
+  useEffect(() => {
+    if (tournament) {
+      setHeroSrc(tournamentHeroImage(tournament, game));
+    }
+  }, [tournament, game]);
+
   async function register() {
     if (!user) {
       window.location.href = "/auth/login";
       return;
     }
 
+    if (hasRegistration) {
+      setActiveTab("Equipos");
+      setMessage("Ya tienes una inscripcion activa en este torneo.");
+      return;
+    }
+
     if (!registrationOpen) {
       setMessage("Las inscripciones no estan abiertas para este torneo.");
+      return;
+    }
+
+    if (capacityFull) {
+      setMessage("Los cupos de este torneo ya estan completos.");
       return;
     }
 
@@ -234,6 +376,21 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     await load();
   }
 
+  async function handlePrimaryAction() {
+    if (myRegistration && tournament?.status === "CHECK_IN" && myRegistration.status === "CONFIRMED") {
+      await checkIn(myRegistration.id);
+      return;
+    }
+
+    if (hasRegistration) {
+      setActiveTab("Equipos");
+      setMessage("Ya estas participando en este torneo. Revisa tu estado en la pestaña Equipos.");
+      return;
+    }
+
+    await register();
+  }
+
   if (!tournament) {
     return (
       <div className="page-section">
@@ -294,13 +451,13 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
       );
     }
 
-    return <BracketBoard rounds={tournament.bracket?.rounds ?? []} />;
+    return <BracketBoard rounds={tournament.bracket?.rounds ?? []} previewRegistrations={tournament.registrations ?? []} />;
   }
 
   return (
     <div className="min-w-0 overflow-x-hidden pb-10">
       <section className="relative overflow-hidden border-b border-white/8">
-        <Image src="/assets/darkside/official/hero-desktop.jpg" alt="" fill priority className="object-cover object-center" />
+        <Image src={heroSrc} alt="" fill priority className="object-cover object-center" onError={() => setHeroSrc(game.bg)} />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,8,12,0.98)_0%,rgba(5,8,12,0.78)_38%,rgba(5,8,12,0.2)_72%,rgba(5,8,12,0.88)_100%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_34%,rgba(255,36,56,0.2),transparent_26%),radial-gradient(circle_at_76%_58%,rgba(24,230,242,0.16),transparent_22%)]" />
 
@@ -341,8 +498,12 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
               </div>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <button onClick={register} className="btn-primary motion-press w-full sm:w-auto">
-                  {user ? "Inscribirme ahora" : "Iniciar sesión para inscribirme"}
+                <button
+                  onClick={handlePrimaryAction}
+                  disabled={actionDisabled}
+                  className={`btn-primary motion-press w-full sm:w-auto ${actionDisabled ? "cursor-not-allowed opacity-55" : ""}`}
+                >
+                  {actionLabel}
                 </button>
                 <Link href="#bracket" className="btn-secondary motion-press w-full sm:w-auto">
                   Ver bracket
@@ -358,12 +519,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
             <div className="rounded-[18px] border border-white/10 bg-black/30 p-5 backdrop-blur-md">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#18e6f2]">Comienza en</p>
               <div className="mt-4 grid grid-cols-4 gap-3 text-center">
-                {[
-                  ["02", "días"],
-                  ["14", "horas"],
-                  ["37", "min"],
-                  ["52", "seg"]
-                ].map(([value, label]) => (
+                {countdownParts.map(([value, label]) => (
                   <div key={label}>
                     <strong className="block text-2xl text-[#18e6f2]">{value}</strong>
                     <span className="text-[10px] uppercase text-white/40">{label}</span>

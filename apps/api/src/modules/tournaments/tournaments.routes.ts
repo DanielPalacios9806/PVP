@@ -262,6 +262,89 @@ async function assertTeamRegistrationAllowed(teamId: string, user: AuthUser) {
   return team;
 }
 
+
+function buildTournamentWindow(tournament: { startsAt: Date | null; endsAt: Date | null }) {
+  if (!tournament.startsAt) {
+    return null;
+  }
+
+  const start = tournament.startsAt;
+  const end = tournament.endsAt ?? new Date(start.getTime() + 2 * 60 * 60 * 1000);
+
+  return {
+    start,
+    end
+  };
+}
+
+function tournamentWindowsOverlap(
+  current: { startsAt: Date | null; endsAt: Date | null },
+  candidate: { startsAt: Date | null; endsAt: Date | null }
+) {
+  const currentWindow = buildTournamentWindow(current);
+  const candidateWindow = buildTournamentWindow(candidate);
+
+  if (!currentWindow || !candidateWindow) {
+    return false;
+  }
+
+  return currentWindow.start < candidateWindow.end && candidateWindow.start < currentWindow.end;
+}
+
+async function assertNoParticipantScheduleConflict(params: {
+  tournament: { id: string; name: string; startsAt: Date | null; endsAt: Date | null };
+  participantUserIds: string[];
+}) {
+  if (!params.participantUserIds.length || !params.tournament.startsAt) {
+    return;
+  }
+
+  const conflictingRegistration = await prisma.tournamentRegistration.findFirst({
+    where: {
+      tournamentId: { not: params.tournament.id },
+      status: { in: activeRegistrationStatuses },
+      tournament: {
+        startsAt: { not: null },
+        status: {
+          notIn: terminalTournamentStatuses
+        }
+      },
+      OR: [
+        {
+          userId: { in: params.participantUserIds }
+        },
+        {
+          team: {
+            members: {
+              some: {
+                userId: { in: params.participantUserIds }
+              }
+            }
+          }
+        }
+      ]
+    },
+    include: {
+      tournament: {
+        select: {
+          id: true,
+          name: true,
+          startsAt: true,
+          endsAt: true
+        }
+      }
+    }
+  });
+
+  if (
+    conflictingRegistration?.tournament &&
+    tournamentWindowsOverlap(params.tournament, conflictingRegistration.tournament)
+  ) {
+    throw conflict(`Participant already has an active tournament at the same time: ${conflictingRegistration.tournament.name}`);
+  }
+}
+
+
 async function createTournamentRegistration(params: {
   request: AuthenticatedRequest;
   tournamentId: string;
@@ -282,14 +365,16 @@ async function createTournamentRegistration(params: {
     throw badRequest("Tournament registration deadline has passed");
   }
 
+  let registeringTeam: Awaited<ReturnType<typeof assertTeamRegistrationAllowed>> | null = null;
+
   if (tournament.type === "TEAM") {
     if (!params.teamId) {
       throw badRequest("Team registration requires teamId");
     }
 
-    const team = await assertTeamRegistrationAllowed(params.teamId, params.request.user!);
+    registeringTeam = await assertTeamRegistrationAllowed(params.teamId, params.request.user!);
 
-    if (tournament.teamSize && team.members.length < tournament.teamSize) {
+    if (tournament.teamSize && registeringTeam.members.length < tournament.teamSize) {
       throw badRequest("Team does not meet the required roster size for this tournament");
     }
   }
@@ -331,6 +416,16 @@ async function createTournamentRegistration(params: {
   if (activeCount >= tournament.maxParticipants) {
     throw badRequest("Tournament registration capacity has been reached");
   }
+
+  const participantUserIds =
+    tournament.type === "TEAM"
+      ? registeringTeam?.members.map((member) => member.userId) ?? []
+      : [params.userId ?? params.request.user!.sub];
+
+  await assertNoParticipantScheduleConflict({
+    tournament,
+    participantUserIds
+  });
 
   const registration = await prisma.tournamentRegistration.create({
     data: {

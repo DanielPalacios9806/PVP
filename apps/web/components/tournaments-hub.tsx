@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { apiUrl, getAuthHeaders } from "@/lib/config";
 import { mockTournaments } from "@/lib/mock-data";
-import { getStoredUser } from "@/lib/session";
+import { getStoredUser, type StoredUser } from "@/lib/session";
 
 const hubConfig = {
   lol: {
@@ -85,7 +85,8 @@ const curatedCards = [
     mode: "5vs5",
     status: "OPEN",
     copy: "Bracket abierto con cupos para escuadras competitivas.",
-    prize: "1.500 tokens"
+    prize: "1.500 tokens",
+    participating: false
   },
   {
     id: "hub-2",
@@ -95,7 +96,8 @@ const curatedCards = [
     mode: "3vs3",
     status: "LIVE",
     copy: "Serie nocturna para comunidades activas y rosters en crecimiento.",
-    prize: "900 tokens"
+    prize: "900 tokens",
+    participating: false
   },
   {
     id: "hub-3",
@@ -105,25 +107,100 @@ const curatedCards = [
     mode: "1vs1",
     status: "COMPLETE",
     copy: "Encuentros individuales para medir mecanicas y reflejos.",
-    prize: "350 tokens"
+    prize: "350 tokens",
+    participating: false
   }
 ];
 
-function mapTournamentCard(item: any) {
+const liveStatuses = ["IN_PROGRESS", "CHECK_IN"];
+const openStatuses = ["REGISTRATION_OPEN", "PUBLISHED", "CHECK_IN", "IN_PROGRESS"];
+
+function tournamentDateLabel(value?: string | Date | null, status?: string) {
+  if (status === "IN_PROGRESS") {
+    return "En curso ahora";
+  }
+
+  if (!value) {
+    return "Programacion pendiente";
+  }
+
+  return new Intl.DateTimeFormat("es-EC", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
+function statusToCardStatus(status?: string) {
+  if (status && liveStatuses.includes(status)) {
+    return "LIVE";
+  }
+
+  if (status && openStatuses.includes(status)) {
+    return "OPEN";
+  }
+
+  return "COMPLETE";
+}
+
+function isUserTournament(item: any, user?: StoredUser | null) {
+  if (!user) {
+    return false;
+  }
+
+  return Boolean(
+    item.registrations?.some((registration: any) =>
+      registration.userId === user.id ||
+      registration.user?.id === user.id
+    )
+  );
+}
+
+function compareTournamentDates(a: any, b: any) {
+  const aTime = a.startsAt ? new Date(a.startsAt).getTime() : Number.MAX_SAFE_INTEGER;
+  const bTime = b.startsAt ? new Date(b.startsAt).getTime() : Number.MAX_SAFE_INTEGER;
+
+  return aTime - bTime;
+}
+
+function sortTournamentsForViewer(items: any[], user?: StoredUser | null) {
+  const pool = user
+    ? [...items]
+    : items.filter((item) => openStatuses.includes(item.status));
+
+  return pool.sort((a, b) => {
+    const aMine = isUserTournament(a, user);
+    const bMine = isUserTournament(b, user);
+
+    if (aMine !== bMine) {
+      return aMine ? -1 : 1;
+    }
+
+    const aOpen = openStatuses.includes(a.status);
+    const bOpen = openStatuses.includes(b.status);
+
+    if (aOpen !== bOpen) {
+      return aOpen ? -1 : 1;
+    }
+
+    return compareTournamentDates(a, b);
+  });
+}
+
+function mapTournamentCard(item: any, user?: StoredUser | null) {
+  const participating = isUserTournament(item, user);
+
   return {
     id: item.id,
     name: item.name,
-    startsAt: item.status === "IN_PROGRESS" ? "En curso ahora" : "Programacion pendiente",
+    startsAt: tournamentDateLabel(item.startsAt, item.status),
     game: item.game,
-    mode: item.type === "TEAM" ? "5vs5" : "1vs1",
-    status:
-      item.status === "IN_PROGRESS"
-        ? "LIVE"
-        : item.status === "PUBLISHED" || item.status === "CHECK_IN"
-          ? "OPEN"
-          : "COMPLETE",
-    copy: item.rules || item.description || "Torneo competitivo listo para inscripciones y seguimiento.",
-    prize: `${item.maxParticipants || 8} slots`
+    mode: item.teamSize ? `${item.teamSize}vs${item.teamSize}` : item.type === "TEAM" ? "5vs5" : "1vs1",
+    status: statusToCardStatus(item.status),
+    copy: item.publicRules || item.rules || item.description || "Torneo competitivo listo para inscripciones y seguimiento.",
+    prize: item.prizes || `${item.maxParticipants || 8} slots`,
+    participating
   };
 }
 
@@ -131,12 +208,14 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
   const gameKey = game === "valorant" ? "valorant" : "lol";
   const config = hubConfig[gameKey];
   const [items, setItems] = useState<any[]>([]);
+  const [user, setUser] = useState<StoredUser | null>(null);
   const [role, setRole] = useState("USER");
   const [activeTab, setActiveTab] = useState("Torneos");
   const [activeFormats, setActiveFormats] = useState<string[]>(["5vs5"]);
 
   useEffect(() => {
     const user = getStoredUser();
+    setUser(user);
     setRole(user?.role ?? "USER");
 
     async function load() {
@@ -158,8 +237,8 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
   }, []);
 
   const cards = useMemo(() => {
-    return items.length ? items.map(mapTournamentCard) : curatedCards;
-  }, [items]);
+    return items.length ? sortTournamentsForViewer(items, user).map((item) => mapTournamentCard(item, user)) : curatedCards;
+  }, [items, user]);
 
   const visibleCards = cards.filter((card) => activeFormats.length === 0 || activeFormats.includes(card.mode));
   const canCreate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "ORGANIZER";
@@ -242,7 +321,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <button className="rounded-xl border border-white/12 bg-[#131a25] px-4 py-3 text-sm font-semibold text-white">
-              Proximos
+              {user ? "Mis torneos primero" : "Proximos por horario"}
             </button>
             {formatFilters.map((format) => (
               <button
@@ -328,7 +407,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
         {visibleCards.map((card) => (
           <Link
             key={card.id}
-            href={card.id.startsWith("mock-") ? `/dashboard/tournaments/${card.id}` : "/dashboard/tournaments/mock-tournament-1"}
+            href={`/dashboard/tournaments/${card.id}`}
             className="block overflow-hidden rounded-[18px] border border-white/8 bg-[#1a2230] p-0 transition hover:border-white/18"
           >
             <div className="grid gap-0 lg:grid-cols-[180px_minmax(0,1fr)]">
@@ -347,13 +426,20 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
                     <p className="mt-3 max-w-2xl text-sm leading-7 text-white/62">{card.copy}</p>
                   </div>
 
-                  <span
-                    className={`status-badge ${
-                      card.status === "LIVE" ? "status-live" : card.status === "OPEN" ? "status-open" : "status-complete"
-                    }`}
-                  >
-                    {card.status === "LIVE" ? "En vivo" : card.status === "OPEN" ? "Abierto" : "Completado"}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {card.participating ? (
+                      <span className="rounded-full border border-[#18e6f2]/35 bg-[#18e6f2]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#bffaff]">
+                        Participando
+                      </span>
+                    ) : null}
+                    <span
+                      className={`status-badge ${
+                        card.status === "LIVE" ? "status-live" : card.status === "OPEN" ? "status-open" : "status-complete"
+                      }`}
+                    >
+                      {card.status === "LIVE" ? "En vivo" : card.status === "OPEN" ? "Abierto" : "Completado"}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-white/58">
