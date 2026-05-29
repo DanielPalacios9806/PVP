@@ -18,6 +18,11 @@ export const auditQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(100)
 });
 
+
+export const userActivityQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50)
+});
+
 export const tokenTransactionQuerySchema = z.object({
   userId: z.string().cuid().optional(),
   type: walletTransactionTypeSchema.optional(),

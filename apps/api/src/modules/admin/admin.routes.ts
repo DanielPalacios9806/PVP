@@ -19,6 +19,7 @@ import {
   auditQuerySchema,
   createAdminUserSchema,
   tokenTransactionQuerySchema,
+  userActivityQuerySchema,
   updateUserRoleSchema,
   updateUserStatusSchema
 } from "./admin.schemas.js";
@@ -164,6 +165,104 @@ function buildAuditWhere(query: z.infer<typeof auditQuerySchema>) {
   return andFilters.length > 0 ? { AND: andFilters } : {};
 }
 
+
+function serializeRegistrationActivity(registration: Prisma.TournamentRegistrationGetPayload<{
+  include: {
+    tournament: { select: { id: true; name: true; slug: true; game: true; status: true; startsAt: true } };
+    team: { select: { id: true; name: true; tag: true } };
+  };
+}>) {
+  return {
+    id: registration.id,
+    status: registration.status,
+    checkedInAt: registration.checkedInAt,
+    createdAt: registration.createdAt,
+    updatedAt: registration.updatedAt,
+    tournament: registration.tournament,
+    team: registration.team
+  };
+}
+
+function serializeWalletTransactionActivity(transaction: Prisma.WalletTransactionGetPayload<{
+  include: {
+    wallet: { select: { id: true; type: true; currencyCode: true; nonWithdrawable: true } };
+    actorUser: { select: { id: true; email: true; username: true; displayName: true; role: true } };
+  };
+}>) {
+  return {
+    id: transaction.id,
+    type: transaction.type,
+    amount: Number(transaction.amount),
+    balanceBefore: Number(transaction.balanceBefore),
+    balanceAfter: Number(transaction.balanceAfter),
+    reason: transaction.reason,
+    metadata: transaction.metadata,
+    createdAt: transaction.createdAt,
+    wallet: transaction.wallet,
+    actorUser: transaction.actorUser
+  };
+}
+
+function serializeMatchResultActivity(result: Prisma.MatchResultGetPayload<{
+  include: {
+    match: {
+      select: {
+        id: true;
+        status: true;
+        tournament: { select: { id: true; name: true; slug: true; game: true } };
+        round: { select: { id: true; name: true; sequence: true } };
+      };
+    };
+    winnerRegistration: {
+      select: {
+        id: true;
+        user: { select: { id: true; username: true; displayName: true } };
+        team: { select: { id: true; name: true; tag: true } };
+      };
+    };
+  };
+}>) {
+  return {
+    id: result.id,
+    matchId: result.matchId,
+    homeScore: result.homeScore,
+    awayScore: result.awayScore,
+    status: result.status,
+    notes: result.notes,
+    evidenceUrls: result.evidenceUrls,
+    createdAt: result.createdAt,
+    confirmedAt: result.confirmedAt,
+    match: result.match,
+    winnerRegistration: result.winnerRegistration
+  };
+}
+
+function serializeDisputeActivity(dispute: Prisma.DisputeGetPayload<{
+  include: {
+    match: {
+      select: {
+        id: true;
+        status: true;
+        tournament: { select: { id: true; name: true; slug: true; game: true } };
+        round: { select: { id: true; name: true; sequence: true } };
+      };
+    };
+    resolvedByUser: { select: { id: true; email: true; username: true; displayName: true; role: true } };
+  };
+}>) {
+  return {
+    id: dispute.id,
+    matchId: dispute.matchId,
+    reason: dispute.reason,
+    status: dispute.status,
+    resolution: dispute.resolution,
+    createdAt: dispute.createdAt,
+    updatedAt: dispute.updatedAt,
+    match: dispute.match,
+    resolvedByUser: dispute.resolvedByUser
+  };
+}
+
 function serializeAuditLog(log: Prisma.AuditLogGetPayload<{ include: { actorUser: { select: { id: true; email: true; username: true; displayName: true; role: true } } } }>) {
   return {
     id: log.id,
@@ -208,6 +307,187 @@ adminRouter.get(
     });
 
     response.json(users);
+  })
+);
+
+
+adminRouter.get(
+  "/users/:id/activity",
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request, response) => {
+    const userId = getRequestParam(request.params.id);
+
+    if (!userId) {
+      throw notFound("User not found");
+    }
+
+    const query = userActivityQuerySchema.parse(request.query);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        displayName: true,
+        role: true,
+        status: true,
+        country: true,
+        mustChangePassword: true,
+        passwordChangedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        wallets: {
+          select: {
+            id: true,
+            type: true,
+            currencyCode: true,
+            balance: true,
+            nonWithdrawable: true,
+            updatedAt: true
+          }
+        },
+        _count: {
+          select: {
+            registrations: true,
+            reportedResults: true,
+            openedDisputes: true,
+            walletTransactions: true,
+            auditLogs: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      throw notFound("User not found");
+    }
+
+    const [auditLogs, walletTransactions, registrations, reportedResults, openedDisputes] = await Promise.all([
+      prisma.auditLog.findMany({
+        where: {
+          OR: [
+            { actorUserId: userId },
+            { entityType: "user", entityId: userId },
+            { metadata: { path: ["targetUserId"], equals: userId } }
+          ]
+        },
+        include: {
+          actorUser: {
+            select: { id: true, email: true, username: true, displayName: true, role: true }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: query.limit
+      }),
+      prisma.walletTransaction.findMany({
+        where: {
+          OR: [{ userId }, { actorUserId: userId }]
+        },
+        include: {
+          wallet: {
+            select: { id: true, type: true, currencyCode: true, nonWithdrawable: true }
+          },
+          actorUser: {
+            select: { id: true, email: true, username: true, displayName: true, role: true }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: query.limit
+      }),
+      prisma.tournamentRegistration.findMany({
+        where: { userId },
+        include: {
+          tournament: {
+            select: { id: true, name: true, slug: true, game: true, status: true, startsAt: true }
+          },
+          team: {
+            select: { id: true, name: true, tag: true }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: query.limit
+      }),
+      prisma.matchResult.findMany({
+        where: { reportedByUserId: userId },
+        include: {
+          match: {
+            select: {
+              id: true,
+              status: true,
+              tournament: { select: { id: true, name: true, slug: true, game: true } },
+              round: { select: { id: true, name: true, sequence: true } }
+            }
+          },
+          winnerRegistration: {
+            select: {
+              id: true,
+              user: { select: { id: true, username: true, displayName: true } },
+              team: { select: { id: true, name: true, tag: true } }
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: query.limit
+      }),
+      prisma.dispute.findMany({
+        where: { openedByUserId: userId },
+        include: {
+          match: {
+            select: {
+              id: true,
+              status: true,
+              tournament: { select: { id: true, name: true, slug: true, game: true } },
+              round: { select: { id: true, name: true, sequence: true } }
+            }
+          },
+          resolvedByUser: {
+            select: { id: true, email: true, username: true, displayName: true, role: true }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: query.limit
+      })
+    ]);
+
+    const serializedAuditLogs = auditLogs.map(serializeAuditLog);
+    const currentWallet = user.wallets.find((wallet) => wallet.type === WalletType.INTERNAL_REWARD) ?? user.wallets[0] ?? null;
+
+    response.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        displayName: user.displayName,
+        role: user.role,
+        status: user.status,
+        country: user.country,
+        mustChangePassword: user.mustChangePassword,
+        passwordChangedAt: user.passwordChangedAt,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        wallet: currentWallet
+          ? {
+              ...currentWallet,
+              balance: Number(currentWallet.balance)
+            }
+          : null
+      },
+      summary: {
+        registrations: user._count.registrations,
+        reportedResults: user._count.reportedResults,
+        openedDisputes: user._count.openedDisputes,
+        walletTransactions: user._count.walletTransactions,
+        auditLogs: user._count.auditLogs,
+        criticalAuditEvents: serializedAuditLogs.filter((log) => log.severity === "critical").length
+      },
+      auditLogs: serializedAuditLogs,
+      walletTransactions: walletTransactions.map(serializeWalletTransactionActivity),
+      registrations: registrations.map(serializeRegistrationActivity),
+      reportedResults: reportedResults.map(serializeMatchResultActivity),
+      openedDisputes: openedDisputes.map(serializeDisputeActivity)
+    });
   })
 );
 

@@ -1,3 +1,4 @@
+import { AdminUserActivityPanel } from "../../../../components/admin-user-activity-panel";
 import { AdminUsersPanel } from "../../../../components/admin-users-panel";
 import { RoleGate } from "../../../../components/role-gate";
 
@@ -17,7 +18,10 @@ export default function AdminProfilesPage() {
       </section>
 
       <RoleGate allowedRoles={["SUPER_ADMIN"]} title="Centro de perfiles">
-        <AdminUsersPanel />
+        <div className="space-y-6">
+          <AdminUsersPanel />
+          <AdminUserActivityPanel />
+        </div>
       </RoleGate>
     </div>
   );
