@@ -9,8 +9,8 @@ import { getRequestParam } from "../../utils/request-param.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { processRiotCallback } from "./riot-callback.service.js";
 import { getRiotRuntimeConfig } from "./riot.client.js";
-import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema } from "./riot.schemas.js";
-import { getMyRiotAccounts, getRiotMode, linkRiotAccount, unlinkRiotAccount } from "./riot.service.js";
+import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema, riotAccountLookupSchema } from "./riot.schemas.js";
+import { checkRiotAccount, getMyRiotAccounts, getRiotMode, getRiotRsoStatus, linkRiotAccount, startRiotRso, unlinkRiotAccount } from "./riot.service.js";
 import { finishMockRiotMatch, generateMockableTournamentCode } from "./riot-tournament.service.js";
 
 export const riotRouter = Router();
@@ -29,11 +29,79 @@ function requireParam(value: string | string[] | undefined, name: string) {
   return param;
 }
 
+
+riotRouter.get(
+  "/health",
+  requireAuth,
+  asyncHandler(async (_request, response) => {
+    const config = getRiotRuntimeConfig();
+    response.json({
+      ok: true,
+      ...config,
+      message: config.readyForAccountLookup
+        ? "Riot integration is ready for safe backend account checks."
+        : "Riot lookup is not ready. Configure RIOT_API_KEY or use mock mode."
+    });
+  })
+);
+
+riotRouter.post(
+  "/accounts/check",
+  riotRateLimiter,
+  requireAuth,
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const payload = riotAccountLookupSchema.parse(request.body);
+    const result = await checkRiotAccount({
+      gameName: payload.gameName,
+      tagLine: payload.tagLine,
+      platformRoute: payload.platformRoute,
+      regionalRoute: payload.regionalRoute,
+      userId: request.user!.sub
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "riot.account.lookup",
+      entityType: "riot_account",
+      entityId: `${payload.gameName}#${payload.tagLine}`,
+      after: {
+        gameName: payload.gameName,
+        tagLine: payload.tagLine,
+        platformRoute: payload.platformRoute,
+        regionalRoute: payload.regionalRoute,
+        ownershipVerified: false,
+        verificationMethod: "LOOKUP_ONLY",
+        mode: getRiotMode()
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
+  })
+);
+
 riotRouter.get(
   "/status",
   requireAuth,
   asyncHandler(async (_request, response) => {
     response.json(getRiotRuntimeConfig());
+  })
+);
+
+
+riotRouter.get(
+  "/rso/status",
+  requireAuth,
+  asyncHandler(async (_request, response) => {
+    response.json(getRiotRsoStatus());
+  })
+);
+
+riotRouter.get(
+  "/rso/start",
+  requireAuth,
+  asyncHandler(async (_request, response) => {
+    response.status(202).json(startRiotRso());
   })
 );
 
@@ -54,7 +122,7 @@ riotRouter.post(
 
     await createAuditLog({
       actorUserId: request.user!.sub,
-      action: "riot.account.link",
+      action: "riot.account.lookup_save",
       entityType: "user_game_account",
       entityId: account.id,
       after: {
@@ -63,7 +131,9 @@ riotRouter.post(
         riotGameName: account.riotGameName,
         riotTagLine: account.riotTagLine,
         puuid: account.puuid,
-        mode: getRiotMode()
+        mode: getRiotMode(),
+        ownershipVerified: false,
+        verificationMethod: "LOOKUP_ONLY"
       },
       ipAddress: getRequestIp(request)
     });

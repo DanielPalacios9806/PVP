@@ -154,15 +154,37 @@ async function recordRiotApiLog(input: {
 
 export function getRiotRuntimeConfig() {
   const providerId = env.RIOT_TOURNAMENT_PROVIDER_ID ?? env.RIOT_PROVIDER_ID;
+  const apiKeyConfigured = Boolean(env.RIOT_API_KEY);
+  const callbackUrlConfigured = Boolean(env.RIOT_CALLBACK_URL);
+  const tournamentProviderIdConfigured = Boolean(providerId);
+  const rsoClientIdConfigured = Boolean(env.RIOT_RSO_CLIENT_ID);
+  const rsoClientSecretConfigured = Boolean(env.RIOT_RSO_CLIENT_SECRET);
+  const rsoRedirectUriConfigured = Boolean(env.RIOT_RSO_REDIRECT_URI);
+  const readyForAccountLookup = env.RIOT_API_MODE === "mock" || apiKeyConfigured;
+  const readyForTournamentCodes =
+    env.RIOT_TOURNAMENT_API_ENABLED && apiKeyConfigured && callbackUrlConfigured && tournamentProviderIdConfigured;
+  const readyForOfficialRso = rsoClientIdConfigured && rsoClientSecretConfigured && rsoRedirectUriConfigured;
+  const missingRequirements = [
+    ...(readyForAccountLookup ? [] : ["RIOT_API_KEY"]),
+    ...(readyForOfficialRso ? [] : ["RIOT_RSO_CLIENT_ID", "RIOT_RSO_CLIENT_SECRET", "RIOT_RSO_REDIRECT_URI"]),
+    ...(readyForTournamentCodes ? [] : ["RIOT_CALLBACK_URL", "RIOT_TOURNAMENT_PROVIDER_ID"])
+  ];
 
   return {
     mode: env.RIOT_API_MODE,
-    apiKeyConfigured: Boolean(env.RIOT_API_KEY),
+    apiKeyConfigured,
     region: normalizeRoute(env.RIOT_REGION),
     regionalRoute: normalizeRoute(env.RIOT_REGIONAL_ROUTE),
-    callbackUrlConfigured: Boolean(env.RIOT_CALLBACK_URL),
-    tournamentProviderIdConfigured: Boolean(providerId),
-    tournamentApiEnabled: env.RIOT_TOURNAMENT_API_ENABLED
+    callbackUrlConfigured,
+    tournamentProviderIdConfigured,
+    tournamentApiEnabled: env.RIOT_TOURNAMENT_API_ENABLED,
+    readyForAccountLookup,
+    readyForTournamentCodes,
+    rsoClientIdConfigured,
+    rsoRedirectUriConfigured,
+    readyForOfficialRso,
+    realRequestsEnabled: env.RIOT_API_MODE !== "mock" && apiKeyConfigured,
+    missingRequirements: Array.from(new Set(missingRequirements))
   };
 }
 

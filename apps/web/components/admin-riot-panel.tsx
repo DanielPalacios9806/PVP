@@ -13,6 +13,13 @@ type RiotOverview = {
     callbackUrlConfigured: boolean;
     tournamentProviderIdConfigured: boolean;
     tournamentApiEnabled: boolean;
+    readyForAccountLookup?: boolean;
+    readyForTournamentCodes?: boolean;
+    rsoClientIdConfigured?: boolean;
+    rsoRedirectUriConfigured?: boolean;
+    readyForOfficialRso?: boolean;
+    realRequestsEnabled?: boolean;
+    missingRequirements?: string[];
   };
   metrics: {
     totalRequests: number;
@@ -104,9 +111,19 @@ export function AdminRiotPanel() {
         <RiotMetric label="Modo" value={overview?.config.mode ?? "Cargando"} />
         <RiotMetric label="API key" value={overview?.config.apiKeyConfigured ? "Configurada" : "No configurada"} />
         <RiotMetric label="Region" value={`${overview?.config.region ?? "la1"} / ${overview?.config.regionalRoute ?? "americas"}`} />
+        <RiotMetric label="Lookup Riot ID" value={overview?.config.readyForAccountLookup ? "Listo" : "Pendiente"} />
+        <RiotMetric label="RSO oficial" value={overview?.config.readyForOfficialRso ? "Configurado" : "Pendiente Riot"} />
+        <RiotMetric label="Tournament codes" value={overview?.config.readyForTournamentCodes ? "Listo" : "Desactivado"} />
         <RiotMetric label="Requests" value={String(overview?.metrics.totalRequests ?? 0)} />
         <RiotMetric label="Exito" value={`${overview?.metrics.successRate ?? 0}%`} />
         <RiotMetric label="Callbacks" value={String(overview?.metrics.callbackCount ?? 0)} />
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100/90">
+        El lookup de Riot ID confirma existencia de cuenta, no propiedad. La vinculacion oficial requiere Riot Sign On aprobado por Riot.
+        {overview?.config.missingRequirements?.length ? (
+          <span className="mt-2 block text-xs text-amber-100/70">Pendiente: {overview.config.missingRequirements.join(", ")}</span>
+        ) : null}
       </div>
 
       <form onSubmit={testConnection} className="mt-5 grid gap-3 md:grid-cols-[1fr_0.55fr_auto]">

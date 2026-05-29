@@ -57,3 +57,29 @@ Antes de solicitar producción a Riot:
 ## Nota
 
 La integración Riot debe entrar después de estabilizar el MVP manual.
+
+## Nota crítica sobre vinculación de cuentas
+
+La validación por Riot ID (`gameName#tagLine`) solo confirma que la cuenta existe en Riot. No confirma que el usuario de Darkside.cool sea el dueño de esa cuenta.
+
+Estados recomendados:
+
+- `LOOKUP_ONLY`: Riot ID existe, pero propiedad no confirmada.
+- `MANUAL`: validación interna/manual para pruebas.
+- `RSO_PENDING`: Darkside está listo para Riot Sign On, pero falta aprobación/configuración.
+- `RSO_VERIFIED`: cuenta vinculada oficialmente mediante Riot Sign On.
+
+Para torneos serios, la inscripción debería exigir `RSO_VERIFIED` cuando Riot apruebe RSO. Mientras tanto, el modo `LOOKUP_ONLY` solo debe usarse para pruebas controladas y debe mostrarse claramente al usuario.
+
+## Flujo RSO recomendado
+
+1. Usuario presiona **Conectar con Riot**.
+2. Darkside genera `state` seguro.
+3. Darkside redirige al login oficial de Riot.
+4. El usuario inicia sesión y autoriza la aplicación.
+5. Riot redirige al callback configurado.
+6. Darkside intercambia el código por token.
+7. Darkside consulta la cuenta autenticada.
+8. Darkside guarda Riot ID, PUUID y marca `ownershipVerified=true`.
+
+No se debe usar iframe para el login oficial. Para MVP, se recomienda redirección completa; una ventana emergente puede implementarse después.

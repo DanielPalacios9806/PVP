@@ -19,6 +19,55 @@ export function getRiotAdapter(): RiotAdapter {
   return new RiotRealAdapter();
 }
 
+function buildLookupMetadata(extra?: Record<string, unknown>) {
+  return {
+    mode: env.RIOT_API_MODE,
+    source: env.RIOT_API_MODE === "mock" ? "mock-adapter" : "riot-api",
+    verificationMethod: "LOOKUP_ONLY",
+    ownershipVerified: false,
+    officialRsoRequired: true,
+    warning:
+      "This confirms the Riot ID exists, but it does not prove that the current Darkside user owns the Riot account.",
+    ...extra
+  };
+}
+
+export async function checkRiotAccount(params: {
+  gameName: string;
+  tagLine: string;
+  platformRoute: string;
+  regionalRoute: string;
+  userId?: string;
+}) {
+  const account = await getRiotAdapter().lookupAccountByRiotId({
+    gameName: params.gameName,
+    tagLine: params.tagLine,
+    platformRoute: params.platformRoute,
+    regionalRoute: params.regionalRoute
+  });
+
+  if (!account?.puuid) {
+    throw badRequest("Riot account could not be resolved in the current mode");
+  }
+
+  return {
+    ok: true,
+    mode: env.RIOT_API_MODE,
+    ownershipVerified: false,
+    verificationMethod: "LOOKUP_ONLY",
+    message:
+      "Riot ID exists. Official ownership verification requires Riot Sign On approval and a Riot login flow.",
+    account: {
+      gameName: account.gameName,
+      tagLine: account.tagLine,
+      platformRoute: account.platformRoute,
+      regionalRoute: account.regionalRoute,
+      puuidPresent: Boolean(account.puuid),
+      summonerIdPresent: Boolean(account.summonerId)
+    }
+  };
+}
+
 export async function linkRiotAccount(params: {
   userId: string;
   gameName: string;
@@ -56,15 +105,11 @@ export async function linkRiotAccount(params: {
     summonerId: account.summonerId,
     platformRoute: account.platformRoute,
     regionalRoute: account.regionalRoute,
-    verified: env.RIOT_API_MODE === "development" || env.RIOT_API_MODE === "production",
-    verificationStatus:
-      env.RIOT_API_MODE === "mock" ? RiotLinkedAccountStatus.MANUAL : RiotLinkedAccountStatus.VERIFIED,
-    verifiedAt: new Date(),
+    verified: false,
+    verificationStatus: env.RIOT_API_MODE === "mock" ? RiotLinkedAccountStatus.MANUAL : RiotLinkedAccountStatus.RSO_PENDING,
+    verifiedAt: null,
     lastSyncedAt: new Date(),
-    metadata: {
-      mode: env.RIOT_API_MODE,
-      source: env.RIOT_API_MODE === "mock" ? "mock-adapter" : "riot-api"
-    }
+    metadata: buildLookupMetadata({ savedAt: new Date().toISOString() })
   };
 
   if (existing) {
@@ -80,6 +125,37 @@ export async function linkRiotAccount(params: {
       ...data
     }
   });
+}
+
+export function getRiotRsoStatus() {
+  const config = getRiotRuntimeConfig();
+
+  return {
+    enabled: false,
+    ready: config.readyForOfficialRso,
+    mode: config.mode,
+    status: config.readyForOfficialRso ? "CONFIGURED_PENDING_RIOT_APPROVAL" : "PENDING_RIOT_APPROVAL",
+    message:
+      "Official Riot account ownership verification requires Riot Sign On approval. Lookup-only validation is available for internal testing.",
+    requiredEnvironment: ["RIOT_RSO_CLIENT_ID", "RIOT_RSO_CLIENT_SECRET", "RIOT_RSO_REDIRECT_URI"],
+    recommendedFlow: "redirect",
+    config: {
+      rsoClientIdConfigured: config.rsoClientIdConfigured,
+      rsoRedirectUriConfigured: config.rsoRedirectUriConfigured,
+      readyForOfficialRso: config.readyForOfficialRso
+    }
+  };
+}
+
+export function startRiotRso() {
+  const status = getRiotRsoStatus();
+
+  return {
+    ...status,
+    redirectUrl: null,
+    message:
+      "Riot Sign On is not active yet. Darkside can validate that a Riot ID exists, but official ownership linking must wait for Riot approval."
+  };
 }
 
 export async function unlinkRiotAccount(params: { userId: string; accountId: string }) {

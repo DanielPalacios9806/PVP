@@ -1,12 +1,14 @@
 import { z } from "zod";
 
-export const linkRiotAccountSchema = z.object({
+export const riotAccountLookupSchema = z.object({
   gameName: z.string().min(2).max(32),
   tagLine: z.string().min(2).max(12),
   game: z.string().min(2).max(50).default("LEAGUE_OF_LEGENDS"),
   platformRoute: z.string().min(2).max(20).default("LA1"),
   regionalRoute: z.string().min(2).max(30).default("AMERICAS")
 });
+
+export const linkRiotAccountSchema = riotAccountLookupSchema;
 
 export const generateTournamentCodeSchema = z.object({
   mapType: z.string().default("SUMMONERS_RIFT"),
