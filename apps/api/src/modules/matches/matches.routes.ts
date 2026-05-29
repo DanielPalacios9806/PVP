@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { MatchResultStatus, MatchStatus, ResultSource } from "@prisma/client";
+import { DisputeStatus, MatchResultStatus, MatchStatus, ResultSource } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth } from "../../middlewares/auth.js";
 import type { AuthenticatedRequest } from "../../types.js";
@@ -17,7 +17,37 @@ import { getRequestParam } from "../../utils/request-param.js";
 import { badRequest, forbidden, notFound } from "../../utils/http-error.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { advanceWinnerAfterMatch } from "../brackets/brackets.service.js";
-import { confirmResultSchema, reportResultSchema } from "./matches.schemas.js";
+import { confirmResultSchema, createDisputeSchema, reportResultSchema, resolveDisputeSchema } from "./matches.schemas.js";
+
+
+async function completeMatchWithResult(params: {
+  resultId: string;
+  actorUserId: string;
+  source: ResultSource;
+}) {
+  const result = await prisma.matchResult.update({
+    where: { id: params.resultId },
+    data: {
+      status: MatchResultStatus.CONFIRMED,
+      confirmedByUserId: params.actorUserId,
+      confirmedAt: new Date()
+    }
+  });
+
+  await prisma.match.update({
+    where: { id: result.matchId },
+    data: {
+      winnerRegistrationId: result.winnerRegistrationId,
+      status: MatchStatus.COMPLETED,
+      resultSource: params.source,
+      resultSyncedAt: new Date()
+    }
+  });
+
+  await advanceWinnerAfterMatch(result.matchId);
+
+  return result;
+}
 
 export const matchesRouter = Router();
 
@@ -221,16 +251,11 @@ matchesRouter.post(
     });
 
     if (payload.approved) {
-      await prisma.match.update({
-        where: { id: result.matchId },
-        data: {
-          winnerRegistrationId: result.winnerRegistrationId,
-          status: MatchStatus.COMPLETED,
-          resultSource: moderator ? ResultSource.ADMIN_OVERRIDE : ResultSource.MANUAL,
-          resultSyncedAt: new Date()
-        }
+      await completeMatchWithResult({
+        resultId: result.id,
+        actorUserId: request.user!.sub,
+        source: moderator ? ResultSource.ADMIN_OVERRIDE : ResultSource.MANUAL
       });
-      await advanceWinnerAfterMatch(result.matchId);
     } else {
       await prisma.match.update({
         where: { id: result.matchId },
@@ -379,16 +404,11 @@ matchesRouter.post(
       }
     });
 
-    await prisma.match.update({
-      where: { id: result.matchId },
-      data: {
-        winnerRegistrationId: result.winnerRegistrationId,
-        status: MatchStatus.COMPLETED,
-        resultSource: ResultSource.MANUAL,
-        resultSyncedAt: new Date()
-      }
+    await completeMatchWithResult({
+      resultId: result.id,
+      actorUserId: request.user!.sub,
+      source: ResultSource.MANUAL
     });
-    await advanceWinnerAfterMatch(result.matchId);
 
     await createAuditLog({
       actorUserId: request.user!.sub,
@@ -403,3 +423,186 @@ matchesRouter.post(
     response.json(result);
   })
 );
+
+matchesRouter.post(
+  "/:id/disputes",
+  requireAuth,
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const matchId = getRequestParam(request.params.id);
+    if (!matchId) {
+      throw badRequest("Match id is required");
+    }
+
+    const payload = createDisputeSchema.parse(request.body);
+    const match = await loadMatchForAuthorization(matchId);
+
+    if (!match) {
+      throw notFound("Match not found");
+    }
+
+    if (match.status === MatchStatus.COMPLETED || match.status === MatchStatus.CANCELLED) {
+      throw badRequest("Match is locked for disputes");
+    }
+
+    const moderator = isMatchModerator({
+      userId: request.user!.sub,
+      role: request.user!.role,
+      organizerId: match.tournament.organizerId
+    });
+    const actorSide = getRegistrationSide(match, request.user!.sub);
+
+    if (!moderator && !actorSide) {
+      throw forbidden("Only match participants or tournament staff can open a dispute");
+    }
+
+    const existingOpenDispute = await prisma.dispute.findFirst({
+      where: {
+        matchId: match.id,
+        status: { in: [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW] }
+      }
+    });
+
+    if (existingOpenDispute) {
+      throw badRequest("This match already has an open dispute");
+    }
+
+    const dispute = await prisma.dispute.create({
+      data: {
+        matchId: match.id,
+        openedByUserId: request.user!.sub,
+        reason: payload.reason,
+        status: DisputeStatus.OPEN
+      }
+    });
+
+    await prisma.match.update({
+      where: { id: match.id },
+      data: { status: MatchStatus.DISPUTED }
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "match_dispute.open",
+      entityType: "dispute",
+      entityId: dispute.id,
+      after: dispute,
+      ipAddress: getRequestIp(request)
+    });
+
+    response.status(201).json(dispute);
+  })
+);
+
+matchesRouter.post(
+  "/disputes/:disputeId/resolve",
+  requireAuth,
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const disputeId = getRequestParam(request.params.disputeId);
+    if (!disputeId) {
+      throw badRequest("Dispute id is required");
+    }
+
+    const payload = resolveDisputeSchema.parse(request.body);
+    const dispute = await prisma.dispute.findUnique({
+      where: { id: disputeId },
+      include: {
+        match: {
+          include: {
+            tournament: { select: { organizerId: true } },
+            results: {
+              where: { status: MatchResultStatus.PENDING_CONFIRMATION },
+              orderBy: { createdAt: "desc" }
+            }
+          }
+        }
+      }
+    });
+
+    if (!dispute) {
+      throw notFound("Dispute not found");
+    }
+
+    const moderator = isMatchModerator({
+      userId: request.user!.sub,
+      role: request.user!.role,
+      organizerId: dispute.match.tournament.organizerId
+    });
+
+    if (!moderator) {
+      throw forbidden("Only tournament staff can resolve disputes");
+    }
+
+    if (dispute.status === DisputeStatus.RESOLVED || dispute.status === DisputeStatus.REJECTED) {
+      throw badRequest("Dispute is already closed");
+    }
+
+    let resolvedResult = null;
+    const selectedResultId = payload.approvedResultId ?? dispute.match.results[0]?.id;
+
+    if (selectedResultId && payload.approved === true) {
+      const selectedResult = dispute.match.results.find((result) => result.id === selectedResultId);
+      if (!selectedResult) {
+        throw badRequest("Selected result is not pending for this match");
+      }
+
+      resolvedResult = await completeMatchWithResult({
+        resultId: selectedResult.id,
+        actorUserId: request.user!.sub,
+        source: ResultSource.ADMIN_OVERRIDE
+      });
+
+      await prisma.matchResult.updateMany({
+        where: {
+          matchId: dispute.matchId,
+          id: { not: selectedResult.id },
+          status: MatchResultStatus.PENDING_CONFIRMATION
+        },
+        data: { status: MatchResultStatus.REJECTED }
+      });
+    } else if (payload.approved === false) {
+      await prisma.matchResult.updateMany({
+        where: {
+          matchId: dispute.matchId,
+          status: MatchResultStatus.PENDING_CONFIRMATION
+        },
+        data: {
+          status: MatchResultStatus.REJECTED,
+          confirmedByUserId: request.user!.sub,
+          confirmedAt: new Date()
+        }
+      });
+
+      await prisma.match.update({
+        where: { id: dispute.matchId },
+        data: { status: MatchStatus.READY }
+      });
+    } else {
+      await prisma.match.update({
+        where: { id: dispute.matchId },
+        data: { status: MatchStatus.READY }
+      });
+    }
+
+    const resolvedDispute = await prisma.dispute.update({
+      where: { id: dispute.id },
+      data: {
+        status: DisputeStatus.RESOLVED,
+        resolution: payload.resolution,
+        resolvedByUserId: request.user!.sub
+      }
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "match_dispute.resolve",
+      entityType: "dispute",
+      entityId: resolvedDispute.id,
+      before: dispute,
+      after: { dispute: resolvedDispute, result: resolvedResult },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json({ dispute: resolvedDispute, result: resolvedResult });
+  })
+);
+

@@ -22,6 +22,20 @@ const resultStatusLabel: Record<string, string> = {
   REJECTED: "Rechazado"
 };
 
+const disputeStatusLabel: Record<string, string> = {
+  OPEN: "Abierta",
+  UNDER_REVIEW: "En revisión",
+  RESOLVED: "Resuelta",
+  REJECTED: "Rechazada"
+};
+
+const disputeTone: Record<string, string> = {
+  OPEN: "border-[#ff4f63]/30 bg-[#ff4f63]/10 text-[#ff9aa7]",
+  UNDER_REVIEW: "border-amber-300/30 bg-amber-300/10 text-amber-100",
+  RESOLVED: "border-emerald-300/30 bg-emerald-300/10 text-emerald-200",
+  REJECTED: "border-white/10 bg-white/8 text-white/55"
+};
+
 const statusTone: Record<string, string> = {
   PENDING: "border-white/10 bg-white/8 text-white/70",
   READY: "border-[#18e6f2]/30 bg-[#18e6f2]/10 text-[#18e6f2]",
@@ -191,6 +205,10 @@ export function MatchRoom({ matchId }: { matchId: string }) {
     () => match?.results?.find((result: any) => result.status === "PENDING_CONFIRMATION") ?? null,
     [match]
   );
+  const activeDispute = useMemo(
+    () => match?.disputes?.find((dispute: any) => ["OPEN", "UNDER_REVIEW"].includes(dispute.status)) ?? null,
+    [match]
+  );
   const canReport = match && !["COMPLETED", "CANCELLED"].includes(match.status) && winnerOptionsFromMatch(match).length > 0;
 
   async function reportResult(formData: FormData) {
@@ -234,7 +252,7 @@ export function MatchRoom({ matchId }: { matchId: string }) {
 
   async function openDispute(formData: FormData) {
     setSubmitting(true);
-    const response = await fetch(`${apiUrl}/disputes/matches/${matchId}`, {
+    const response = await fetch(`${apiUrl}/matches/${matchId}/disputes`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -282,6 +300,45 @@ export function MatchRoom({ matchId }: { matchId: string }) {
 
     setMessage(approved ? "Resultado confirmado y bracket actualizado." : "Resultado rechazado; la partida queda en disputa.");
     setMessageTone(approved ? "success" : "info");
+    setSubmitting(false);
+    await load();
+  }
+
+
+  async function resolveDispute(formData: FormData) {
+    const disputeId = String(formData.get("disputeId") || "");
+    if (!disputeId) {
+      setMessage("No se encontró la disputa para resolver.");
+      setMessageTone("error");
+      return;
+    }
+
+    setSubmitting(true);
+    const action = String(formData.get("action") || "note");
+    const response = await fetch(`${apiUrl}/matches/disputes/${disputeId}/resolve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify({
+        resolution: String(formData.get("resolution") || "Disputa resuelta por el staff."),
+        approvedResultId: pendingResult?.id,
+        approved: action === "approve" ? true : action === "reject" ? false : undefined
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setMessage(data.message ?? "No se pudo resolver la disputa.");
+      setMessageTone("error");
+      setSubmitting(false);
+      return;
+    }
+
+    setMessage(action === "approve" ? "Disputa resuelta y resultado confirmado." : action === "reject" ? "Disputa resuelta y resultado rechazado." : "Disputa resuelta por el staff.");
+    setMessageTone("success");
     setSubmitting(false);
     await load();
   }
@@ -485,13 +542,35 @@ export function MatchRoom({ matchId }: { matchId: string }) {
                   key={dispute.id}
                   className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(0,0,0,0.2))] p-4"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <strong>{dispute.status}</strong>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.18em] ${disputeTone[dispute.status] ?? disputeTone.OPEN}`}>
+                      {disputeStatusLabel[dispute.status] ?? dispute.status}
+                    </span>
                     <span className="text-xs text-white/50">{new Date(dispute.createdAt).toLocaleString()}</span>
                   </div>
-                  <p className="mt-2 text-sm text-white/70">{dispute.reason}</p>
+                  <p className="mt-3 text-sm text-white/70">{dispute.reason}</p>
+                  <p className="mt-2 text-xs text-white/40">Abrió: {dispute.openedByUser?.displayName ?? dispute.openedByUser?.username ?? "Usuario"}</p>
                   {dispute.resolution ? (
-                    <p className="mt-2 text-xs text-[#18e6f2]">Resolución: {dispute.resolution}</p>
+                    <p className="mt-3 rounded-2xl border border-[#18e6f2]/20 bg-[#18e6f2]/8 p-3 text-xs text-[#18e6f2]">
+                      Resolución: {dispute.resolution}
+                    </p>
+                  ) : null}
+                  {canOperate && ["OPEN", "UNDER_REVIEW"].includes(dispute.status) ? (
+                    <form action={resolveDispute} className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                      <input type="hidden" name="disputeId" value={dispute.id} />
+                      <textarea name="resolution" rows={3} placeholder="Resolución administrativa" required />
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <button name="action" value="approve" disabled={submitting || !pendingResult} className="btn-primary !py-2 text-xs disabled:opacity-50">
+                          Confirmar resultado
+                        </button>
+                        <button name="action" value="reject" disabled={submitting} className="btn-secondary !py-2 text-xs disabled:opacity-50">
+                          Rechazar resultado
+                        </button>
+                        <button name="action" value="note" disabled={submitting} className="rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-bold text-white/70 disabled:opacity-50">
+                          Cerrar sin resultado
+                        </button>
+                      </div>
+                    </form>
                   ) : null}
                 </article>
               ))}
@@ -544,12 +623,20 @@ export function MatchRoom({ matchId }: { matchId: string }) {
           ) : null}
 
           <SectionCard title="Abrir disputa" description="Usa esta vía si el marcador o la evidencia son incorrectos.">
-            <form action={openDispute} className="space-y-4">
-              <textarea name="reason" rows={5} placeholder="Describe claramente la disputa" required />
-              <button disabled={submitting} className="btn-secondary w-full disabled:opacity-50">
-                Crear disputa
-              </button>
-            </form>
+            {activeDispute ? (
+              <p className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-sm leading-7 text-amber-100">
+                Ya existe una disputa abierta para esta partida. Espera la resolución del staff.
+              </p>
+            ) : ["COMPLETED", "CANCELLED"].includes(match.status) ? (
+              <p className="text-sm leading-7 text-white/60">Esta partida ya no acepta disputas nuevas.</p>
+            ) : (
+              <form action={openDispute} className="space-y-4">
+                <textarea name="reason" rows={5} placeholder="Describe claramente la disputa" required />
+                <button disabled={submitting} className="btn-secondary w-full disabled:opacity-50">
+                  Crear disputa
+                </button>
+              </form>
+            )}
           </SectionCard>
 
           {canOperate ? (

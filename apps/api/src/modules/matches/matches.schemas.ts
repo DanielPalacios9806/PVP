@@ -11,3 +11,14 @@ export const reportResultSchema = z.object({
 export const confirmResultSchema = z.object({
   approved: z.boolean()
 });
+
+
+export const createDisputeSchema = z.object({
+  reason: z.string().min(10).max(1000)
+});
+
+export const resolveDisputeSchema = z.object({
+  resolution: z.string().min(10).max(1000),
+  approvedResultId: z.string().optional(),
+  approved: z.boolean().optional()
+});
