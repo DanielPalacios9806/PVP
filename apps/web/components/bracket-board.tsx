@@ -202,15 +202,20 @@ export function BracketBoard({
   return (
     <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
       {!hasRealRounds ? (
-        <div className="mb-5 rounded-[18px] border border-[#18e6f2]/20 bg-[#18e6f2]/8 px-4 py-3 text-sm leading-6 text-[#bffaff]">
-          Bracket simulado para vista previa. Cuando el organizador genere las llaves reales, se reemplazara automaticamente.
+        <div className="mb-5 flex flex-col gap-3 rounded-[18px] border border-[#18e6f2]/20 bg-[#18e6f2]/8 px-4 py-3 text-sm leading-6 text-[#bffaff] sm:flex-row sm:items-center sm:justify-between">
+          <span>Bracket simulado para vista previa. Cuando el organizador genere las llaves reales, se reemplazara automaticamente.</span>
+          <span className="shrink-0 rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">Preview</span>
         </div>
       ) : null}
 
-      <div className="flex min-w-max items-start gap-5">
-        {visibleRounds.map((round) => (
-          <section key={round.id} className="relative w-[255px] shrink-0 sm:w-[292px]">
-            <div className="absolute -right-5 top-[52%] hidden h-px w-5 bg-gradient-to-r from-[#18e6f2]/60 to-transparent lg:block" />
+      <div className="flex min-w-max items-start gap-7 py-2">
+        {visibleRounds.map((round, roundIndex) => (
+          <section
+            key={round.id}
+            className="relative w-[250px] shrink-0 sm:w-[286px]"
+            style={{ paddingTop: roundIndex === 0 ? 0 : `${Math.min(roundIndex * 42, 132)}px` }}
+          >
+            <div className="absolute -right-7 top-[52%] hidden h-px w-7 bg-gradient-to-r from-[#18e6f2]/60 to-transparent lg:block" />
             <div className="mb-4 border-l border-[#ff2438]/60 pl-3">
               <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/80">{round.name}</h3>
               <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-[#8eb8ff]">{statusLabel(round.status)}</p>
@@ -224,7 +229,7 @@ export function BracketBoard({
                 return (
                   <article
                     key={match.id}
-                    className="motion-card relative overflow-hidden rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,36,0.96),rgba(7,11,17,0.94))] p-3 shadow-[0_16px_34px_rgba(0,0,0,0.26)]"
+                    className="motion-card relative overflow-hidden rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,36,0.98),rgba(7,11,17,0.96))] p-3 shadow-[0_18px_36px_rgba(0,0,0,0.32)] after:absolute after:-right-7 after:top-1/2 after:hidden after:h-px after:w-7 after:bg-[#18e6f2]/45 lg:after:block"
                   >
                     <div className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-[#18e6f2] via-[#ff2438] to-transparent" />
                     <div className="mb-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.14em] text-white/45">

@@ -23,6 +23,24 @@ const gameAssets: Record<string, { bg: string; logo: string; label: string }> = 
   }
 };
 
+function normalizeGameKey(value?: string | null) {
+  const normalized = String(value || "")
+    .toUpperCase()
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .trim();
+
+  if (normalized.includes("LEAGUE") || normalized === "LOL") {
+    return "LEAGUE OF LEGENDS";
+  }
+
+  if (normalized.includes("VALORANT")) {
+    return "VALORANT";
+  }
+
+  return "VALORANT";
+}
+
 function tournamentHeroImage(tournament: any, game: { bg: string }) {
   if (tournament?.slug) {
     return `/images/tournaments/${tournament.slug}.webp`;
@@ -75,6 +93,70 @@ function isActiveParticipantStatus(status?: string) {
   return status === "PENDING" || status === "CONFIRMED" || status === "CHECKED_IN";
 }
 
+function registrationStatusLabel(status?: string) {
+  const labels: Record<string, string> = {
+    PENDING: "Pendiente de aprobación",
+    CONFIRMED: "Confirmado",
+    CHECKED_IN: "Check-in realizado",
+    REJECTED: "Rechazado",
+    CANCELLED: "Cancelado"
+  };
+
+  return labels[status ?? ""] ?? status ?? "Sin estado";
+}
+
+function translateTournamentError(message?: string) {
+  const fallback = "No se pudo completar la acción. Revisa los requisitos del torneo.";
+
+  if (!message) {
+    return fallback;
+  }
+
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("same time") || normalized.includes("active tournament")) {
+    return "No puedes inscribirte porque tú o alguien de tu equipo ya participa en otro torneo que se juega en el mismo horario.";
+  }
+
+  if (normalized.includes("capacity") || normalized.includes("cupos")) {
+    return "Los cupos de este torneo ya están completos.";
+  }
+
+  if (normalized.includes("deadline")) {
+    return "La fecha límite de inscripción ya terminó.";
+  }
+
+  if (normalized.includes("not open") || normalized.includes("registration is not open")) {
+    return "Las inscripciones no están abiertas para este torneo.";
+  }
+
+  if (normalized.includes("roster") || normalized.includes("team does not meet")) {
+    return "Tu equipo todavía no cumple el número de integrantes requerido para este torneo.";
+  }
+
+  if (normalized.includes("already registered")) {
+    return "Ya existe una inscripción activa para este participante en este torneo.";
+  }
+
+  return message;
+}
+
+function teamRosterCount(team: any) {
+  if (Array.isArray(team?.members)) {
+    return team.members.length;
+  }
+
+  return team?.memberCount ?? 0;
+}
+
+function teamLabel(team: any) {
+  if (!team) {
+    return "Selecciona equipo";
+  }
+
+  return team.tag ? `${team.name} [${team.tag}]` : team.name;
+}
+
 function primaryActionLabel(params: {
   user: StoredUser | null;
   tournament: any;
@@ -116,12 +198,19 @@ function primaryActionDisabled(params: {
   hasRegistration: boolean;
   registrationOpen: boolean;
   capacityFull: boolean;
+  needsTeam: boolean;
+  selectedTeamMissingRoster: boolean;
+  isSubmitting: boolean;
 }) {
+  if (params.isSubmitting) {
+    return true;
+  }
+
   if (!params.user || params.hasRegistration) {
     return false;
   }
 
-  return !params.registrationOpen || params.capacityFull;
+  return !params.registrationOpen || params.capacityFull || params.needsTeam || params.selectedTeamMissingRoster;
 }
 
 function registrationLabel(registration: any) {
@@ -202,10 +291,12 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const [activeTab, setActiveTab] = useState("Bracket");
   const [localRegistered, setLocalRegistered] = useState(false);
   const [ownedTeams, setOwnedTeams] = useState<any[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [heroSrc, setHeroSrc] = useState("/assets/darkside/official/hero-desktop.jpg");
 
   const isMockTournament = tournamentId.startsWith("mock-") || tournament?.id?.startsWith("mock-");
-  const game = gameAssets[String(tournament?.game || "").toUpperCase()] ?? gameAssets.VALORANT;
+  const game = gameAssets[normalizeGameKey(tournament?.game)] ?? gameAssets.VALORANT;
   const matches = useMemo(() => (tournament ? flattenMatches(tournament) : []), [tournament]);
   const featuredMatches = matches.slice(0, 2);
   const registrationOpen = tournament?.status === "REGISTRATION_OPEN" || isMockTournament;
@@ -217,6 +308,13 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   );
   const hasRegistration = Boolean(localRegistered || (myRegistration && isActiveParticipantStatus(myRegistration.status)));
   const capacityFull = registeredCount >= maxParticipants;
+  const selectedTeam = ownedTeams.find((team) => team.id === selectedTeamId) ?? ownedTeams[0] ?? null;
+  const selectedTeamMissingRoster = Boolean(
+    tournament?.type === "TEAM" &&
+    selectedTeam &&
+    tournament.teamSize &&
+    teamRosterCount(selectedTeam) < tournament.teamSize
+  );
   const needsTeam = Boolean(tournament?.type === "TEAM" && user && !ownedTeams.length && !hasRegistration);
   const countdownParts = useMemo(() => getCountdownParts(tournament?.startsAt), [tournament?.startsAt]);
   const actionLabel = primaryActionLabel({
@@ -232,7 +330,10 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     user,
     hasRegistration,
     registrationOpen,
-    capacityFull
+    capacityFull,
+    needsTeam,
+    selectedTeamMissingRoster,
+    isSubmitting
   });
 
   async function load() {
@@ -269,12 +370,13 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
         return;
       }
 
-      setOwnedTeams(
-        data.filter((team) =>
-          team.ownerId === currentUser.id ||
-          team.members?.some((member: any) => member.userId === currentUser.id && ["OWNER", "CAPTAIN"].includes(member.role))
-        )
+      const filteredTeams = data.filter((team) =>
+        team.ownerId === currentUser.id ||
+        team.members?.some((member: any) => member.userId === currentUser.id && ["OWNER", "CAPTAIN"].includes(member.role))
       );
+
+      setOwnedTeams(filteredTeams);
+      setSelectedTeamId((current) => current || filteredTeams[0]?.id || "");
     } catch {
       setOwnedTeams([]);
     }
@@ -301,28 +403,34 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
 
     if (hasRegistration) {
       setActiveTab("Equipos");
-      setMessage("Ya tienes una inscripcion activa en este torneo.");
+      setMessage("Ya tienes una inscripción activa en este torneo.");
       return;
     }
 
     if (!registrationOpen) {
-      setMessage("Las inscripciones no estan abiertas para este torneo.");
+      setMessage("Las inscripciones no están abiertas para este torneo.");
       return;
     }
 
     if (capacityFull) {
-      setMessage("Los cupos de este torneo ya estan completos.");
+      setMessage("Los cupos de este torneo ya están completos.");
+      return;
+    }
+
+    if (selectedTeamMissingRoster) {
+      setMessage(`El equipo seleccionado necesita ${tournament.teamSize} integrantes para este torneo.`);
       return;
     }
 
     if (isMockTournament) {
       setLocalRegistered(true);
-      setMessage("Inscripción simulada para demo. El flujo real se activara con un torneo publicado en API.");
+      setMessage("Inscripción simulada para demo. El flujo real se activará con un torneo publicado en API.");
       return;
     }
 
     try {
-      const team = tournament.type === "TEAM" ? ownedTeams[0] : null;
+      setIsSubmitting(true);
+      const team = tournament.type === "TEAM" ? selectedTeam : null;
       if (tournament.type === "TEAM" && !team) {
         setMessage("Necesitas crear o unirte a un equipo antes de inscribirte a este torneo.");
         return;
@@ -339,14 +447,16 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message ?? "No se pudo completar la inscripción.");
+        throw new Error(translateTournamentError(data.message));
       }
 
-      setMessage("Inscripción enviada. El organizador debe aprobarla si el torneo requiere revisión.");
+      setMessage("Inscripción enviada correctamente. Revisa la pestaña Equipos para ver tu estado.");
+      setActiveTab("Equipos");
       await load();
     } catch (error) {
-      setLocalRegistered(true);
-      setMessage(error instanceof Error ? `${error.message} Se muestra inscripción simulada para demo.` : "Inscripción simulada para demo.");
+      setMessage(error instanceof Error ? error.message : "No se pudo completar la inscripción.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -368,7 +478,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     const data = await response.json();
 
     if (!response.ok) {
-      setCheckInMessage(data.message ?? "No se pudo registrar el check-in.");
+      setCheckInMessage(translateTournamentError(data.message ?? "No se pudo registrar el check-in."));
       return;
     }
 
@@ -403,26 +513,59 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
 
   function renderMainTab() {
     if (activeTab === "Equipos") {
+      const registrations = tournament.registrations ?? [];
+
       return (
-        <div className="grid gap-3 md:grid-cols-2">
-          {tournament.registrations?.map((registration: any) => (
-            <article key={registration.id} className="rounded-[16px] border border-white/10 bg-white/[0.035] p-4">
-              <div className="flex items-center justify-between gap-3">
-                <strong className="min-w-0 truncate text-white">{registrationLabel(registration)}</strong>
-                <span className="text-xs uppercase tracking-[0.12em] text-[#18e6f2]">{registration.status}</span>
+        <div className="space-y-4">
+          {myRegistration ? (
+            <article className="rounded-[18px] border border-[#18e6f2]/30 bg-[#18e6f2]/10 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#18e6f2]">Mi inscripción</p>
+                  <strong className="mt-2 block text-white">{registrationLabel(myRegistration)}</strong>
+                  <p className="mt-1 text-sm text-white/62">{registrationStatusLabel(myRegistration.status)}</p>
+                </div>
+                {tournament.status === "CHECK_IN" && myRegistration.status === "CONFIRMED" ? (
+                  <button onClick={() => checkIn(myRegistration.id)} className="btn-primary motion-press !rounded-xl !px-4 !py-2 !text-xs">
+                    Hacer check-in
+                  </button>
+                ) : null}
               </div>
-              {registration.status !== "CHECKED_IN" ? (
-                <button onClick={() => checkIn(registration.id)} className="btn-secondary mt-4 !rounded-xl !px-4 !py-2 !text-xs">
-                  Hacer check-in
-                </button>
-              ) : null}
             </article>
-          ))}
+          ) : null}
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {registrations.map((registration: any) => {
+              const mine = isUserRegistration(registration, user, ownedTeams);
+
+              return (
+                <article
+                  key={registration.id}
+                  className={`rounded-[16px] border p-4 ${
+                    mine ? "border-[#18e6f2]/35 bg-[#18e6f2]/8" : "border-white/10 bg-white/[0.035]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <strong className="min-w-0 truncate text-white">{registrationLabel(registration)}</strong>
+                    <span className="text-xs uppercase tracking-[0.12em] text-[#18e6f2]">{registrationStatusLabel(registration.status)}</span>
+                  </div>
+                  {mine ? <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#40ff91]">Tu participación</p> : null}
+                </article>
+              );
+            })}
+          </div>
+
           {localRegistered ? (
             <article className="rounded-[16px] border border-[#18e6f2]/30 bg-[#18e6f2]/10 p-4">
               <strong className="text-white">{user?.displayName || user?.username || "Tu cuenta"}</strong>
               <p className="mt-2 text-sm text-white/62">Inscripción simulada para demo.</p>
             </article>
+          ) : null}
+
+          {!registrations.length && !localRegistered ? (
+            <div className="rounded-[16px] border border-white/10 bg-white/[0.035] p-5 text-sm text-white/62">
+              Aún no hay participantes inscritos. Sé el primero cuando el registro esté abierto.
+            </div>
           ) : null}
         </div>
       );
@@ -455,25 +598,26 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   }
 
   return (
-    <div className="min-w-0 overflow-x-hidden pb-10">
-      <section className="relative overflow-hidden border-b border-white/8">
-        <Image src={heroSrc} alt="" fill priority className="object-cover object-center" onError={() => setHeroSrc(game.bg)} />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,8,12,0.98)_0%,rgba(5,8,12,0.78)_38%,rgba(5,8,12,0.2)_72%,rgba(5,8,12,0.88)_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_34%,rgba(255,36,56,0.2),transparent_26%),radial-gradient(circle_at_76%_58%,rgba(24,230,242,0.16),transparent_22%)]" />
+    <div className="min-w-0 overflow-x-hidden bg-[#05080d] pb-10">
+      <section className="relative isolate overflow-hidden border-b border-white/8 bg-[#070b12]">
+        <Image src={heroSrc} alt="" fill priority className="object-cover object-[center_38%]" onError={() => setHeroSrc(game.bg)} />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,8,12,0.98)_0%,rgba(5,8,12,0.82)_38%,rgba(5,8,12,0.28)_72%,rgba(5,8,12,0.9)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_34%,rgba(255,36,56,0.24),transparent_28%),radial-gradient(circle_at_76%_58%,rgba(24,230,242,0.18),transparent_24%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05080d] to-transparent" />
 
-        <div className="relative z-10 mx-auto max-w-[1360px] px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
+        <div className="relative z-10 mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <div className="mb-7 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
             <Link href="/dashboard/tournaments" className="transition hover:text-white">Torneos</Link>
             <span>/</span>
             <span className="text-white/70">{tournament.name}</span>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_240px] xl:items-start">
             <div className="min-w-0">
               <span className="inline-flex rounded-full border border-[#ff2438]/35 bg-[#ff2438]/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#ff5868]">
                 {isMockTournament ? "Modo demo" : statusLabel(tournament.status)}
               </span>
-              <h1 className="mt-5 max-w-4xl break-words font-heading text-[2.65rem] font-semibold leading-none text-white sm:text-6xl lg:text-7xl">
+              <h1 className="mt-5 max-w-5xl break-words font-heading text-[2.35rem] font-semibold leading-[0.94] text-white sm:text-5xl xl:text-[4.85rem]">
                 {tournament.name}
               </h1>
 
@@ -490,12 +634,23 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
                 {tournament.description || tournament.rules || "Compite en un entorno organizado con brackets, check-in, reportes auditables y resultados preparados para Riot mock."}
               </p>
 
-              <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <HeroMetric label="Recompensa" value="Tokens internos" />
                 <HeroMetric label="Inicio" value={formatDate(tournament.startsAt)} />
                 <HeroMetric label="Formato" value={String(tournament.format || "SINGLE_ELIMINATION").replaceAll("_", " ")} />
                 <HeroMetric label="Equipos" value={`${registeredCount}/${maxParticipants}`} />
               </div>
+
+              {tournament.type === "TEAM" && user && !hasRegistration ? (
+                <TeamEligibilityPanel
+                  teams={ownedTeams}
+                  selectedTeamId={selectedTeamId}
+                  onSelectTeam={setSelectedTeamId}
+                  teamSize={tournament.teamSize}
+                  needsTeam={needsTeam}
+                  selectedTeamMissingRoster={selectedTeamMissingRoster}
+                />
+              ) : null}
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <button
@@ -503,12 +658,22 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
                   disabled={actionDisabled}
                   className={`btn-primary motion-press w-full sm:w-auto ${actionDisabled ? "cursor-not-allowed opacity-55" : ""}`}
                 >
-                  {actionLabel}
+                  {isSubmitting ? "Procesando..." : actionLabel}
                 </button>
                 <Link href="#bracket" className="btn-secondary motion-press w-full sm:w-auto">
                   Ver bracket
                 </Link>
               </div>
+              <EligibilityHint
+                user={user}
+                tournament={tournament}
+                hasRegistration={hasRegistration}
+                myRegistration={myRegistration}
+                registrationOpen={registrationOpen}
+                capacityFull={capacityFull}
+                needsTeam={needsTeam}
+                selectedTeamMissingRoster={selectedTeamMissingRoster}
+              />
               {(message || checkInMessage) ? (
                 <p className="mt-4 max-w-2xl rounded-[14px] border border-[#18e6f2]/25 bg-[#18e6f2]/10 px-4 py-3 text-sm text-[#bffaff]">
                   {message || checkInMessage}
@@ -516,7 +681,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
               ) : null}
             </div>
 
-            <div className="rounded-[18px] border border-white/10 bg-black/30 p-5 backdrop-blur-md">
+            <div className="rounded-[18px] border border-[#18e6f2]/15 bg-black/35 p-5 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-md">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#18e6f2]">Comienza en</p>
               <div className="mt-4 grid grid-cols-4 gap-3 text-center">
                 {countdownParts.map(([value, label]) => (
@@ -545,7 +710,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-[1360px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_310px] lg:px-8" id="bracket">
+      <section className="mx-auto grid max-w-[1280px] gap-5 px-4 py-5 sm:px-6 2xl:grid-cols-[minmax(0,1fr)_310px] lg:px-8" id="bracket">
         <div className="min-w-0 space-y-5">
           <div className="surface-panel motion-section min-w-0 p-4 sm:p-6">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -575,10 +740,142 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   );
 }
 
+function EligibilityHint({
+  user,
+  tournament,
+  hasRegistration,
+  myRegistration,
+  registrationOpen,
+  capacityFull,
+  needsTeam,
+  selectedTeamMissingRoster
+}: {
+  user: StoredUser | null;
+  tournament: any;
+  hasRegistration: boolean;
+  myRegistration?: any;
+  registrationOpen: boolean;
+  capacityFull: boolean;
+  needsTeam: boolean;
+  selectedTeamMissingRoster: boolean;
+}) {
+  let title = "Listo para competir";
+  let copy = "Puedes inscribirte si cumples las reglas del torneo y no tienes otro evento en el mismo horario.";
+  let tone = "border-[#18e6f2]/25 bg-[#18e6f2]/10 text-[#bffaff]";
+
+  if (!user) {
+    title = "Inicia sesión para validar requisitos";
+    copy = "Necesitamos tu cuenta para revisar equipos, inscripciones activas y conflictos de horario.";
+    tone = "border-white/10 bg-white/[0.04] text-white/62";
+  } else if (hasRegistration) {
+    title = "Ya participas en este torneo";
+    copy = myRegistration
+      ? `Estado actual: ${registrationStatusLabel(myRegistration.status)}.`
+      : "Tu inscripción aparece activa en este torneo.";
+    tone = "border-[#40ff91]/25 bg-[#40ff91]/10 text-[#d7ffe8]";
+  } else if (capacityFull) {
+    title = "Cupos completos";
+    copy = "El torneo alcanzó su límite de participantes. Puedes revisar otros torneos abiertos.";
+    tone = "border-[#ffb347]/30 bg-[#ffb347]/10 text-[#ffe0b0]";
+  } else if (!registrationOpen) {
+    title = "Registro no disponible";
+    copy = `El torneo está en estado ${statusLabel(tournament.status)}. El botón se activará cuando el organizador abra inscripciones.`;
+    tone = "border-white/10 bg-white/[0.04] text-white/62";
+  } else if (needsTeam) {
+    title = "Necesitas un equipo";
+    copy = "Este torneo es por equipos. Crea un equipo o únete como capitán antes de inscribirte.";
+    tone = "border-[#ffb347]/30 bg-[#ffb347]/10 text-[#ffe0b0]";
+  } else if (selectedTeamMissingRoster) {
+    title = "Equipo incompleto";
+    copy = `El equipo seleccionado no cumple el tamaño requerido de ${tournament.teamSize} integrantes.`;
+    tone = "border-[#ffb347]/30 bg-[#ffb347]/10 text-[#ffe0b0]";
+  }
+
+  return (
+    <div className={`mt-4 rounded-[16px] border px-4 py-3 text-sm leading-6 ${tone}`}>
+      <strong className="block text-white">{title}</strong>
+      <span>{copy}</span>
+    </div>
+  );
+}
+
+function TeamEligibilityPanel({
+  teams,
+  selectedTeamId,
+  onSelectTeam,
+  teamSize,
+  needsTeam,
+  selectedTeamMissingRoster
+}: {
+  teams: any[];
+  selectedTeamId: string;
+  onSelectTeam: (value: string) => void;
+  teamSize?: number | null;
+  needsTeam: boolean;
+  selectedTeamMissingRoster: boolean;
+}) {
+  if (needsTeam) {
+    return (
+      <div className="mt-6 rounded-[18px] border border-[#ffb347]/30 bg-[#ffb347]/10 p-4 text-sm leading-6 text-[#ffe0b0]">
+        <strong className="block text-white">Este torneo requiere equipo</strong>
+        Crea un equipo o confirma que seas capitán/owner para poder inscribirte.
+        <Link href="/dashboard/teams" className="mt-3 inline-flex font-semibold text-[#18e6f2]">
+          Ir a mis equipos
+        </Link>
+      </div>
+    );
+  }
+
+  if (!teams.length) {
+    return null;
+  }
+
+  return (
+    <div className="mt-6 rounded-[18px] border border-white/10 bg-black/30 p-4 backdrop-blur-md">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#18e6f2]">Equipo para inscripción</p>
+          <p className="mt-1 text-sm text-white/62">Selecciona el equipo con el que competirás.</p>
+        </div>
+        {teamSize ? <span className="text-xs uppercase tracking-[0.14em] text-white/40">Requiere {teamSize} integrantes</span> : null}
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {teams.map((team) => {
+          const selected = team.id === selectedTeamId;
+          const incomplete = Boolean(teamSize && teamRosterCount(team) < teamSize);
+
+          return (
+            <button
+              key={team.id}
+              type="button"
+              onClick={() => onSelectTeam(team.id)}
+              className={`rounded-[14px] border px-4 py-3 text-left transition ${
+                selected
+                  ? "border-[#18e6f2]/45 bg-[#18e6f2]/12"
+                  : "border-white/10 bg-white/[0.035] hover:border-white/20"
+              }`}
+            >
+              <strong className="block truncate text-white">{teamLabel(team)}</strong>
+              <span className={`mt-1 block text-xs ${incomplete ? "text-[#ffb347]" : "text-white/50"}`}>
+                {teamRosterCount(team)} integrante(s){incomplete ? " · incompleto" : ""}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {selectedTeamMissingRoster ? (
+        <p className="mt-3 rounded-[12px] border border-[#ffb347]/25 bg-[#ffb347]/10 px-3 py-2 text-xs text-[#ffe0b0]">
+          El equipo seleccionado todavía no cumple el tamaño requerido.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function HeroMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[16px] border border-white/10 bg-black/30 p-4 backdrop-blur-sm">
-      <p className="text-xs uppercase tracking-[0.16em] text-white/40">{label}</p>
+    <div className="rounded-[16px] border border-white/10 bg-black/35 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
+      <p className="text-xs uppercase tracking-[0.18em] text-white/42">{label}</p>
       <strong className="mt-2 block break-words text-sm text-white sm:text-base">{value}</strong>
     </div>
   );

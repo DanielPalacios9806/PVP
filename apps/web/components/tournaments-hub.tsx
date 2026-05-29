@@ -250,208 +250,182 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
   }
 
   return (
-    <div className="space-y-0">
-      <section className="overflow-hidden border-b border-white/6 bg-[#1a2230]">
-        <div className="relative min-h-[360px] xl:min-h-[420px]">
-          <Image src={config.cover} alt={config.title} fill className="object-cover object-center" priority />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(14,19,28,0.62),rgba(14,19,28,0.12))]" />
-          <div className={`absolute inset-0 bg-gradient-to-b ${config.accent}`} />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),rgba(16,21,31,0.7)_68%,rgba(16,21,31,0.96)_100%)]" />
+    <div className="min-w-0 bg-[#05080d] pb-10 text-white">
+      <div className="mx-auto grid max-w-[1440px] gap-5 px-4 py-5 lg:grid-cols-[286px_minmax(0,1fr)] lg:px-6">
+        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+          <section className="rounded-[18px] border border-white/10 bg-[#0b111b]/92 p-5 shadow-[0_18px_44px_rgba(0,0,0,0.28)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ff4254]">Explorar torneos</p>
+            <h1 className="mt-3 text-3xl font-semibold text-white">Explorar torneos</h1>
+            <p className="mt-3 text-sm leading-6 text-white/58">Encuentra torneos abiertos, revisa cupos y entra a competir desde una vista segura.</p>
 
-          <div className="relative z-10 mx-auto flex min-h-[360px] max-w-[1140px] flex-col justify-end gap-6 px-5 pb-0 pt-6 lg:px-8 xl:min-h-[420px]">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="flex items-end gap-6">
-                <div className="relative hidden h-46 w-36 overflow-hidden rounded-2xl border border-white/10 bg-[#121925] shadow-2xl shadow-black/40 md:block">
-                  <Image src={config.avatar} alt={config.title} fill className="object-cover" />
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <h1 className="text-5xl font-semibold leading-none text-white md:text-6xl">
-                      {config.title}
-                    </h1>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-white/72 md:text-base">
-                      {config.subtitle}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-sm text-white/78">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/8 text-xs font-semibold uppercase text-white">
-                      {config.owner.slice(0, 2)}
-                    </span>
-                    <div>
-                      <p className="font-semibold text-white">{config.owner}</p>
-                      <p className="text-white/55">{config.ownerRole}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 self-start lg:self-end">
+            <div className="mt-6 space-y-3">
+              {gameShowcase.map((item) => (
                 <Link
-                  href="/dashboard/matches/mock-match-1"
-                  className="rounded-xl border border-white/12 bg-[#202839] px-4 py-3 text-sm font-semibold text-white/72"
+                  key={item.id}
+                  href={item.href}
+                  className={`flex items-center justify-between rounded-[14px] border px-4 py-3 text-sm font-semibold transition ${
+                    item.id === gameKey ? "border-[#18e6f2]/45 bg-[#18e6f2]/10 text-white" : "border-white/10 bg-white/[0.035] text-white/70 hover:border-white/20"
+                  }`}
                 >
-                  Abrir partida
+                  <span>{item.id === "lol" ? "League of Legends" : "VALORANT"}</span>
+                  <span className="text-[#18e6f2]">{item.id === "lol" ? cards.length * 2 : cards.length}</span>
                 </Link>
-                <button className="rounded-xl bg-[#3d4760] px-8 py-3 text-sm font-semibold text-white">
-                  {canCreate ? "Crear torneo" : "Participar"}
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[18px] border border-white/10 bg-[#0b111b]/92 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Filtros</p>
+              <button onClick={() => setActiveFormats([])} className="text-xs font-semibold text-[#18e6f2]">Limpiar</button>
+            </div>
+            <div className="mt-4 space-y-2">
+              {formatFilters.map((format) => (
+                <button
+                  key={format}
+                  onClick={() => toggleFormat(format)}
+                  className={`flex w-full items-center justify-between rounded-[12px] border px-4 py-3 text-left text-sm font-semibold transition ${
+                    activeFormats.includes(format)
+                      ? "border-[#ff2438]/45 bg-[#ff2438]/10 text-white"
+                      : "border-white/10 bg-white/[0.035] text-white/62 hover:border-white/20 hover:text-white"
+                  }`}
+                >
+                  <span>{format}</span>
+                  <span className="text-xs text-white/35">Formato</span>
                 </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[18px] border border-white/10 bg-[#0b111b]/92 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Estadísticas en vivo</p>
+            <dl className="mt-4 space-y-4 text-sm">
+              <div className="flex items-center justify-between"><dt className="text-white/55">Torneos visibles</dt><dd className="font-semibold text-white">{cards.length}</dd></div>
+              <div className="flex items-center justify-between"><dt className="text-white/55">Inscripciones abiertas</dt><dd className="font-semibold text-[#40ff91]">{cards.filter((card) => card.status === "OPEN").length}</dd></div>
+              <div className="flex items-center justify-between"><dt className="text-white/55">Mis torneos</dt><dd className="font-semibold text-[#18e6f2]">{cards.filter((card) => card.participating).length}</dd></div>
+            </dl>
+          </section>
+
+          <section className="rounded-[18px] border border-white/10 bg-[#0b111b]/92 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Herramientas</p>
+            <div className="mt-4 space-y-2">
+              {utilityPanels.map((item) => (
+                <Link key={item.title} href={item.href} className="block rounded-[14px] border border-white/10 bg-white/[0.035] p-4 transition hover:border-white/20">
+                  <strong className="text-sm text-white">{item.title}</strong>
+                  <p className="mt-2 text-xs leading-5 text-white/52">{item.copy}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </aside>
+
+        <main className="min-w-0 space-y-5">
+          <section className="relative overflow-hidden rounded-[20px] border border-white/10 bg-[#0b111b] p-5 shadow-[0_22px_50px_rgba(0,0,0,0.26)] lg:p-6">
+            <Image src={config.cover} alt={config.title} fill className="object-cover object-center opacity-42" priority />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,10,16,0.96),rgba(7,10,16,0.7)_48%,rgba(7,10,16,0.3))]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_38%,rgba(255,36,56,0.26),transparent_24%),radial-gradient(circle_at_78%_62%,rgba(24,230,242,0.16),transparent_22%)]" />
+            <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_230px] xl:items-center">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ff4254]">Destacado</p>
+                <h2 className="mt-3 font-heading text-4xl font-semibold leading-none text-white sm:text-5xl">Darkside Cup</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-white/68">Torneos competitivos con brackets, check-in, salas y recompensas internas no monetarias.</p>
+                <Link href={visibleCards[0] ? `/dashboard/tournaments/${visibleCards[0].id}` : "/dashboard/tournaments"} className="mt-5 inline-flex rounded-[12px] border border-[#ff2438]/50 px-5 py-3 text-sm font-semibold text-[#ff5868] transition hover:bg-[#ff2438]/10">
+                  Ver detalles
+                </Link>
+              </div>
+              <div className="grid gap-3 text-sm">
+                <div className="rounded-[14px] border border-white/10 bg-black/30 p-4"><strong className="block text-xl text-white">{cards.length}</strong><span className="text-white/45">Torneos</span></div>
+                <div className="rounded-[14px] border border-white/10 bg-black/30 p-4"><strong className="block text-xl text-[#18e6f2]">{visibleCards.length}</strong><span className="text-white/45">Filtrados</span></div>
               </div>
             </div>
+          </section>
 
-            <div className="mt-6 flex flex-wrap gap-7 overflow-x-auto border-b border-white/8 pb-3">
+          <section className="overflow-x-auto rounded-[18px] border border-white/10 bg-[#0b111b]/92 px-4">
+            <div className="flex min-w-max gap-6">
               {topTabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`pb-4 text-base font-semibold transition ${
-                    activeTab === tab ? "border-b-2 border-[#33d7ff] text-white" : "text-[#8d9bb8] hover:text-white"
+                  className={`py-4 text-sm font-semibold transition ${
+                    activeTab === tab ? "border-b-2 border-[#ff2438] text-white" : "text-white/45 hover:text-white"
                   }`}
                 >
                   {tab}
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      <section className="mx-auto max-w-[1140px] px-5 py-8 lg:px-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <button className="rounded-xl border border-white/12 bg-[#131a25] px-4 py-3 text-sm font-semibold text-white">
-              {user ? "Mis torneos primero" : "Proximos por horario"}
-            </button>
-            {formatFilters.map((format) => (
-              <button
-                key={format}
-                onClick={() => toggleFormat(format)}
-                className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                  activeFormats.includes(format)
-                    ? "border border-[#7b61ff]/50 bg-[#251f3d] text-white"
-                    : "border border-white/10 bg-[#131a25] text-white/70 hover:text-white"
-                }`}
-              >
-                {format}
-              </button>
-            ))}
-          </div>
+          <section className="rounded-[20px] border border-white/10 bg-[#0b111b]/92 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.25)]">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[14px] border border-white/10 bg-black/28 px-4 py-3 text-sm text-white/45">
+                <span>⌕</span>
+                <span>Buscar torneos, equipos o comunidades...</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs uppercase tracking-[0.18em] text-white/35">Ordenar por</span>
+                <button className="rounded-[12px] border border-white/10 bg-white/[0.035] px-4 py-3 text-sm font-semibold text-white/70">Más recientes</button>
+              </div>
+            </div>
+          </section>
 
-          <button className="rounded-xl border border-white/12 bg-[#131a25] px-6 py-3 text-sm font-semibold text-white">
-            Filtros avanzados
-          </button>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-[1140px] px-5 lg:px-8">
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="grid gap-4 md:grid-cols-2">
-            {gameShowcase.map((item) => (
+          <section className="space-y-4">
+            {visibleCards.map((card) => (
               <Link
-                key={item.id}
-                href={item.href}
-                className="relative min-h-[220px] overflow-hidden rounded-[18px] border border-white/8"
+                key={card.id}
+                href={`/dashboard/tournaments/${card.id}`}
+                className="group block overflow-hidden rounded-[18px] border border-white/10 bg-[#0b111b]/92 transition hover:border-[#18e6f2]/25 hover:shadow-[0_18px_50px_rgba(24,230,242,0.08)]"
               >
-                <Image src={item.image} alt={item.title} fill className="object-cover object-center" />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,12,18,0.08),rgba(8,12,18,0.86))]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(51,215,255,0.18),transparent_20%)]" />
-                <div className="absolute inset-x-0 bottom-0 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8eb8ff]">
-                    {item.id === "lol" ? "League of Legends" : "VALORANT"}
-                  </p>
-                  <h3 className="mt-3 text-2xl font-semibold text-white">{item.title}</h3>
-                  <p className="mt-3 max-w-md text-sm leading-7 text-white/70">{item.copy}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <div className="rounded-[18px] border border-white/8 bg-[#181f2b] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8eb8ff]">Herramientas del torneo</p>
-            <div className="mt-4 grid gap-3">
-              {utilityPanels.map((item) => (
-                <Link
-                  key={item.title}
-                  href={item.href}
-                  className="rounded-2xl border border-white/8 bg-[#111722] p-4 transition hover:border-white/16"
-                >
-                  <h3 className="text-lg font-semibold text-white">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-7 text-white/62">{item.copy}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {canCreate ? (
-        <section className="mx-auto max-w-[1140px] px-5 pt-6 lg:px-8">
-          <div className="rounded-[18px] border border-dashed border-white/10 bg-[#181f2b] p-5">
-            <div className="flex items-center gap-5">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#3b4760] text-3xl text-white/70">
-                +
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">Crear torneo</h2>
-                <p className="mt-2 text-sm text-white/58">
-                  Crea un torneo para tu comunidad, define formato, fechas y publica el flujo competitivo.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <div className="mx-auto max-w-[1140px] space-y-4 px-5 pb-10 pt-6 lg:px-8">
-        {visibleCards.map((card) => (
-          <Link
-            key={card.id}
-            href={`/dashboard/tournaments/${card.id}`}
-            className="block overflow-hidden rounded-[18px] border border-white/8 bg-[#1a2230] p-0 transition hover:border-white/18"
-          >
-            <div className="grid gap-0 lg:grid-cols-[180px_minmax(0,1fr)]">
-              <div className="relative min-h-[120px] bg-[#1a2130]">
-                <Image src={config.cover} alt={card.name} fill className="object-cover opacity-55" />
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,20,30,0.2),rgba(15,20,30,0.88))]" />
-              </div>
-
-              <div className="p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8eb8ff]">
-                      {card.startsAt}
-                    </p>
-                    <h3 className="mt-2 text-2xl font-semibold text-white">{card.name}</h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-white/62">{card.copy}</p>
+                <div className="grid gap-0 xl:grid-cols-[230px_minmax(0,1fr)_190px]">
+                  <div className="relative min-h-[150px] bg-[#111722]">
+                    <Image src={config.cover} alt={card.name} fill className="object-cover opacity-72 transition group-hover:scale-[1.03]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(8,12,18,0.12),rgba(8,12,18,0.86))]" />
+                    {card.participating ? <span className="absolute left-3 top-3 rounded-full bg-[#18e6f2] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-black">Participando</span> : null}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    {card.participating ? (
-                      <span className="rounded-full border border-[#18e6f2]/35 bg-[#18e6f2]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#bffaff]">
-                        Participando
-                      </span>
-                    ) : null}
+                  <div className="p-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#18e6f2]">{card.game}</p>
+                    <h3 className="mt-2 text-2xl font-semibold text-white">{card.name}</h3>
+                    <p className="mt-3 max-w-3xl text-sm leading-7 text-white/58">{card.copy}</p>
+                    <div className="mt-5 grid gap-3 text-sm text-white/55 sm:grid-cols-4">
+                      <span>{card.prize}</span>
+                      <span>{card.mode}</span>
+                      <span>Bracket activo</span>
+                      <span>{card.startsAt}</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-white/8 p-5 xl:border-l xl:border-t-0">
                     <span
-                      className={`status-badge ${
-                        card.status === "LIVE" ? "status-live" : card.status === "OPEN" ? "status-open" : "status-complete"
+                      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                        card.status === "LIVE" ? "bg-[#18e6f2]/12 text-[#bffaff]" : card.status === "OPEN" ? "bg-[#40ff91]/12 text-[#9dffc4]" : "bg-white/8 text-white/55"
                       }`}
                     >
-                      {card.status === "LIVE" ? "En vivo" : card.status === "OPEN" ? "Abierto" : "Completado"}
+                      {card.status === "LIVE" ? "En vivo" : card.status === "OPEN" ? "Inscripciones abiertas" : "Completado"}
+                    </span>
+                    <p className="mt-4 text-sm text-white/45">Inscripción</p>
+                    <strong className="mt-1 block text-lg text-white">Tokens internos</strong>
+                    <span className="mt-5 inline-flex w-full justify-center rounded-[12px] bg-[#ff2438] px-4 py-3 text-sm font-semibold text-white transition group-hover:bg-[#ff4254]">
+                      {card.participating ? "Ver mi inscripción" : card.status === "OPEN" ? "Inscribirse" : "Ver detalles"}
                     </span>
                   </div>
                 </div>
+              </Link>
+            ))}
+          </section>
 
-                <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-white/58">
-                  <span>{card.game}</span>
-                  <span>{card.mode}</span>
-                  <span>{card.prize}</span>
-                  <span>Bracket activo</span>
+          {canCreate ? (
+            <section className="rounded-[18px] border border-dashed border-white/10 bg-[#0b111b]/92 p-5">
+              <div className="flex items-center gap-5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1b2332] text-3xl text-white/70">+</div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Crear torneo</h2>
+                  <p className="mt-2 text-sm text-white/58">Define reglas, fechas, formato y publica el flujo competitivo.</p>
                 </div>
               </div>
-            </div>
-          </Link>
-        ))}
+            </section>
+          ) : null}
+        </main>
       </div>
     </div>
   );
