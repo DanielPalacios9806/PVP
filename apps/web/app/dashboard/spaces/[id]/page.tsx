@@ -1,5 +1,5 @@
-import { LayoutShell } from "../../../../components/layout-shell";
-import { SpaceDetail } from "../../../../components/space-detail";
+import { LayoutShell } from "@/components/layout-shell";
+import { SpaceDetail } from "@/components/space-detail";
 
 export default async function SpaceDetailPage({
   params

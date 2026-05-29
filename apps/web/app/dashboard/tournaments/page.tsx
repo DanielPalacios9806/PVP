@@ -1,4 +1,4 @@
-import { TournamentsHub } from "../../../components/tournaments-hub";
+import { TournamentsHub } from "@/components/tournaments-hub";
 
 export default async function TournamentsPage({
   searchParams

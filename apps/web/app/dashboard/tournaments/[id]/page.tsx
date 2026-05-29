@@ -1,4 +1,4 @@
-import { TournamentDetail } from "../../../../components/tournament-detail";
+import { TournamentDetail } from "@/components/tournament-detail";
 
 export default async function TournamentDetailPage({
   params

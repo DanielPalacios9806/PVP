@@ -1,9 +1,9 @@
-import { AdminAuditPanel } from "../../../components/admin-audit-panel";
-import { AdminQuickAccess } from "../../../components/admin-quick-access";
-import { AdminRiotPanel } from "../../../components/admin-riot-panel";
-import { AdminTokenPanel } from "../../../components/admin-token-panel";
-import { RoleGate } from "../../../components/role-gate";
-import { TournamentOpsPanel } from "../../../components/tournament-ops-panel";
+import { AdminAuditPanel } from "@/components/admin-audit-panel";
+import { AdminQuickAccess } from "@/components/admin-quick-access";
+import { AdminRiotPanel } from "@/components/admin-riot-panel";
+import { AdminTokenPanel } from "@/components/admin-token-panel";
+import { RoleGate } from "@/components/role-gate";
+import { TournamentOpsPanel } from "@/components/tournament-ops-panel";
 
 export default function AdminPage() {
   return (

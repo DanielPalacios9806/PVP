@@ -1,4 +1,4 @@
-import { ResourcePanel } from "../../../components/resource-panel";
+import { ResourcePanel } from "@/components/resource-panel";
 
 export default function TeamsPage() {
   return (

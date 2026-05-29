@@ -1,4 +1,4 @@
-﻿# QA_CHECKLIST.md
+# QA_CHECKLIST.md
 
 ## Objetivo
 
@@ -150,7 +150,7 @@ Checklist de pruebas para validar que Darkside.cool funciona correctamente antes
 - [ ] RSO aparece como pendiente/requiere aprobación y no se presenta como vinculación oficial.
 - [ ] Tournament Codes aparecen como futuro/no configurado si falta provider/callback.
 
-## 10. Riot visual dashboard
+## 12. Riot visual dashboard
 
 - [ ] El dashboard carga aunque Riot API no responda.
 - [ ] Si existe Riot ID validado, se muestra ícono de perfil por Data Dragon.
@@ -160,7 +160,7 @@ Checklist de pruebas para validar que Darkside.cool funciona correctamente antes
 - [ ] El panel no afirma propiedad oficial sin Riot Sign On.
 - [ ] Las imágenes remotas de Data Dragon cargan correctamente.
 
-## 12. RSO readiness y solicitud Riot
+## 13. RSO readiness y solicitud Riot
 
 - [ ] `GET /api/riot/rso/status` responde sin exponer secretos.
 - [ ] `GET /api/riot/rso/start` no intenta OAuth real sin Production Key.
@@ -173,7 +173,7 @@ Checklist de pruebas para validar que Darkside.cool funciona correctamente antes
 - [ ] El texto legal indica no gambling y tokens no monetarios.
 - [ ] El sistema no afirma afiliacion oficial con Riot.
 
-## 10. Automatización simulada de torneos
+## 14. Automatización simulada de torneos
 
 - [ ] El detalle del torneo muestra timeline de automatización.
 - [ ] El panel operativo guía cierre de registro, check-in, bracket e inicio.
@@ -183,3 +183,40 @@ Checklist de pruebas para validar que Darkside.cool funciona correctamente antes
 - [ ] El reporte de resultado sigue funcionando.
 - [ ] La disputa y confirmación siguen actualizando el estado.
 - [ ] El bracket avanza después de confirmar resultado.
+
+
+## 15. Tournament callback sandbox
+
+- [ ] Desde el panel admin Riot se puede pegar un matchId válido.
+- [ ] El simulador permite seleccionar ganador A/B.
+- [ ] El callback sandbox crea un evento `RiotCallbackEvent`.
+- [ ] El match pasa a COMPLETED.
+- [ ] El ganador queda registrado.
+- [ ] El bracket avanza si aplica.
+- [ ] El resultado queda marcado como `MOCK_RIOT`, no como callback oficial Riot.
+- [ ] Un usuario sin rol permitido no puede simular callback.
+- [ ] El match room sigue mostrando reporte/disputa sin romperse.
+
+## 16. Release candidate / entrada a producción
+
+- [ ] `git status --short` solo muestra cambios esperados de la fase actual.
+- [ ] No quedan ZIPs, carpetas de revisión ni patches locales en el status.
+- [ ] `npm.cmd run build:shared` pasa.
+- [ ] `npm.cmd run build:api` pasa.
+- [ ] `npm.cmd run build:web` pasa.
+- [ ] `/dashboard`, `/dashboard/account`, `/dashboard/tournaments` y `/dashboard/matches` cargan en local.
+- [ ] `/legal/terms`, `/legal/privacy` y `/legal/data-deletion` cargan en local y producción.
+- [ ] `git grep -n "RGAPI-"` no encuentra claves reales.
+- [ ] `git grep -n "NEXT_PUBLIC_RIOT"` no encuentra variables Riot expuestas al frontend.
+- [ ] Render despliega API y Web sin errores.
+- [ ] La `RIOT_API_KEY` está solo en Render API Environment, no en Web.
+
+## 17. Paquete para Riot Developer Portal
+
+- [ ] `docs/RIOT_DEVELOPER_APPLICATION.md` está actualizado.
+- [ ] Existe demo funcional en `https://darkside.cool`.
+- [ ] Se puede explicar el flujo de torneos, matches, disputas y auditoría.
+- [ ] Se puede mostrar que DS_TOKEN no es dinero real, no es retirable y no habilita apuestas.
+- [ ] Se puede mostrar que Riot ID lookup no confirma propiedad.
+- [ ] Se puede explicar que RSO será obligatorio para propiedad oficial.
+- [ ] Se puede explicar que Tournament Codes reales son fase futura posterior a aprobación.
