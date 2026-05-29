@@ -14,7 +14,7 @@ import { checkInSchema, matchSchema, registrationSchema, tournamentSchema } from
 
 export const tournamentsRouter = Router();
 
-const activeRegistrationStatuses = [
+const activeRegistrationStatuses: RegistrationStatus[] = [
   RegistrationStatus.PENDING,
   RegistrationStatus.CONFIRMED,
   RegistrationStatus.CHECKED_IN
@@ -485,7 +485,7 @@ async function updateRegistrationDecision(params: {
   request: AuthenticatedRequest;
   tournamentId: string;
   registrationId: string;
-  status: RegistrationStatus.CONFIRMED | RegistrationStatus.REJECTED;
+  status: "CONFIRMED" | "REJECTED";
   reason?: string;
 }) {
   const registration = await prisma.tournamentRegistration.findUnique({
