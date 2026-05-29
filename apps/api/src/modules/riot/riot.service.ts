@@ -102,6 +102,38 @@ export async function unlinkRiotAccount(params: { userId: string; accountId: str
   return { id: existing.id, unlinked: true };
 }
 
+
+export async function checkRiotAccount(params: {
+  gameName: string;
+  tagLine: string;
+  platformRoute: string;
+  regionalRoute: string;
+}) {
+  const account = await getRiotAdapter().lookupAccountByRiotId({
+    gameName: params.gameName,
+    tagLine: params.tagLine,
+    platformRoute: params.platformRoute,
+    regionalRoute: params.regionalRoute
+  });
+
+  if (!account?.puuid) {
+    throw badRequest("No se pudo validar ese Riot ID con la configuracion actual.");
+  }
+
+  return {
+    ok: true,
+    mode: env.RIOT_API_MODE,
+    account: {
+      gameName: account.gameName,
+      tagLine: account.tagLine,
+      platformRoute: account.platformRoute,
+      regionalRoute: account.regionalRoute,
+      puuidPresent: Boolean(account.puuid),
+      summonerIdPresent: Boolean(account.summonerId)
+    }
+  };
+}
+
 export async function testRiotConnection(params?: { gameName?: string; tagLine?: string; userId?: string }) {
   const config = getRiotRuntimeConfig();
 

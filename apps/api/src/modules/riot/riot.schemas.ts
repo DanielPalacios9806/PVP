@@ -1,11 +1,36 @@
 import { z } from "zod";
 
-export const linkRiotAccountSchema = z.object({
-  gameName: z.string().min(2).max(32),
-  tagLine: z.string().min(2).max(12),
-  game: z.string().min(2).max(50).default("LEAGUE_OF_LEGENDS"),
-  platformRoute: z.string().min(2).max(20).default("LA1"),
-  regionalRoute: z.string().min(2).max(30).default("AMERICAS")
+const riotGameNameSchema = z.string().trim().min(2).max(32);
+const riotTagLineSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(12)
+  .transform((value) => value.replace(/^#/, "").toUpperCase());
+
+const platformRouteSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(20)
+  .transform((value) => value.toUpperCase());
+
+const regionalRouteSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(30)
+  .transform((value) => value.toUpperCase());
+
+export const checkRiotAccountSchema = z.object({
+  gameName: riotGameNameSchema,
+  tagLine: riotTagLineSchema,
+  platformRoute: platformRouteSchema.default("LA1"),
+  regionalRoute: regionalRouteSchema.default("AMERICAS")
+});
+
+export const linkRiotAccountSchema = checkRiotAccountSchema.extend({
+  game: z.string().trim().min(2).max(50).default("LEAGUE_OF_LEGENDS")
 });
 
 export const generateTournamentCodeSchema = z.object({

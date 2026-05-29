@@ -154,15 +154,37 @@ async function recordRiotApiLog(input: {
 
 export function getRiotRuntimeConfig() {
   const providerId = env.RIOT_TOURNAMENT_PROVIDER_ID ?? env.RIOT_PROVIDER_ID;
+  const isMock = env.RIOT_API_MODE === "mock";
+  const apiKeyConfigured = Boolean(env.RIOT_API_KEY);
+  const callbackUrlConfigured = Boolean(env.RIOT_CALLBACK_URL);
+  const tournamentProviderIdConfigured = Boolean(providerId);
+  const tournamentIdConfigured = Boolean(env.RIOT_TOURNAMENT_ID);
+
+  const missingRequirements = [
+    !isMock && !apiKeyConfigured ? "RIOT_API_KEY" : null,
+    env.RIOT_TOURNAMENT_API_ENABLED && !callbackUrlConfigured ? "RIOT_CALLBACK_URL" : null,
+    env.RIOT_TOURNAMENT_API_ENABLED && !tournamentProviderIdConfigured ? "RIOT_TOURNAMENT_PROVIDER_ID" : null,
+    env.RIOT_TOURNAMENT_API_ENABLED && !tournamentIdConfigured ? "RIOT_TOURNAMENT_ID" : null
+  ].filter(Boolean);
 
   return {
     mode: env.RIOT_API_MODE,
-    apiKeyConfigured: Boolean(env.RIOT_API_KEY),
+    apiKeyConfigured,
     region: normalizeRoute(env.RIOT_REGION),
     regionalRoute: normalizeRoute(env.RIOT_REGIONAL_ROUTE),
-    callbackUrlConfigured: Boolean(env.RIOT_CALLBACK_URL),
-    tournamentProviderIdConfigured: Boolean(providerId),
-    tournamentApiEnabled: env.RIOT_TOURNAMENT_API_ENABLED
+    callbackUrlConfigured,
+    tournamentProviderIdConfigured,
+    tournamentIdConfigured,
+    tournamentApiEnabled: env.RIOT_TOURNAMENT_API_ENABLED,
+    realRequestsEnabled: !isMock && apiKeyConfigured,
+    readyForAccountLookup: isMock || apiKeyConfigured,
+    readyForTournamentCodes:
+      env.RIOT_TOURNAMENT_API_ENABLED &&
+      apiKeyConfigured &&
+      callbackUrlConfigured &&
+      tournamentProviderIdConfigured &&
+      tournamentIdConfigured,
+    missingRequirements
   };
 }
 

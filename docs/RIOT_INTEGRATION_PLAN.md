@@ -57,3 +57,33 @@ Antes de solicitar producción a Riot:
 ## Nota
 
 La integración Riot debe entrar después de estabilizar el MVP manual.
+
+
+## Fase 6.1 implementada: backend prep seguro
+
+La integracion debe iniciar con endpoints server-side y modo mock por defecto:
+
+- `GET /api/riot/status`: configuracion segura sin exponer secretos.
+- `GET /api/riot/health`: readiness para lookup de Riot ID y tournament codes.
+- `POST /api/riot/accounts/check`: valida un Riot ID desde backend sin guardarlo.
+- `POST /api/riot/accounts/link`: vincula Riot ID al usuario autenticado.
+
+### Configuracion local controlada
+
+```env
+RIOT_API_MODE=development
+RIOT_API_KEY=RGAPI_xxxxx
+RIOT_REGION=la1
+RIOT_REGIONAL_ROUTE=americas
+RIOT_TOURNAMENT_API_ENABLED=false
+```
+
+### Configuracion recomendada en Render hasta tener aprobacion
+
+```env
+RIOT_API_MODE=mock
+RIOT_API_KEY=
+RIOT_TOURNAMENT_API_ENABLED=false
+```
+
+La API key temporal de desarrollo solo debe cargarse en el backend, nunca en `NEXT_PUBLIC_*`, nunca en GitHub y nunca en el navegador.

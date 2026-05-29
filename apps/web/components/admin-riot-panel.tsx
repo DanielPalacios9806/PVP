@@ -12,7 +12,12 @@ type RiotOverview = {
     regionalRoute: string;
     callbackUrlConfigured: boolean;
     tournamentProviderIdConfigured: boolean;
+    tournamentIdConfigured: boolean;
     tournamentApiEnabled: boolean;
+    realRequestsEnabled: boolean;
+    readyForAccountLookup: boolean;
+    readyForTournamentCodes: boolean;
+    missingRequirements: string[];
   };
   metrics: {
     totalRequests: number;
@@ -104,6 +109,8 @@ export function AdminRiotPanel() {
         <RiotMetric label="Modo" value={overview?.config.mode ?? "Cargando"} />
         <RiotMetric label="API key" value={overview?.config.apiKeyConfigured ? "Configurada" : "No configurada"} />
         <RiotMetric label="Region" value={`${overview?.config.region ?? "la1"} / ${overview?.config.regionalRoute ?? "americas"}`} />
+        <RiotMetric label="Lookup Riot ID" value={overview?.config.readyForAccountLookup ? "Listo" : "Pendiente"} />
+        <RiotMetric label="Tournament codes" value={overview?.config.readyForTournamentCodes ? "Listo" : "Desactivado"} />
         <RiotMetric label="Requests" value={String(overview?.metrics.totalRequests ?? 0)} />
         <RiotMetric label="Exito" value={`${overview?.metrics.successRate ?? 0}%`} />
         <RiotMetric label="Callbacks" value={String(overview?.metrics.callbackCount ?? 0)} />
@@ -116,6 +123,15 @@ export function AdminRiotPanel() {
           {loading ? "Probando..." : "Probar conexion"}
         </button>
       </form>
+
+      {overview?.config.missingRequirements?.length ? (
+        <div className="mt-5 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100">
+          <p className="font-semibold">Pendiente para modo real</p>
+          <p className="mt-1 text-white/70">
+            Configura en Render/API: {overview.config.missingRequirements.join(", ")}.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">

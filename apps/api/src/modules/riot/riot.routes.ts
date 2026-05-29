@@ -9,8 +9,8 @@ import { getRequestParam } from "../../utils/request-param.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { processRiotCallback } from "./riot-callback.service.js";
 import { getRiotRuntimeConfig } from "./riot.client.js";
-import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema } from "./riot.schemas.js";
-import { getMyRiotAccounts, getRiotMode, linkRiotAccount, unlinkRiotAccount } from "./riot.service.js";
+import { checkRiotAccountSchema, finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema } from "./riot.schemas.js";
+import { checkRiotAccount, getMyRiotAccounts, getRiotMode, linkRiotAccount, unlinkRiotAccount } from "./riot.service.js";
 import { finishMockRiotMatch, generateMockableTournamentCode } from "./riot-tournament.service.js";
 
 export const riotRouter = Router();
@@ -34,6 +34,53 @@ riotRouter.get(
   requireAuth,
   asyncHandler(async (_request, response) => {
     response.json(getRiotRuntimeConfig());
+  })
+);
+
+
+riotRouter.get(
+  "/health",
+  requireAuth,
+  asyncHandler(async (_request, response) => {
+    const config = getRiotRuntimeConfig();
+
+    response.json({
+      ok: true,
+      mode: config.mode,
+      readyForAccountLookup: config.readyForAccountLookup,
+      readyForTournamentCodes: config.readyForTournamentCodes,
+      missingRequirements: config.missingRequirements,
+      message: config.readyForAccountLookup
+        ? "Riot integration is ready for safe backend account checks."
+        : "Riot integration is not ready for real account checks. Review backend environment variables."
+    });
+  })
+);
+
+riotRouter.post(
+  "/accounts/check",
+  riotRateLimiter,
+  requireAuth,
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const payload = checkRiotAccountSchema.parse(request.body);
+    const result = await checkRiotAccount(payload);
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "riot.account.check",
+      entityType: "riot_account",
+      after: {
+        gameName: result.account.gameName,
+        tagLine: result.account.tagLine,
+        platformRoute: result.account.platformRoute,
+        regionalRoute: result.account.regionalRoute,
+        mode: getRiotMode(),
+        puuidPresent: result.account.puuidPresent
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
   })
 );
 
