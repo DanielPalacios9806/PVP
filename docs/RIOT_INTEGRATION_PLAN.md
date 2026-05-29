@@ -161,3 +161,18 @@ Reglas:
 - Mantener politica de privacidad, terminos, eliminacion de datos y disclaimer Riot visibles.
 
 El objetivo de esta fase es que el panel admin muestre claramente que Darkside tiene MVP funcional, politicas, seguridad de API key, auditoria, separacion lookup/ownership y callback RSO preparado.
+
+## Fase 6.5 — Automatización simulada de torneos
+
+Antes de activar Tournament Codes reales, Darkside opera un flujo competitivo simulado:
+
+- inscripción abierta y cierre de registro;
+- check-in opcional;
+- generación de bracket;
+- creación de match rooms;
+- código de sala manual/simulado;
+- reporte de resultado con evidencia;
+- aceptación, disputa o resolución por staff;
+- avance automático de bracket al confirmar resultado.
+
+Este flujo permite demostrar a Riot que la plataforma ya tiene operación competitiva, moderación y trazabilidad antes de solicitar Production Key, RSO y Tournament API real.

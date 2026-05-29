@@ -172,3 +172,14 @@ Checklist de pruebas para validar que Darkside.cool funciona correctamente antes
 - [ ] La UI sigue diferenciando lookup tecnico de propiedad oficial.
 - [ ] El texto legal indica no gambling y tokens no monetarios.
 - [ ] El sistema no afirma afiliacion oficial con Riot.
+
+## 10. Automatización simulada de torneos
+
+- [ ] El detalle del torneo muestra timeline de automatización.
+- [ ] El panel operativo guía cierre de registro, check-in, bracket e inicio.
+- [ ] La pestaña Automatización explica cada fase del flujo.
+- [ ] La match room muestra código de sala manual/simulado.
+- [ ] El código simulado no se presenta como Tournament Code oficial.
+- [ ] El reporte de resultado sigue funcionando.
+- [ ] La disputa y confirmación siguen actualizando el estado.
+- [ ] El bracket avanza después de confirmar resultado.

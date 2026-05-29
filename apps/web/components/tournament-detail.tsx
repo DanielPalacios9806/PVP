@@ -9,7 +9,7 @@ import { getStoredUser, type AppRole, type StoredUser } from "../lib/session";
 import { BracketBoard } from "./bracket-board";
 import { ConfirmActionDialog, type ConfirmActionRequest } from "./confirm-action-dialog";
 
-const tabs = ["Información", "Bracket", "Equipos", "Reglas", "Partidos"];
+const tabs = ["Información", "Bracket", "Automatización", "Equipos", "Reglas", "Partidos"];
 
 const gameAssets: Record<string, { bg: string; logo: string; label: string }> = {
   "LEAGUE OF LEGENDS": {
@@ -845,6 +845,20 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   }
 
   function renderMainTab() {
+
+    if (activeTab === "Automatización") {
+      return (
+        <TournamentAutomationFlow
+          tournament={tournament}
+          matches={matches}
+          registrations={tournament.registrations ?? []}
+          canManage={canManageTournament}
+          onAction={requestTournamentOperation}
+          operatingAction={operatingAction}
+        />
+      );
+    }
+
     if (activeTab === "Equipos") {
       const registrations = tournament.registrations ?? [];
 
@@ -1371,6 +1385,280 @@ function TeamScore({ registration, score, alignRight = false }: { registration: 
 }
 
 
+
+function tournamentAutomationSteps(tournament: any, matches: any[], registrations: any[]) {
+  const confirmedCount = registrations.filter((registration: any) => registration.status === "CONFIRMED" || registration.status === "CHECKED_IN").length;
+  const checkedInCount = registrations.filter((registration: any) => registration.status === "CHECKED_IN").length;
+  const hasBracket = Boolean(tournament.bracket?.id);
+  const pendingResults = matches.filter((match: any) => match.status === "RESULT_PENDING" || match.results?.some((result: any) => result.status === "PENDING_CONFIRMATION")).length;
+  const disputedMatches = matches.filter((match: any) => match.status === "DISPUTED" || match.disputes?.some((dispute: any) => ["OPEN", "UNDER_REVIEW"].includes(dispute.status))).length;
+  const completedMatches = matches.filter((match: any) => match.status === "COMPLETED").length;
+
+  return [
+    {
+      id: "registration",
+      label: "Inscripción",
+      title: "Registro competitivo",
+      description: tournament.status === "REGISTRATION_OPEN"
+        ? "Los jugadores/equipos todavía pueden entrar al torneo."
+        : "El registro ya fue cerrado o aún no se abre.",
+      done: ["REGISTRATION_CLOSED", "CHECK_IN", "IN_PROGRESS", "COMPLETED"].includes(tournament.status),
+      active: tournament.status === "REGISTRATION_OPEN",
+      metric: `${registrations.length}/${tournament.maxParticipants ?? "?"}`
+    },
+    {
+      id: "check-in",
+      label: "Check-in",
+      title: "Validación de presencia",
+      description: tournament.checkInEnabled
+        ? "Los participantes confirmados deben validar asistencia antes de iniciar."
+        : "Check-in no obligatorio para este torneo.",
+      done: tournament.checkInEnabled ? checkedInCount > 0 || ["IN_PROGRESS", "COMPLETED"].includes(tournament.status) : ["REGISTRATION_CLOSED", "IN_PROGRESS", "COMPLETED"].includes(tournament.status),
+      active: tournament.status === "CHECK_IN",
+      metric: tournament.checkInEnabled ? `${checkedInCount}/${confirmedCount}` : "Opcional"
+    },
+    {
+      id: "bracket",
+      label: "Bracket",
+      title: "Llaves generadas",
+      description: hasBracket
+        ? "Las rondas y salas de partida ya están listas para operar."
+        : "Genera el bracket cuando el registro/check-in esté cerrado.",
+      done: hasBracket,
+      active: !hasBracket && ["REGISTRATION_CLOSED", "CHECK_IN"].includes(tournament.status),
+      metric: hasBracket ? `${matches.length} partidas` : "Pendiente"
+    },
+    {
+      id: "rooms",
+      label: "Match rooms",
+      title: "Salas competitivas",
+      description: "Cada cruce usa sala propia con instrucciones, reporte manual y evidencia.",
+      done: matches.length > 0 && matches.some((match: any) => ["READY", "IN_PROGRESS", "RESULT_PENDING", "COMPLETED"].includes(match.status)),
+      active: tournament.status === "IN_PROGRESS",
+      metric: `${matches.filter((match: any) => ["READY", "IN_PROGRESS"].includes(match.status)).length} activas`
+    },
+    {
+      id: "review",
+      label: "Resultados",
+      title: "Validación y disputas",
+      description: "Los reportes pendientes se validan por rival o staff; las disputas bloquean el avance.",
+      done: tournament.status === "COMPLETED",
+      active: pendingResults > 0 || disputedMatches > 0,
+      metric: disputedMatches ? `${disputedMatches} disputa(s)` : `${pendingResults} pendiente(s)`
+    },
+    {
+      id: "champion",
+      label: "Campeón",
+      title: "Cierre del torneo",
+      description: "El ganador final se conserva en historial. Tournament Codes reales quedan para Riot Production.",
+      done: tournament.status === "COMPLETED",
+      active: tournament.status === "IN_PROGRESS" && completedMatches > 0,
+      metric: tournament.status === "COMPLETED" ? "Finalizado" : "Por definir"
+    }
+  ];
+}
+
+function TournamentAutomationSnapshot({ tournament, matches, registrations }: { tournament: any; matches: any[]; registrations: any[] }) {
+  const steps = tournamentAutomationSteps(tournament, matches, registrations);
+  const doneCount = steps.filter((step) => step.done).length;
+  const activeStep = steps.find((step) => step.active && !step.done) ?? steps.find((step) => step.active) ?? steps[0];
+  const progress = Math.round((doneCount / steps.length) * 100);
+
+  return (
+    <section className="relative overflow-hidden rounded-[28px] border border-[#18e6f2]/18 bg-[linear-gradient(135deg,rgba(24,230,242,0.09),rgba(255,36,56,0.07)_52%,rgba(0,0,0,0.35))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+      <div className="absolute inset-y-0 right-0 w-1/3 bg-[radial-gradient(circle_at_50%_30%,rgba(24,230,242,0.20),transparent_55%)]" />
+      <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
+        <div>
+          <p className="page-kicker">Automatización simulada</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">Flujo competitivo tipo plataforma</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-7 text-white/62">
+            Darkside ya opera el ciclo completo: registro, check-in, bracket, match rooms, reportes, disputas y avance de bracket. Los Tournament Codes reales quedan listos para una fase posterior con Riot Production.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {steps.map((step, index) => (
+              <span
+                key={step.id}
+                className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                  step.done
+                    ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
+                    : step.active
+                      ? "border-[#18e6f2]/35 bg-[#18e6f2]/10 text-[#bffaff]"
+                      : "border-white/10 bg-white/[0.04] text-white/42"
+                }`}
+              >
+                {index + 1}. {step.label}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-[22px] border border-white/10 bg-black/35 p-4">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-white/38">Progreso</p>
+              <strong className="mt-1 block text-4xl font-black text-white">{progress}%</strong>
+            </div>
+            <span className="rounded-full border border-[#ff2438]/30 bg-[#ff2438]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#ff9aa7]">
+              {activeStep?.label}
+            </span>
+          </div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-[linear-gradient(90deg,#18e6f2,#ff2438)]" style={{ width: `${progress}%` }} />
+          </div>
+          <p className="mt-3 text-xs leading-5 text-white/50">{activeStep?.description}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TournamentAutomationFlow({
+  tournament,
+  matches,
+  registrations,
+  canManage,
+  onAction,
+  operatingAction
+}: {
+  tournament: any;
+  matches: any[];
+  registrations: any[];
+  canManage: boolean;
+  onAction: (action: string, path: string, successMessage: string, method?: string) => void;
+  operatingAction: string;
+}) {
+  const steps = tournamentAutomationSteps(tournament, matches, registrations);
+  const hasBracket = Boolean(tournament.bracket?.id);
+  const confirmedCount = registrations.filter((registration: any) => registration.status === "CONFIRMED" || registration.status === "CHECKED_IN").length;
+  const checkedInCount = registrations.filter((registration: any) => registration.status === "CHECKED_IN").length;
+  const readyForBracket = ["REGISTRATION_CLOSED", "CHECK_IN"].includes(tournament.status) && !hasBracket;
+  const readyForStart = ["REGISTRATION_CLOSED", "CHECK_IN"].includes(tournament.status) && hasBracket;
+  const automationActions = [
+    {
+      id: "close-registration",
+      label: "Cerrar registro",
+      path: `/tournaments/${tournament.id}/close-registration`,
+      disabled: tournament.status !== "REGISTRATION_OPEN",
+      copy: "Bloquea nuevas inscripciones y congela participantes."
+    },
+    {
+      id: "open-check-in",
+      label: "Abrir check-in",
+      path: `/tournaments/${tournament.id}/open-check-in`,
+      disabled: !tournament.checkInEnabled || !["REGISTRATION_OPEN", "REGISTRATION_CLOSED"].includes(tournament.status),
+      copy: "Activa validación de asistencia para confirmados."
+    },
+    {
+      id: "generate-bracket",
+      label: "Generar bracket",
+      path: `/tournaments/${tournament.id}/generate-bracket`,
+      disabled: !readyForBracket,
+      copy: "Crea rondas y match rooms desde participantes elegibles."
+    },
+    {
+      id: "start",
+      label: "Iniciar torneo",
+      path: `/tournaments/${tournament.id}/start`,
+      disabled: !readyForStart,
+      copy: "Habilita operación de partidas, reportes y disputas."
+    }
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.035] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="page-kicker">Pipeline operativo</p>
+              <h3 className="mt-2 text-2xl font-semibold text-white">De inscripción a campeón</h3>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-white/60">
+                Esta vista simula la experiencia de plataformas competitivas: cada etapa tiene requisitos claros y el organizador sabe qué acción ejecutar después.
+              </p>
+            </div>
+            <span className="rounded-full border border-[#18e6f2]/25 bg-[#18e6f2]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#bffaff]">
+              {statusLabel(tournament.status)}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {steps.map((step, index) => (
+              <article
+                key={step.id}
+                className={`rounded-[20px] border p-4 ${
+                  step.done
+                    ? "border-emerald-300/25 bg-emerald-300/10"
+                    : step.active
+                      ? "border-[#18e6f2]/35 bg-[#18e6f2]/10 shadow-[0_0_30px_rgba(24,230,242,0.08)]"
+                      : "border-white/10 bg-black/22"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-2xl border border-white/10 bg-black/35 text-sm font-black text-white">
+                    {step.done ? "✓" : index + 1}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">{step.metric}</span>
+                </div>
+                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#18e6f2]">{step.label}</p>
+                <h4 className="mt-1 text-lg font-semibold text-white">{step.title}</h4>
+                <p className="mt-2 text-sm leading-6 text-white/58">{step.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <aside className="rounded-[24px] border border-[#ff2438]/20 bg-[linear-gradient(180deg,rgba(255,36,56,0.10),rgba(0,0,0,0.26))] p-4">
+          <p className="page-kicker">Sala simulada</p>
+          <h3 className="mt-2 text-xl font-semibold text-white">Tournament Codes</h3>
+          <p className="mt-3 text-sm leading-7 text-white/60">
+            Por ahora Darkside usa código manual/simulado y reporte con evidencia. La generación real de Tournament Codes queda para cuando Riot apruebe Production Key, callback y provider.
+          </p>
+          <div className="mt-4 space-y-3 text-sm">
+            <div className="rounded-[16px] border border-white/10 bg-black/25 p-3">
+              <span className="block text-xs uppercase tracking-[0.16em] text-white/40">Lobby code</span>
+              <strong className="mt-1 block text-white">DS-{String(tournament.slug || tournament.id).slice(0, 8).toUpperCase()}</strong>
+            </div>
+            <div className="rounded-[16px] border border-white/10 bg-black/25 p-3">
+              <span className="block text-xs uppercase tracking-[0.16em] text-white/40">Participantes elegibles</span>
+              <strong className="mt-1 block text-white">{confirmedCount} confirmados · {checkedInCount} check-in</strong>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {canManage ? (
+        <div className="rounded-[24px] border border-white/10 bg-black/25 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="page-kicker">Acciones guiadas</p>
+              <h3 className="mt-2 text-xl font-semibold text-white">Siguiente paso operativo</h3>
+            </div>
+            <span className="text-xs uppercase tracking-[0.16em] text-white/40">Organizer / Admin</span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            {automationActions.map((action) => (
+              <button
+                key={action.id}
+                type="button"
+                disabled={action.disabled || operatingAction === action.id}
+                onClick={() => onAction(action.id, action.path, `${action.label} ejecutado correctamente.`)}
+                className={`rounded-[18px] border p-4 text-left transition ${
+                  action.disabled
+                    ? "cursor-not-allowed border-white/8 bg-white/[0.025] text-white/28"
+                    : "border-[#18e6f2]/25 bg-[#18e6f2]/10 text-white hover:border-[#18e6f2]/50"
+                }`}
+              >
+                <strong className="block text-sm">{action.label}</strong>
+                <span className="mt-2 block text-xs leading-5 opacity-70">{action.copy}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+
 function TournamentOperationsPanel({
   tournament,
   operatingAction,
@@ -1460,6 +1748,20 @@ function TournamentOperationsPanel({
         <span className="rounded-full border border-[#18e6f2]/30 bg-[#18e6f2]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#bffaff]">
           {statusLabel(tournament.status)}
         </span>
+      </div>
+
+      <div className="mt-5 rounded-[16px] border border-[#18e6f2]/18 bg-[#18e6f2]/8 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#18e6f2]">Automatización</p>
+            <p className="mt-1 text-sm text-white/58">
+              Bracket {hasBracket ? "listo" : "pendiente"} · {confirmedRegistrations.length} confirmados · Tournament Codes reales pendientes de Riot.
+            </p>
+          </div>
+          <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">
+            MVP simulado
+          </span>
+        </div>
       </div>
 
       <div className="mt-5 grid gap-2">
