@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiUrl, getAuthHeaders } from "../lib/config";
 import { mockMatch } from "../lib/mock-data";
-import { getStoredUser, type AppRole } from "../lib/session";
+import { getStoredUser, type StoredUser } from "../lib/session";
 import { SectionCard } from "./section-card";
 import { ConfirmActionDialog, type ConfirmActionRequest } from "./confirm-action-dialog";
 
@@ -349,13 +349,25 @@ function ParticipantCard({
   );
 }
 
+function canOperateMatch(user: StoredUser | null, match: any) {
+  if (!user) {
+    return false;
+  }
+
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "MODERATOR") {
+    return true;
+  }
+
+  return user.role === "ORGANIZER" && (match?.tournament?.organizerId === user.id || match?.tournament?.organizer?.id === user.id);
+}
+
 export function MatchRoom({ matchId }: { matchId: string }) {
   const [match, setMatch] = useState<any | null>(null);
   const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState<"success" | "error" | "info">("info");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [role, setRole] = useState<AppRole>("USER");
+  const [user, setUser] = useState<StoredUser | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmActionRequest | null>(null);
 
   async function load() {
@@ -381,11 +393,12 @@ export function MatchRoom({ matchId }: { matchId: string }) {
   }
 
   useEffect(() => {
-    setRole(getStoredUser()?.role ?? "USER");
+    const storedUser = getStoredUser();
+    setUser(storedUser);
     void load();
   }, [matchId]);
 
-  const canOperate = role === "ADMIN" || role === "SUPER_ADMIN" || role === "ORGANIZER" || role === "MODERATOR";
+  const canOperate = canOperateMatch(user, match);
   const latestResult = useMemo(() => match?.results?.[0] ?? null, [match]);
   const pendingResult = useMemo(
     () => match?.results?.find((result: any) => result.status === "PENDING_CONFIRMATION") ?? null,

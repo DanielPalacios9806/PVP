@@ -2,6 +2,31 @@
 
 export type AppRole = "USER" | "ORGANIZER" | "MODERATOR" | "ADMIN" | "SUPER_ADMIN" | "FINANCE";
 
+export const roleLabels: Record<AppRole, string> = {
+  USER: "Jugador",
+  ORGANIZER: "Organizador",
+  MODERATOR: "Moderador",
+  ADMIN: "Admin",
+  SUPER_ADMIN: "Super admin",
+  FINANCE: "Finanzas"
+};
+
+export const routeRoleAccess: Array<{ prefix: string; roles: AppRole[] }> = [
+  { prefix: "/dashboard/admin/profiles", roles: ["SUPER_ADMIN"] },
+  { prefix: "/dashboard/admin", roles: ["ADMIN", "SUPER_ADMIN"] },
+  { prefix: "/dashboard/moderation", roles: ["MODERATOR", "ADMIN", "SUPER_ADMIN"] }
+];
+
+export function hasAnyRole(role: AppRole | undefined, roles: AppRole[]) {
+  return Boolean(role && roles.includes(role));
+}
+
+export function canAccessDashboardRoute(role: AppRole | undefined, pathname: string) {
+  const rule = routeRoleAccess.find((item) => pathname.startsWith(item.prefix));
+  return !rule || hasAnyRole(role, rule.roles);
+}
+
+
 export interface StoredUser {
   id: string;
   email?: string;

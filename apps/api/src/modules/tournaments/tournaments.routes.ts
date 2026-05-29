@@ -218,7 +218,11 @@ function requireRouteParam(value: string | string[] | undefined, name: string) {
 }
 
 function canManageTournament(params: { user: AuthUser; organizerId: string }) {
-  return params.user.role === "ADMIN" || params.user.role === "SUPER_ADMIN" || params.user.sub === params.organizerId;
+  return (
+    params.user.role === "ADMIN" ||
+    params.user.role === "SUPER_ADMIN" ||
+    (params.user.role === "ORGANIZER" && params.user.sub === params.organizerId)
+  );
 }
 
 function assertCanManageTournament(user: AuthUser, organizerId: string) {
@@ -243,7 +247,7 @@ async function assertTeamRegistrationAllowed(teamId: string, user: AuthUser) {
     throw badRequest("Only active teams can register for tournaments");
   }
 
-  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "ORGANIZER") {
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
     return team;
   }
 

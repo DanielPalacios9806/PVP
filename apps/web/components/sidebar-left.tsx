@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { brand } from "@/lib/brand";
-import { getStoredUser, subscribeSessionChange, type AppRole } from "@/lib/session";
+import { canAccessDashboardRoute, getStoredUser, subscribeSessionChange, type AppRole } from "@/lib/session";
 
 interface RailItem {
   id: string;
@@ -40,7 +40,10 @@ export function SidebarLeft() {
     return subscribeSessionChange(syncRole);
   }, []);
 
-  const items = railItems.filter((item) => !item.roles || item.roles.includes(role));
+  const items = railItems.filter((item) => {
+    const path = item.href.split("?")[0];
+    return (!item.roles || item.roles.includes(role)) && canAccessDashboardRoute(role, path);
+  });
 
   return (
     <div className="flex h-full flex-col items-center gap-4 py-2">

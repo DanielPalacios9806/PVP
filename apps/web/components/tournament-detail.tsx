@@ -311,7 +311,7 @@ function formatDate(value?: string | Date | null) {
 }
 
 function canOperate(role?: AppRole) {
-  return role === "ADMIN" || role === "SUPER_ADMIN" || role === "ORGANIZER" || role === "MODERATOR";
+  return role === "ADMIN" || role === "SUPER_ADMIN" || role === "ORGANIZER";
 }
 
 function canManageTournamentUi(user: StoredUser | null, tournament: any) {
@@ -322,8 +322,7 @@ function canManageTournamentUi(user: StoredUser | null, tournament: any) {
   return (
     user.role === "ADMIN" ||
     user.role === "SUPER_ADMIN" ||
-    tournament.organizerId === user.id ||
-    tournament.organizer?.id === user.id
+    (user.role === "ORGANIZER" && (tournament.organizerId === user.id || tournament.organizer?.id === user.id))
   );
 }
 

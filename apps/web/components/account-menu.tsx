@@ -87,7 +87,7 @@ const accountSections: Array<{ title: string; links: AccountLink[] }> = [
         label: "Tokens y finanzas",
         href: "/dashboard/tokens",
         description: "Gestion y revision de tokens internos.",
-        roles: ["FINANCE", "SUPER_ADMIN"]
+        roles: ["FINANCE", "ADMIN", "SUPER_ADMIN"]
       }
     ]
   }
