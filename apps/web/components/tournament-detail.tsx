@@ -42,8 +42,16 @@ function normalizeGameKey(value?: string | null) {
 }
 
 function tournamentHeroImage(tournament: any, game: { bg: string }) {
-  if (tournament?.slug) {
-    return `/images/tournaments/${tournament.slug}.webp`;
+  const explicitHero =
+    tournament?.heroImageUrl ||
+    tournament?.heroImage ||
+    tournament?.coverImageUrl ||
+    tournament?.bannerUrl ||
+    tournament?.imageUrl ||
+    tournament?.metadata?.heroImageUrl;
+
+  if (typeof explicitHero === "string" && explicitHero.trim()) {
+    return explicitHero.trim();
   }
 
   return game.bg;
@@ -293,10 +301,10 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const [ownedTeams, setOwnedTeams] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [heroSrc, setHeroSrc] = useState("/assets/darkside/official/hero-desktop.jpg");
 
   const isMockTournament = tournamentId.startsWith("mock-") || tournament?.id?.startsWith("mock-");
   const game = gameAssets[normalizeGameKey(tournament?.game)] ?? gameAssets.VALORANT;
+  const heroImage = tournament ? tournamentHeroImage(tournament, game) : game.bg;
   const matches = useMemo(() => (tournament ? flattenMatches(tournament) : []), [tournament]);
   const featuredMatches = matches.slice(0, 2);
   const registrationOpen = tournament?.status === "REGISTRATION_OPEN" || isMockTournament;
@@ -388,12 +396,6 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     void load();
     void loadTeams(storedUser);
   }, [tournamentId]);
-
-  useEffect(() => {
-    if (tournament) {
-      setHeroSrc(tournamentHeroImage(tournament, game));
-    }
-  }, [tournament, game]);
 
   async function register() {
     if (!user) {
@@ -600,7 +602,11 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   return (
     <div className="min-w-0 overflow-x-hidden bg-[#05080d] pb-10">
       <section className="relative isolate overflow-hidden border-b border-white/8 bg-[#070b12]">
-        <Image src={heroSrc} alt="" fill priority className="object-cover object-[center_38%]" onError={() => setHeroSrc(game.bg)} />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-cover bg-[center_38%]"
+          style={{ backgroundImage: `url("${heroImage}")` }}
+        />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,8,12,0.98)_0%,rgba(5,8,12,0.82)_38%,rgba(5,8,12,0.28)_72%,rgba(5,8,12,0.9)_100%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_34%,rgba(255,36,56,0.24),transparent_28%),radial-gradient(circle_at_76%_58%,rgba(24,230,242,0.18),transparent_24%)]" />
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05080d] to-transparent" />
