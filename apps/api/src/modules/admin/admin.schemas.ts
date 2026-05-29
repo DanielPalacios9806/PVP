@@ -4,9 +4,17 @@ export const userRoleSchema = z.enum(["USER", "ORGANIZER", "MODERATOR", "ADMIN",
 export const userStatusSchema = z.enum(["ACTIVE", "SUSPENDED", "PENDING"]);
 export const walletTransactionTypeSchema = z.enum(["ADMIN_ADJUSTMENT", "TOURNAMENT_REWARD", "CORRECTION"]);
 
+export const auditModuleSchema = z.enum(["auth", "admin", "tokens", "tournaments", "matches", "riot", "teams", "spaces", "system"]);
+
 export const auditQuerySchema = z.object({
-  entityType: z.string().optional(),
-  action: z.string().optional(),
+  q: z.string().trim().min(1).max(120).optional(),
+  module: auditModuleSchema.optional(),
+  entityType: z.string().trim().min(1).max(80).optional(),
+  action: z.string().trim().min(1).max(120).optional(),
+  actorUserId: z.string().cuid().optional(),
+  criticalOnly: z.coerce.boolean().default(false),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100)
 });
 

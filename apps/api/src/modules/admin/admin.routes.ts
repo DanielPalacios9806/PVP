@@ -66,6 +66,121 @@ async function ensureAnotherActiveSuperAdmin(userId: string) {
   }
 }
 
+const auditModuleFilters: Record<string, Prisma.AuditLogWhereInput> = {
+  auth: { OR: [{ action: { startsWith: "auth." } }, { entityType: "session" }, { entityType: "oauth" }] },
+  admin: { OR: [{ action: { startsWith: "admin." } }, { entityType: "user" }] },
+  tokens: { OR: [{ action: { contains: "wallet" } }, { action: { contains: "token" } }, { entityType: "wallet" }] },
+  tournaments: { OR: [{ action: { contains: "tournament" } }, { entityType: "tournament" }] },
+  matches: { OR: [{ action: { contains: "match" } }, { action: { contains: "dispute" } }, { entityType: "match" }, { entityType: "dispute" }] },
+  riot: { OR: [{ action: { startsWith: "riot." } }, { entityType: "riot_api" }] },
+  teams: { OR: [{ action: { contains: "team" } }, { entityType: "team" }] },
+  spaces: { OR: [{ action: { contains: "space" } }, { entityType: "space" }] },
+  system: { OR: [{ entityType: "system" }, { action: { startsWith: "system." } }] }
+};
+
+const criticalAuditFilter: Prisma.AuditLogWhereInput = {
+  OR: [
+    { action: { contains: "delete" } },
+    { action: { contains: "cancel" } },
+    { action: { contains: "reject" } },
+    { action: { contains: "role" } },
+    { action: { contains: "status" } },
+    { action: { contains: "wallet" } },
+    { action: { contains: "token" } },
+    { action: { contains: "dispute" } },
+    { action: { contains: "result" } },
+    { action: { contains: "complete" } }
+  ]
+};
+
+function inferAuditModule(action: string, entityType: string) {
+  const normalized = `${action} ${entityType}`.toLowerCase();
+
+  if (normalized.includes("wallet") || normalized.includes("token")) return "tokens";
+  if (normalized.includes("tournament")) return "tournaments";
+  if (normalized.includes("match") || normalized.includes("dispute")) return "matches";
+  if (normalized.includes("riot")) return "riot";
+  if (normalized.includes("team")) return "teams";
+  if (normalized.includes("space")) return "spaces";
+  if (normalized.includes("auth") || normalized.includes("login") || normalized.includes("oauth")) return "auth";
+  if (normalized.includes("admin") || normalized.includes("user")) return "admin";
+
+  return "system";
+}
+
+function inferAuditSeverity(action: string) {
+  const normalized = action.toLowerCase();
+
+  if (["delete", "cancel", "reject", "role", "status", "dispute"].some((keyword) => normalized.includes(keyword))) {
+    return "critical";
+  }
+
+  if (["wallet", "token", "result", "complete", "start"].some((keyword) => normalized.includes(keyword))) {
+    return "warning";
+  }
+
+  return "info";
+}
+
+function buildAuditWhere(query: z.infer<typeof auditQuerySchema>) {
+  const andFilters: Prisma.AuditLogWhereInput[] = [];
+
+  if (query.entityType) andFilters.push({ entityType: query.entityType });
+  if (query.action) andFilters.push({ action: query.action });
+  if (query.actorUserId) andFilters.push({ actorUserId: query.actorUserId });
+  if (query.module) andFilters.push(auditModuleFilters[query.module]);
+  if (query.criticalOnly) andFilters.push(criticalAuditFilter);
+
+  if (query.from || query.to) {
+    andFilters.push({
+      createdAt: {
+        gte: query.from,
+        lte: query.to
+      }
+    });
+  }
+
+  if (query.q) {
+    andFilters.push({
+      OR: [
+        { action: { contains: query.q, mode: "insensitive" } },
+        { entityType: { contains: query.q, mode: "insensitive" } },
+        { entityId: { contains: query.q, mode: "insensitive" } },
+        {
+          actorUser: {
+            is: {
+              OR: [
+                { email: { contains: query.q, mode: "insensitive" } },
+                { username: { contains: query.q, mode: "insensitive" } },
+                { displayName: { contains: query.q, mode: "insensitive" } }
+              ]
+            }
+          }
+        }
+      ]
+    });
+  }
+
+  return andFilters.length > 0 ? { AND: andFilters } : {};
+}
+
+function serializeAuditLog(log: Prisma.AuditLogGetPayload<{ include: { actorUser: { select: { id: true; email: true; username: true; displayName: true; role: true } } } }>) {
+  return {
+    id: log.id,
+    action: log.action,
+    entityType: log.entityType,
+    entityId: log.entityId,
+    before: log.before,
+    after: log.after,
+    metadata: log.metadata,
+    ipAddress: log.ipAddress,
+    createdAt: log.createdAt,
+    module: inferAuditModule(log.action, log.entityType),
+    severity: inferAuditSeverity(log.action),
+    actorUser: log.actorUser
+  };
+}
+
 adminRouter.get(
   "/users",
   requireAuth,
@@ -588,20 +703,20 @@ adminRouter.get(
 adminRouter.get(
   "/audit-logs",
   requireAuth,
-  requireRole(["ADMIN", "SUPER_ADMIN", "MODERATOR"]),
+  requireRole(["ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request, response) => {
     const query = auditQuerySchema.parse(request.query);
+    const where = buildAuditWhere(query);
+
     const logs = await prisma.auditLog.findMany({
-      where: {
-        entityType: query.entityType,
-        action: query.action
-      },
+      where,
       include: {
         actorUser: {
           select: {
             id: true,
             email: true,
             username: true,
+            displayName: true,
             role: true
           }
         }
@@ -610,27 +725,52 @@ adminRouter.get(
       take: query.limit
     });
 
-    response.json(logs);
+    const serializedLogs = logs.map(serializeAuditLog);
+    const summary = serializedLogs.reduce(
+      (accumulator, log) => {
+        accumulator.total += 1;
+        accumulator.byModule[log.module] = (accumulator.byModule[log.module] ?? 0) + 1;
+        accumulator.bySeverity[log.severity] = (accumulator.bySeverity[log.severity] ?? 0) + 1;
+        return accumulator;
+      },
+      {
+        total: 0,
+        byModule: {} as Record<string, number>,
+        bySeverity: {} as Record<string, number>
+      }
+    );
+
+    response.json({
+      logs: serializedLogs,
+      summary,
+      filters: {
+        q: query.q ?? null,
+        module: query.module ?? null,
+        entityType: query.entityType ?? null,
+        action: query.action ?? null,
+        actorUserId: query.actorUserId ?? null,
+        criticalOnly: query.criticalOnly,
+        limit: query.limit
+      }
+    });
   })
 );
 
 adminRouter.get(
   "/audit",
   requireAuth,
-  requireRole(["ADMIN", "SUPER_ADMIN", "MODERATOR"]),
+  requireRole(["ADMIN", "SUPER_ADMIN"]),
   asyncHandler(async (request, response) => {
     const query = auditQuerySchema.parse(request.query);
     const logs = await prisma.auditLog.findMany({
-      where: {
-        entityType: query.entityType,
-        action: query.action
-      },
+      where: buildAuditWhere(query),
       include: {
         actorUser: {
           select: {
             id: true,
             email: true,
             username: true,
+            displayName: true,
             role: true
           }
         }
@@ -639,7 +779,7 @@ adminRouter.get(
       take: query.limit
     });
 
-    response.json(logs);
+    response.json(logs.map(serializeAuditLog));
   })
 );
 
