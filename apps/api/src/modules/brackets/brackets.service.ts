@@ -1,6 +1,13 @@
-import { MatchStatus, RoundStatus } from "@prisma/client";
+import { BracketStatus, MatchStatus, RoundStatus, TournamentStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { badRequest } from "../../utils/http-error.js";
+
+const liveMatchStatuses = new Set<MatchStatus>([
+  MatchStatus.READY,
+  MatchStatus.IN_PROGRESS,
+  MatchStatus.RESULT_PENDING,
+  MatchStatus.DISPUTED
+]);
 
 function nextPowerOfTwo(value: number) {
   let p = 1;
@@ -107,7 +114,15 @@ export async function generateSingleEliminationBracket(input: {
     }
   }
 
-  await prisma.$transaction(matches);
+  const createdMatches = await prisma.$transaction(matches);
+
+  for (const createdMatch of createdMatches) {
+    if (createdMatch.status === MatchStatus.COMPLETED && createdMatch.winnerRegistrationId) {
+      await advanceWinnerAfterMatch(createdMatch.id);
+    }
+  }
+
+  await refreshBracketProgress(bracket.id);
 
   return prisma.bracket.findUnique({
     where: { id: bracket.id },
@@ -118,6 +133,76 @@ export async function generateSingleEliminationBracket(input: {
       }
     }
   });
+}
+
+async function refreshBracketProgress(bracketId: string) {
+  const bracket = await prisma.bracket.findUnique({
+    where: { id: bracketId },
+    include: {
+      tournament: true,
+      rounds: {
+        orderBy: { sequence: "asc" },
+        include: { matches: { orderBy: { createdAt: "asc" } } }
+      }
+    }
+  });
+
+  if (!bracket) {
+    return null;
+  }
+
+  const allMatches = bracket.rounds.flatMap((round) => round.matches);
+  const finalRound = bracket.rounds[bracket.rounds.length - 1];
+  const finalMatch = finalRound?.matches[0];
+
+  for (const round of bracket.rounds) {
+    const roundMatches = round.matches;
+    const allRoundMatchesCompleted =
+      roundMatches.length > 0 &&
+      roundMatches.every((match) => match.status === MatchStatus.COMPLETED || match.status === MatchStatus.CANCELLED);
+    const hasLiveRoundMatch = roundMatches.some((match) => liveMatchStatuses.has(match.status));
+
+    const nextStatus = allRoundMatchesCompleted
+      ? RoundStatus.COMPLETED
+      : hasLiveRoundMatch || round.sequence === 1
+        ? RoundStatus.ACTIVE
+        : RoundStatus.PENDING;
+
+    if (round.status !== nextStatus) {
+      await prisma.round.update({
+        where: { id: round.id },
+        data: { status: nextStatus }
+      });
+    }
+  }
+
+  const finalCompleted = finalMatch?.status === MatchStatus.COMPLETED && Boolean(finalMatch.winnerRegistrationId);
+  const nextBracketStatus = finalCompleted ? BracketStatus.COMPLETED : BracketStatus.GENERATED;
+
+  if (bracket.status !== nextBracketStatus) {
+    await prisma.bracket.update({
+      where: { id: bracket.id },
+      data: { status: nextBracketStatus }
+    });
+  }
+
+  if (finalCompleted && bracket.tournament.status !== TournamentStatus.COMPLETED) {
+    await prisma.tournament.update({
+      where: { id: bracket.tournamentId },
+      data: { status: TournamentStatus.COMPLETED }
+    });
+  } else if (
+    !finalCompleted &&
+    bracket.tournament.status === TournamentStatus.COMPLETED &&
+    allMatches.some((match) => match.status !== MatchStatus.COMPLETED)
+  ) {
+    await prisma.tournament.update({
+      where: { id: bracket.tournamentId },
+      data: { status: TournamentStatus.IN_PROGRESS }
+    });
+  }
+
+  return { bracketId: bracket.id, finalCompleted };
 }
 
 export async function advanceWinnerAfterMatch(matchId: string) {
@@ -151,7 +236,12 @@ export async function advanceWinnerAfterMatch(matchId: string) {
   const currentRound = rounds.find((round) => round.id === match.roundId);
   const nextRound = rounds.find((round) => round.sequence === match.round!.sequence + 1);
 
-  if (!currentRound || !nextRound) {
+  if (!currentRound) {
+    return null;
+  }
+
+  if (!nextRound) {
+    await refreshBracketProgress(match.round.bracket.id);
     return null;
   }
 
@@ -159,21 +249,31 @@ export async function advanceWinnerAfterMatch(matchId: string) {
   const nextMatch = nextRound.matches[Math.floor(currentMatchIndex / 2)];
 
   if (currentMatchIndex < 0 || !nextMatch) {
+    await refreshBracketProgress(match.round.bracket.id);
     return null;
   }
 
-  const placement =
-    currentMatchIndex % 2 === 0
-      ? { homeRegistrationId: match.winnerRegistrationId }
-      : { awayRegistrationId: match.winnerRegistrationId };
-  const nextHome = placement.homeRegistrationId ?? nextMatch.homeRegistrationId;
-  const nextAway = placement.awayRegistrationId ?? nextMatch.awayRegistrationId;
+  const placeAsHome = currentMatchIndex % 2 === 0;
+  const currentSlotValue = placeAsHome ? nextMatch.homeRegistrationId : nextMatch.awayRegistrationId;
 
-  return prisma.match.update({
+  if (currentSlotValue && currentSlotValue !== match.winnerRegistrationId) {
+    await refreshBracketProgress(match.round.bracket.id);
+    return nextMatch;
+  }
+
+  const nextHome = placeAsHome ? match.winnerRegistrationId : nextMatch.homeRegistrationId;
+  const nextAway = placeAsHome ? nextMatch.awayRegistrationId : match.winnerRegistrationId;
+
+  const updatedNextMatch = await prisma.match.update({
     where: { id: nextMatch.id },
     data: {
-      ...placement,
+      homeRegistrationId: nextHome,
+      awayRegistrationId: nextAway,
       status: nextHome && nextAway ? MatchStatus.READY : MatchStatus.PENDING
     }
   });
+
+  await refreshBracketProgress(match.round.bracket.id);
+
+  return updatedNextMatch;
 }

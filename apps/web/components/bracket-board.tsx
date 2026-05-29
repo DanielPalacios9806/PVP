@@ -191,6 +191,28 @@ function buildPreviewRounds(registrations?: RegistrationView[]): RoundView[] {
   ];
 }
 
+function finalWinnerFromRounds(rounds: RoundView[]) {
+  const finalRound = rounds[rounds.length - 1];
+  const finalMatch = finalRound?.matches?.[finalRound.matches.length - 1];
+
+  if (finalMatch?.status !== "COMPLETED" || !finalMatch.winnerRegistration) {
+    return null;
+  }
+
+  return finalMatch.winnerRegistration;
+}
+
+function bracketProgress(rounds: RoundView[]) {
+  const matches = rounds.flatMap((round) => round.matches ?? []);
+  const completed = matches.filter((match) => match.status === "COMPLETED").length;
+
+  return {
+    total: matches.length,
+    completed,
+    percent: matches.length ? Math.round((completed / matches.length) * 100) : 0
+  };
+}
+
 function TeamLine({ registration, score, winner }: { registration?: RegistrationView | null; score: string; winner: boolean }) {
   const label = registrationLabel(registration);
 
@@ -237,6 +259,8 @@ export function BracketBoard({
 }) {
   const hasRealRounds = rounds.length > 0;
   const visibleRounds = hasRealRounds ? rounds : buildPreviewRounds(previewRegistrations);
+  const champion = finalWinnerFromRounds(visibleRounds);
+  const progress = bracketProgress(visibleRounds);
 
   return (
     <div className="relative overflow-hidden rounded-[22px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(24,230,242,0.12),transparent_28%),linear-gradient(180deg,rgba(10,16,25,0.92),rgba(4,7,11,0.98))] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.36)] sm:p-5">
@@ -249,6 +273,33 @@ export function BracketBoard({
           <span className="rounded-full border border-[#40ff91]/25 bg-[#40ff91]/8 px-3 py-1 text-[#b8ffd7]">Ganador</span>
           <span className="rounded-full border border-[#18e6f2]/25 bg-[#18e6f2]/8 px-3 py-1 text-[#bffaff]">Sala</span>
           <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">BO</span>
+        </div>
+      </div>
+
+      <div className="mb-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="rounded-[18px] border border-white/10 bg-white/[0.035] p-4">
+          <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.16em] text-white/45">
+            <span>Progreso del bracket</span>
+            <span>{progress.completed}/{progress.total}</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/8">
+            <div className="h-full rounded-full bg-gradient-to-r from-[#18e6f2] via-[#40ff91] to-[#ff2438]" style={{ width: `${progress.percent}%` }} />
+          </div>
+          <p className="mt-3 text-sm text-white/55">
+            {champion ? "La final ya tiene ganador confirmado y el torneo puede cerrarse como completado." : "Los ganadores confirmados avanzan automaticamente a la siguiente ronda."}
+          </p>
+        </div>
+        <div className={`rounded-[18px] border p-4 ${champion ? "border-[#40ff91]/30 bg-[#40ff91]/10" : "border-white/10 bg-black/20"}`}>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">Campeon</p>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-full border border-[#18e6f2]/35 bg-[#18e6f2]/12 text-xs font-black text-[#d9fdff]">
+              {teamInitials(champion ? registrationLabel(champion) : "?")}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-white">{champion ? registrationLabel(champion) : "Pendiente"}</p>
+              <p className="text-xs text-white/45">{champion ? "Ganador confirmado" : "Aun no definido"}</p>
+            </div>
+          </div>
         </div>
       </div>
 
