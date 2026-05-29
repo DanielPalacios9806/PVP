@@ -5,6 +5,7 @@ import { apiUrl, getAuthHeaders } from "../lib/config";
 import { mockMatch } from "../lib/mock-data";
 import { getStoredUser, type AppRole } from "../lib/session";
 import { SectionCard } from "./section-card";
+import { ConfirmActionDialog, type ConfirmActionRequest } from "./confirm-action-dialog";
 
 const matchStatusLabel: Record<string, string> = {
   PENDING: "Pendiente",
@@ -355,6 +356,7 @@ export function MatchRoom({ matchId }: { matchId: string }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [role, setRole] = useState<AppRole>("USER");
+  const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmActionRequest | null>(null);
 
   async function load() {
     try {
@@ -587,6 +589,32 @@ export function MatchRoom({ matchId }: { matchId: string }) {
     }
   }
 
+  function requestResultConfirmation(resultId: string, approved: boolean) {
+    setPendingConfirmation({
+      title: approved ? "Confirmar resultado" : "Rechazar resultado",
+      description: approved
+        ? "Vas a validar el marcador reportado. Si corresponde, el ganador avanzará en el bracket."
+        : "Vas a rechazar el marcador reportado y la partida quedará disponible para revisión o nuevo reporte.",
+      consequence: approved
+        ? "Esta acción puede completar la partida y afectar la siguiente ronda."
+        : "Usa esta opción cuando la evidencia no coincida o el reporte sea incorrecto.",
+      confirmLabel: approved ? "Confirmar resultado" : "Rechazar resultado",
+      tone: approved ? "warning" : "danger",
+      onConfirm: () => confirmResult(resultId, approved)
+    });
+  }
+
+  function requestRiotSimulation() {
+    setPendingConfirmation({
+      title: "Simular resultado Riot mock",
+      description: "Se generará un resultado de prueba para validar el flujo de avance de bracket.",
+      consequence: "No representa una verificación oficial de Riot. Úsalo solo para pruebas operativas.",
+      confirmLabel: "Simular resultado",
+      tone: "warning",
+      onConfirm: simulateRiotResult
+    });
+  }
+
   if (!match || loading) {
     return (
       <SectionCard title="Sala de partida" description="Cargando datos de la partida.">
@@ -706,14 +734,14 @@ export function MatchRoom({ matchId }: { matchId: string }) {
                     {result.status === "PENDING_CONFIRMATION" ? (
                       <div className="mt-4 flex flex-wrap gap-3">
                         <button
-                          onClick={() => confirmResult(result.id, true)}
+                          onClick={() => requestResultConfirmation(result.id, true)}
                           disabled={submitting}
                           className="btn-primary !rounded-xl !px-4 !py-2 !text-xs disabled:opacity-50"
                         >
                           Confirmar
                         </button>
                         <button
-                          onClick={() => confirmResult(result.id, false)}
+                          onClick={() => requestResultConfirmation(result.id, false)}
                           disabled={submitting}
                           className="btn-secondary !rounded-xl !px-4 !py-2 !text-xs disabled:opacity-50"
                         >
@@ -804,10 +832,10 @@ export function MatchRoom({ matchId }: { matchId: string }) {
                   Hay un resultado pendiente. El rival puede aceptarlo o el staff puede confirmarlo/rechazarlo.
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <button onClick={() => confirmResult(pendingResult.id, true)} disabled={submitting} className="btn-primary !py-2 disabled:opacity-50">
+                  <button onClick={() => requestResultConfirmation(pendingResult.id, true)} disabled={submitting} className="btn-primary !py-2 disabled:opacity-50">
                     Aceptar resultado
                   </button>
-                  <button onClick={() => confirmResult(pendingResult.id, false)} disabled={submitting} className="btn-secondary !py-2 disabled:opacity-50">
+                  <button onClick={() => requestResultConfirmation(pendingResult.id, false)} disabled={submitting} className="btn-secondary !py-2 disabled:opacity-50">
                     Rechazar
                   </button>
                 </div>
@@ -838,7 +866,7 @@ export function MatchRoom({ matchId }: { matchId: string }) {
                 <p className="text-sm leading-7 text-white/68">
                   Esta acción usa el adaptador mock para validar el flujo de avance de bracket. No representa una verificación oficial de Riot.
                 </p>
-                <button onClick={simulateRiotResult} className="btn-primary mt-4 w-full">
+                <button onClick={requestRiotSimulation} className="btn-primary mt-4 w-full">
                   Simular resultado Riot mock
                 </button>
               </div>
@@ -854,6 +882,7 @@ export function MatchRoom({ matchId }: { matchId: string }) {
           ) : null}
         </div>
       </div>
+      <ConfirmActionDialog request={pendingConfirmation} onClose={() => setPendingConfirmation(null)} />
     </div>
   );
 }

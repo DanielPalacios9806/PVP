@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiUrl, getAuthHeaders } from "../lib/config";
 import { SectionCard } from "./section-card";
+import { ConfirmActionDialog, type ConfirmActionRequest } from "./confirm-action-dialog";
 
 type RegistrationSummary = {
   id: string;
@@ -121,6 +122,7 @@ export function ModerationPanel() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmActionRequest | null>(null);
 
   const selectedCase = useMemo(() => cases.find((item) => item.id === selectedCaseId) ?? cases[0] ?? null, [cases, selectedCaseId]);
 
@@ -180,6 +182,13 @@ export function ModerationPanel() {
     } finally {
       setActionLoading(null);
     }
+  }
+
+  function requestAction(label: string, path: string, body: Record<string, unknown>, confirmation: Omit<ConfirmActionRequest, "onConfirm">) {
+    setPendingConfirmation({
+      ...confirmation,
+      onConfirm: () => runAction(label, path, body)
+    });
   }
 
   useEffect(() => {
@@ -322,7 +331,7 @@ export function ModerationPanel() {
                       <button
                         type="button"
                         disabled={Boolean(actionLoading)}
-                        onClick={() => void runAction("confirm", `/matches/results/${selectedCase.pendingResult?.id}/confirm`, { approved: true })}
+                        onClick={() => requestAction("confirm", `/matches/results/${selectedCase.pendingResult?.id}/confirm`, { approved: true }, { title: "Confirmar resultado", description: "Vas a validar el resultado reportado y el sistema avanzará el ganador si corresponde.", consequence: "Esta acción puede mover el bracket y cerrar la partida como completada.", confirmLabel: "Confirmar resultado", tone: "warning" })}
                         className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-[#06130f] transition hover:bg-white disabled:opacity-60"
                       >
                         Confirmar resultado
@@ -330,7 +339,7 @@ export function ModerationPanel() {
                       <button
                         type="button"
                         disabled={Boolean(actionLoading)}
-                        onClick={() => void runAction("reject", `/matches/results/${selectedCase.pendingResult?.id}/confirm`, { approved: false })}
+                        onClick={() => requestAction("reject", `/matches/results/${selectedCase.pendingResult?.id}/confirm`, { approved: false }, { title: "Rechazar resultado", description: "El resultado reportado será rechazado y la partida volverá a revisión operativa.", consequence: "Usa esta acción si la evidencia no coincide o si el reporte fue incorrecto.", confirmLabel: "Rechazar resultado", tone: "danger" })}
                         className="rounded-xl border border-rose-300/40 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:opacity-60"
                       >
                         Rechazar
@@ -353,7 +362,7 @@ export function ModerationPanel() {
                       <button
                         type="button"
                         disabled={Boolean(actionLoading)}
-                        onClick={() => void runAction("resolve-confirm", `/matches/disputes/${selectedCase.openDispute?.id}/resolve`, { resolution, approved: true, approvedResultId: selectedCase.pendingResult?.id })}
+                        onClick={() => requestAction("resolve-confirm", `/matches/disputes/${selectedCase.openDispute?.id}/resolve`, { resolution, approved: true, approvedResultId: selectedCase.pendingResult?.id }, { title: "Resolver disputa confirmando resultado", description: "La disputa se cerrará y el resultado pendiente quedará validado.", consequence: "El ganador podrá avanzar en el bracket. Revisa la evidencia antes de continuar.", confirmLabel: "Resolver y confirmar", tone: "warning" })}
                         className="rounded-xl bg-[#18e6f2] px-3 py-2 text-xs font-semibold text-[#07111f] transition hover:bg-white disabled:opacity-60"
                       >
                         Resolver confirmando resultado
@@ -361,7 +370,7 @@ export function ModerationPanel() {
                       <button
                         type="button"
                         disabled={Boolean(actionLoading)}
-                        onClick={() => void runAction("resolve-reject", `/matches/disputes/${selectedCase.openDispute?.id}/resolve`, { resolution, approved: false })}
+                        onClick={() => requestAction("resolve-reject", `/matches/disputes/${selectedCase.openDispute?.id}/resolve`, { resolution, approved: false }, { title: "Resolver disputa sin resultado", description: "La disputa se cerrará sin aprobar el resultado reportado.", consequence: "La partida volverá a un estado operativo para que se reporte o revise nuevamente.", confirmLabel: "Cerrar sin resultado", tone: "danger" })}
                         className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/10 disabled:opacity-60"
                       >
                         Resolver sin resultado
@@ -376,6 +385,7 @@ export function ModerationPanel() {
           </aside>
         </div>
       </SectionCard>
+      <ConfirmActionDialog request={pendingConfirmation} onClose={() => setPendingConfirmation(null)} />
     </div>
   );
 }

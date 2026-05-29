@@ -7,6 +7,7 @@ import { apiUrl, getAuthHeaders } from "../lib/config";
 import { mockMatch, mockTournaments } from "../lib/mock-data";
 import { getStoredUser, type AppRole, type StoredUser } from "../lib/session";
 import { BracketBoard } from "./bracket-board";
+import { ConfirmActionDialog, type ConfirmActionRequest } from "./confirm-action-dialog";
 
 const tabs = ["Información", "Bracket", "Equipos", "Reglas", "Partidos"];
 
@@ -372,6 +373,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [operationMessage, setOperationMessage] = useState("");
   const [operatingAction, setOperatingAction] = useState("");
+  const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmActionRequest | null>(null);
 
   const isMockTournament = tournamentId.startsWith("mock-") || tournament?.id?.startsWith("mock-");
   const game = gameAssets[normalizeGameKey(tournament?.game)] ?? gameAssets.VALORANT;
@@ -603,6 +605,87 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     } finally {
       setOperatingAction("");
     }
+  }
+
+  function requestTournamentOperation(action: string, path: string, successMessage: string, method = "POST") {
+    const criticalActions: Record<string, ConfirmActionRequest> = {
+      "close-registration": {
+        title: "Cerrar inscripciones",
+        description: "Se bloquearán nuevas inscripciones para este torneo. Los jugadores que no alcanzaron a registrarse ya no podrán entrar por el flujo normal.",
+        consequence: "Podrás abrir check-in o generar bracket según el estado del torneo.",
+        confirmLabel: "Cerrar registro",
+        tone: "warning",
+        onConfirm: () => runTournamentOperation(action, path, successMessage, method)
+      },
+      "open-check-in": {
+        title: "Abrir check-in",
+        description: "Los participantes confirmados podrán validar asistencia. Esta acción comunica que la operación del torneo ya está avanzando.",
+        consequence: "Quienes no hagan check-in podrían quedar fuera según las reglas operativas.",
+        confirmLabel: "Abrir check-in",
+        tone: "info",
+        onConfirm: () => runTournamentOperation(action, path, successMessage, method)
+      },
+      "generate-bracket": {
+        title: "Generar bracket",
+        description: "Se crearán las llaves de competencia con los participantes elegibles disponibles.",
+        consequence: "Evita generar bracket si todavía esperas cambios en inscripciones o check-in.",
+        confirmLabel: "Generar bracket",
+        tone: "warning",
+        requireText: "GENERAR",
+        onConfirm: () => runTournamentOperation(action, path, successMessage, method)
+      },
+      start: {
+        title: "Iniciar torneo",
+        description: "El torneo pasará a competencia activa y las partidas podrán empezar a operarse.",
+        consequence: "Verifica que bracket, participantes y horarios estén correctos antes de iniciar.",
+        confirmLabel: "Iniciar torneo",
+        tone: "warning",
+        onConfirm: () => runTournamentOperation(action, path, successMessage, method)
+      },
+      complete: {
+        title: "Finalizar torneo",
+        description: "El torneo quedará cerrado y los resultados actuales se conservarán como estado final.",
+        consequence: "Esta acción debe usarse cuando ya se validó el campeón o se cerró la operación.",
+        confirmLabel: "Finalizar torneo",
+        tone: "danger",
+        requireText: "FINALIZAR",
+        onConfirm: () => runTournamentOperation(action, path, successMessage, method)
+      },
+      cancel: {
+        title: "Cancelar torneo",
+        description: "El torneo será marcado como cancelado y se bloqueará su operación competitiva.",
+        consequence: "Los jugadores perderán acceso al flujo normal de inscripción, check-in y partidas de este torneo.",
+        confirmLabel: "Cancelar torneo",
+        tone: "danger",
+        requireText: "CANCELAR",
+        onConfirm: () => runTournamentOperation(action, path, successMessage, method)
+      }
+    };
+
+    const confirmation = criticalActions[action];
+
+    if (confirmation) {
+      setPendingConfirmation(confirmation);
+      return;
+    }
+
+    void runTournamentOperation(action, path, successMessage, method);
+  }
+
+  function requestRegistrationDecision(registrationId: string, decision: "approve" | "reject") {
+    if (decision === "reject") {
+      setPendingConfirmation({
+        title: "Rechazar inscripción",
+        description: "La inscripción seleccionada dejará de participar en el flujo operativo del torneo.",
+        consequence: "Usa esta acción solo cuando el jugador/equipo no cumple requisitos o la inscripción fue incorrecta.",
+        confirmLabel: "Rechazar inscripción",
+        tone: "danger",
+        onConfirm: () => decideRegistration(registrationId, decision)
+      });
+      return;
+    }
+
+    void decideRegistration(registrationId, decision);
   }
 
   async function decideRegistration(registrationId: string, decision: "approve" | "reject") {
@@ -875,8 +958,8 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
               tournament={tournament}
               operatingAction={operatingAction}
               operationMessage={operationMessage}
-              onAction={runTournamentOperation}
-              onRegistrationDecision={decideRegistration}
+              onAction={requestTournamentOperation}
+              onRegistrationDecision={requestRegistrationDecision}
             />
           ) : null}
           <InfoPanel tournament={tournament} game={game.label} registeredCount={registeredCount} maxParticipants={maxParticipants} />
@@ -884,6 +967,8 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
           <OrganizerPanel />
         </aside>
       </section>
+
+      <ConfirmActionDialog request={pendingConfirmation} onClose={() => setPendingConfirmation(null)} />
     </div>
   );
 }

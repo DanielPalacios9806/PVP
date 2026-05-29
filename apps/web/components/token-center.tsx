@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiUrl, getAuthHeaders } from "@/lib/config";
 import { getStoredUser, getStoredWallet, persistSession, subscribeSessionChange, type AppRole } from "../lib/session";
 import { SectionCard } from "./section-card";
+import { ConfirmActionDialog, type ConfirmActionRequest } from "./confirm-action-dialog";
 
 type MessageTone = "info" | "success" | "error";
 
@@ -133,6 +134,7 @@ export function TokenCenter() {
   const [loadingFinance, setLoadingFinance] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmActionRequest | null>(null);
 
   const canViewFinance = canViewFinancePanel(currentUser?.role);
   const canAdjust = canAdjustTokens(currentUser?.role);
@@ -255,26 +257,7 @@ export function TokenCenter() {
     void loadFinanceTokenHistory();
   }, [canViewFinance]);
 
-  async function adjustTokens(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedUserId) {
-      showMessage("Selecciona un usuario para ajustar tokens.", "error");
-      return;
-    }
-
-    const parsedAmount = Number(amount);
-
-    if (!Number.isInteger(parsedAmount) || parsedAmount === 0) {
-      showMessage("Ingresa un ajuste entero distinto de cero.", "error");
-      return;
-    }
-
-    if (reason.trim().length < 8) {
-      showMessage("Escribe una justificacion de al menos 8 caracteres.", "error");
-      return;
-    }
-
+  async function performTokenAdjustment(parsedAmount: number, trimmedReason: string) {
     try {
       setAdjusting(true);
       showMessage("Registrando ajuste de tokens...", "info");
@@ -287,7 +270,7 @@ export function TokenCenter() {
         },
         body: JSON.stringify({
           amount: parsedAmount,
-          reason: reason.trim()
+          reason: trimmedReason
         })
       });
       const data = await response.json();
@@ -314,6 +297,61 @@ export function TokenCenter() {
     } finally {
       setAdjusting(false);
     }
+  }
+
+  async function adjustTokens(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canAdjust) {
+      showMessage("Tu rol no tiene permisos para ajustar tokens.", "error");
+      return;
+    }
+
+    if (!selectedUserId) {
+      showMessage("Selecciona un usuario para ajustar tokens.", "error");
+      return;
+    }
+
+    const parsedAmount = Number(amount);
+    const trimmedReason = reason.trim();
+
+    if (!Number.isFinite(parsedAmount) || parsedAmount === 0 || !Number.isInteger(parsedAmount)) {
+      showMessage("Ingresa una cantidad entera distinta de cero.", "error");
+      return;
+    }
+
+    if (trimmedReason.length < 8) {
+      showMessage("Escribe una justificacion de al menos 8 caracteres.", "error");
+      return;
+    }
+
+    if (parsedAmount < 0) {
+      const target = selectedUser?.displayName || selectedUser?.username || "usuario seleccionado";
+      setPendingConfirmation({
+        title: "Restar tokens internos",
+        description: `Vas a descontar ${Math.abs(parsedAmount)} tokens a ${target}.`,
+        consequence: "Este ajuste quedará en el historial financiero y auditoría. Verifica que el motivo sea correcto antes de continuar.",
+        confirmLabel: "Aplicar descuento",
+        tone: "danger",
+        requireText: "DESCONTAR",
+        onConfirm: () => performTokenAdjustment(parsedAmount, trimmedReason)
+      });
+      return;
+    }
+
+    if (parsedAmount >= 1000) {
+      setPendingConfirmation({
+        title: "Ajuste alto de tokens",
+        description: `Vas a acreditar ${parsedAmount} tokens internos.`,
+        consequence: "Los ajustes altos deben tener una justificación clara porque quedan visibles en auditoría.",
+        confirmLabel: "Acreditar tokens",
+        tone: "warning",
+        onConfirm: () => performTokenAdjustment(parsedAmount, trimmedReason)
+      });
+      return;
+    }
+
+    await performTokenAdjustment(parsedAmount, trimmedReason);
   }
 
   const messageClass =
@@ -547,6 +585,7 @@ export function TokenCenter() {
           )}
         </SectionCard>
       ) : null}
+      <ConfirmActionDialog request={pendingConfirmation} onClose={() => setPendingConfirmation(null)} />
     </div>
   );
 }
