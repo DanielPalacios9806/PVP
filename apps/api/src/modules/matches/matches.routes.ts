@@ -78,10 +78,24 @@ matchesRouter.get(
           }
         },
         results: {
-          orderBy: { createdAt: "desc" }
+          orderBy: { createdAt: "desc" },
+          include: {
+            reportedByUser: { select: { id: true, username: true, displayName: true } },
+            confirmedByUser: { select: { id: true, username: true, displayName: true } },
+            winnerRegistration: {
+              include: {
+                user: { select: { id: true, username: true, displayName: true } },
+                team: { select: { id: true, name: true, tag: true } }
+              }
+            }
+          }
         },
         disputes: {
-          orderBy: { createdAt: "desc" }
+          orderBy: { createdAt: "desc" },
+          include: {
+            openedByUser: { select: { id: true, username: true, displayName: true } },
+            resolvedByUser: { select: { id: true, username: true, displayName: true } }
+          }
         }
       }
     });
