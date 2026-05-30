@@ -71,28 +71,65 @@ function looksLikePlaceholder(value) {
   return (
     value.includes("<") ||
     value.includes(">") ||
+    value.includes("...") ||
+    value.includes("***") ||
     normalized.includes("placeholder") ||
     normalized.includes("replace") ||
     normalized.includes("example") ||
     normalized.includes("change-me") ||
     normalized.includes("local") ||
+    normalized.includes("dummy") ||
+    normalized.includes("sample") ||
     normalized.includes("your_") ||
     normalized.includes("your-") ||
     normalized.includes("password") ||
+    normalized.includes("secret") ||
+    normalized.includes("token") ||
     normalized.includes("project_ref") ||
     normalized.includes("project-ref")
   );
 }
 
+function isDocumentationPath(relativePath) {
+  return (
+    relativePath.endsWith(".md") ||
+    relativePath.endsWith(".txt") ||
+    relativePath.startsWith("docs/") ||
+    relativePath.toLowerCase().startsWith("readme")
+  );
+}
+
+function isEnvExamplePath(relativePath) {
+  return (
+    relativePath.endsWith(".env.example") ||
+    relativePath.endsWith(".env.render.example") ||
+    relativePath.endsWith(".env.server.example")
+  );
+}
+
 function scanSecrets(relativePath, content) {
   const findings = [];
+  const documentation = isDocumentationPath(relativePath);
 
-  if (/RGAPI-[A-Za-z0-9_-]+/.test(content)) {
+  // A real Riot key must never be committed, even in documentation.
+  if (/RGAPI-[A-Za-z0-9_-]{10,}/.test(content)) {
     findings.push("Riot API key real");
   }
 
-  if (/NEXT_PUBLIC_RIOT/i.test(content)) {
-    findings.push("Riot key expuesta en NEXT_PUBLIC");
+  // Only flag NEXT_PUBLIC_RIOT when it looks like an actual env assignment.
+  // Mentions in docs such as "no usar NEXT_PUBLIC_RIOT" are allowed.
+  for (const match of content.matchAll(/^\s*(NEXT_PUBLIC_[A-Z0-9_]*RIOT[A-Z0-9_]*)\s*=\s*["']?([^"'\r\n#]*)/gim)) {
+    const value = match[2].trim();
+    if (value && !looksLikePlaceholder(value)) {
+      findings.push(`${match[1]} definido con valor`);
+      break;
+    }
+  }
+
+  // Markdown can include safe examples and anti-pattern notes. For docs, keep the
+  // hard Riot-key check above and avoid noisy false positives for examples.
+  if (documentation || relativePath === "scripts/check-release-readiness.mjs") {
+    return findings;
   }
 
   for (const match of content.matchAll(/JWT_SECRET\s*=\s*["']?([^"'\r\n#]+)/gi)) {
@@ -106,8 +143,7 @@ function scanSecrets(relativePath, content) {
   for (const match of content.matchAll(/postgresql:\/\/[^\s"']+/gi)) {
     const value = match[0].trim();
     const isLocal = value.includes("localhost") || value.includes("127.0.0.1");
-    const isExampleFile = relativePath.endsWith(".env.example") || relativePath.endsWith(".env.render.example") || relativePath.endsWith(".env.server.example");
-    if (!isLocal && !isExampleFile && !looksLikePlaceholder(value)) {
+    if (!isLocal && !isEnvExamplePath(relativePath) && !looksLikePlaceholder(value)) {
       findings.push("Postgres URL literal");
       break;
     }

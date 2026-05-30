@@ -57,7 +57,7 @@ git push -u origin chore/production-readiness-v0.7.1
 
 ## Nota sobre check:release
 
-El script `check:release` escanea principalmente archivos versionados con `git ls-files`. Esto evita falsos positivos por `.env` locales ignorados por Git. Si aparece una coincidencia de secreto en un archivo versionado, no hagas merge hasta corregirlo.
+El script `check:release` escanea principalmente archivos versionados con `git ls-files`. Esto evita falsos positivos por `.env` locales ignorados por Git. La documentación puede mencionar variables prohibidas como ejemplo o anti-patrón, pero una clave real tipo `RGAPI-...` seguirá bloqueando el release.
 
 ## Smoke test local
 
