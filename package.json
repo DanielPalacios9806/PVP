@@ -22,7 +22,10 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "docker:migrate": "docker compose run --rm migrate",
-    "docker:seed": "docker compose run --rm seed"
+    "docker:seed": "docker compose run --rm seed",
+    "check:release": "node scripts/check-release-readiness.mjs",
+    "check:smoke": "node scripts/production-smoke-check.mjs",
+    "release:preflight": "npm run build && npm run check:release"
   },
   "devDependencies": {
     "@prisma/client": "^6.8.2",
