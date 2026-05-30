@@ -30,3 +30,18 @@ export const finishMockMatchSchema = z.object({
   awayScore: z.number().int().min(0),
   riotGameId: z.string().optional()
 });
+
+
+export const tournamentCallbackSandboxSchema = z.object({
+  matchId: z.string().min(1),
+  winningSide: z.enum(["HOME", "AWAY", "A", "B", "home", "away", "a", "b"]).optional(),
+  winnerRegistrationId: z.string().min(1).optional(),
+  homeScore: z.number().int().min(0).default(1),
+  awayScore: z.number().int().min(0).default(0),
+  riotGameId: z.string().min(1).optional(),
+  source: z.string().default("SIMULATED_TOURNAMENT_CODE"),
+  notes: z.string().max(500).optional()
+}).refine((value) => Boolean(value.winningSide || value.winnerRegistrationId), {
+  message: "winningSide or winnerRegistrationId is required",
+  path: ["winningSide"]
+});

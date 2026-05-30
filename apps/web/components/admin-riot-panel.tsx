@@ -65,6 +65,26 @@ type RiotCapabilities = {
   tournamentCodes?: CapabilityBlock;
 };
 
+type SandboxCallbackResult = {
+  ok: boolean;
+  mode: string;
+  eventId?: string;
+  message?: string;
+  match?: {
+    id: string;
+    status: string;
+    winnerRegistrationId?: string | null;
+    riotGameId?: string | null;
+    resultSource?: string;
+  };
+  result?: {
+    id: string;
+    homeScore: number;
+    awayScore: number;
+    status: string;
+  };
+};
+
 type ReadinessStatus = "ready" | "pending" | "warning";
 
 type RiotReadiness = {
@@ -107,6 +127,8 @@ export function AdminRiotPanel() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [checkingCapabilities, setCheckingCapabilities] = useState(false);
+  const [testingSandbox, setTestingSandbox] = useState(false);
+  const [sandboxResult, setSandboxResult] = useState<SandboxCallbackResult | null>(null);
 
   async function load() {
     try {
@@ -203,6 +225,47 @@ export function AdminRiotPanel() {
       setMessage(error instanceof Error ? error.message : "No se pudo revisar compatibilidad Riot.");
     } finally {
       setCheckingCapabilities(false);
+    }
+  }
+
+
+  async function simulateSandboxCallback(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setTestingSandbox(true);
+    setMessage("");
+    setSandboxResult(null);
+
+    try {
+      const response = await fetch(`${apiUrl}/riot/tournament/callback/sandbox`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          matchId: String(form.get("matchId") || ""),
+          winningSide: String(form.get("winningSide") || "HOME"),
+          homeScore: Number(form.get("homeScore") || 1),
+          awayScore: Number(form.get("awayScore") || 0),
+          riotGameId: String(form.get("riotGameId") || "") || undefined,
+          source: "ADMIN_SANDBOX_CALLBACK",
+          notes: "Simulacion controlada desde panel Riot admin. No es callback oficial de Riot."
+        })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message ?? "No se pudo simular el callback de torneo.");
+      }
+
+      setSandboxResult(data);
+      setMessage(data.message ?? "Callback sandbox procesado.");
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo simular el callback de torneo.");
+    } finally {
+      setTestingSandbox(false);
     }
   }
 
@@ -362,6 +425,57 @@ export function AdminRiotPanel() {
             ) : null}
           </div>
         ) : null}
+      </div>
+
+
+      <div className="mt-6 rounded-[26px] border border-fuchsia-400/18 bg-[#0b0817]/85 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.34)]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="page-kicker">Tournament callback sandbox</p>
+            <h3 className="mt-2 text-2xl font-black text-white">Simulador de resultado automático</h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
+              Prueba el flujo futuro de Tournament Codes sin usar Riot real: registra callback, confirma resultado, marca ganador y dispara avance de bracket.
+            </p>
+          </div>
+          <span className="rounded-full border border-amber-400/25 bg-amber-400/10 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-amber-100">
+            Sandbox seguro
+          </span>
+        </div>
+
+        <form onSubmit={simulateSandboxCallback} className="mt-5 grid gap-3 lg:grid-cols-[1fr_0.45fr_0.3fr_0.3fr_0.7fr_auto]">
+          <input name="matchId" placeholder="ID del match Darkside" required />
+          <select name="winningSide" defaultValue="HOME" className="rounded-[12px] border border-white/10 bg-[#050914] px-3 py-2 text-sm text-white outline-none focus:border-[#18e6f2]/60">
+            <option value="HOME">Gana equipo A</option>
+            <option value="AWAY">Gana equipo B</option>
+          </select>
+          <input name="homeScore" type="number" min="0" defaultValue="1" placeholder="A" />
+          <input name="awayScore" type="number" min="0" defaultValue="0" placeholder="B" />
+          <input name="riotGameId" placeholder="SANDBOX opcional" />
+          <button className="btn-primary rounded-[12px]" disabled={testingSandbox}>
+            {testingSandbox ? "Procesando..." : "Simular callback"}
+          </button>
+        </form>
+
+        {sandboxResult ? (
+          <article className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <strong>{sandboxResult.message ?? "Callback sandbox procesado."}</strong>
+              <span className="rounded-full border border-emerald-300/25 px-3 py-1 text-xs uppercase tracking-[0.16em]">
+                {sandboxResult.match?.resultSource ?? "MOCK_RIOT"}
+              </span>
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-4">
+              <RiotMetric label="Match" value={sandboxResult.match?.id ?? "n/a"} />
+              <RiotMetric label="Estado" value={sandboxResult.match?.status ?? "n/a"} />
+              <RiotMetric label="Ganador" value={sandboxResult.match?.winnerRegistrationId ?? "n/a"} />
+              <RiotMetric label="Evento" value={sandboxResult.eventId ?? "n/a"} />
+            </div>
+          </article>
+        ) : (
+          <p className="mt-4 text-xs leading-5 text-white/45">
+            Usa un match existente. Este flujo no reemplaza Tournament Codes reales; solo valida que Darkside puede recibir un resultado automático y actualizar bracket de forma controlada.
+          </p>
+        )}
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">

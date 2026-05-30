@@ -7,9 +7,9 @@ import { badRequest } from "../../utils/http-error.js";
 import { getRequestIp } from "../../utils/request-ip.js";
 import { getRequestParam } from "../../utils/request-param.js";
 import { createAuditLog } from "../audit/audit.service.js";
-import { processRiotCallback } from "./riot-callback.service.js";
+import { processRiotCallback, processSandboxTournamentCallback } from "./riot-callback.service.js";
 import { getRiotRuntimeConfig } from "./riot.client.js";
-import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema, riotAccountLookupSchema, riotCapabilitiesCheckSchema } from "./riot.schemas.js";
+import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema, riotAccountLookupSchema, riotCapabilitiesCheckSchema, tournamentCallbackSandboxSchema } from "./riot.schemas.js";
 import { checkRiotAccount, checkRiotCapabilities, getMyRiotAccounts, getMyRiotCompetitiveSummary, getRiotComplianceReadiness, getRiotMode, getRiotRsoCallbackPreview, getRiotRsoStatus, linkRiotAccount, startRiotRso, unlinkRiotAccount } from "./riot.service.js";
 import { finishMockRiotMatch, generateMockableTournamentCode } from "./riot-tournament.service.js";
 
@@ -299,6 +299,38 @@ riotRouter.post(
         winnerRegistrationId: result.match.winnerRegistrationId,
         riotGameId: result.match.riotGameId,
         resultSource: result.match.resultSource
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
+  })
+);
+
+
+riotRouter.post(
+  "/tournament/callback/sandbox",
+  requireAuth,
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const payload = tournamentCallbackSandboxSchema.parse(request.body);
+    const result = await processSandboxTournamentCallback({
+      actor: request.user!,
+      body: payload,
+      sourceIp: getRequestIp(request)
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "riot.callback.sandbox.process",
+      entityType: "match",
+      entityId: result.match.id,
+      after: {
+        eventId: result.eventId,
+        winnerRegistrationId: result.match.winnerRegistrationId,
+        riotGameId: result.match.riotGameId,
+        resultSource: result.match.resultSource,
+        source: payload.source ?? "SIMULATED_TOURNAMENT_CODE"
       },
       ipAddress: getRequestIp(request)
     });
