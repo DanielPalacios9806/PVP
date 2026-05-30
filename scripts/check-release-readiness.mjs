@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
@@ -19,31 +20,100 @@ function read(relativePath) {
   return readFileSync(path.join(root, relativePath), "utf8");
 }
 
+function isIgnoredPath(relativePath) {
+  return (
+    relativePath === ".git" ||
+    relativePath.startsWith(".git/") ||
+    relativePath.includes("/node_modules/") ||
+    relativePath === "node_modules" ||
+    relativePath.includes("/.next/") ||
+    relativePath.includes("/dist/") ||
+    relativePath.includes("/build/") ||
+    relativePath.includes("/coverage/") ||
+    relativePath.endsWith(".zip") ||
+    relativePath.endsWith(".7z") ||
+    relativePath.endsWith(".rar") ||
+    relativePath.includes("riot_final_qa_review") ||
+    relativePath.includes("riot_visual_assets_review") ||
+    relativePath.includes("darkside_local_review_") ||
+    relativePath.includes("_review_meta/")
+  );
+}
+
 function walk(dir, files = []) {
   if (!existsSync(dir)) return files;
   for (const entry of readdirSync(dir)) {
     const full = path.join(dir, entry);
     const rel = path.relative(root, full).replaceAll(path.sep, "/");
-    if (
-      entry === "node_modules" ||
-      entry === ".git" ||
-      entry === ".next" ||
-      entry === "dist" ||
-      entry === "build" ||
-      entry === "coverage" ||
-      entry.endsWith(".zip") ||
-      rel.includes("riot_final_qa_review") ||
-      rel.includes("riot_visual_assets_review") ||
-      rel.includes("darkside_local_review_")
-    ) {
-      continue;
-    }
+    if (isIgnoredPath(rel)) continue;
 
     const stat = statSync(full);
     if (stat.isDirectory()) walk(full, files);
-    else if (stat.size <= 750_000) files.push(full);
+    else if (stat.size <= 750_000) files.push(rel);
   }
   return files;
+}
+
+function trackedFiles() {
+  try {
+    return execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((relativePath) => !isIgnoredPath(relativePath));
+  } catch {
+    return walk(root);
+  }
+}
+
+function looksLikePlaceholder(value) {
+  const normalized = value.toLowerCase();
+  return (
+    value.includes("<") ||
+    value.includes(">") ||
+    normalized.includes("placeholder") ||
+    normalized.includes("replace") ||
+    normalized.includes("example") ||
+    normalized.includes("change-me") ||
+    normalized.includes("local") ||
+    normalized.includes("your_") ||
+    normalized.includes("your-") ||
+    normalized.includes("password") ||
+    normalized.includes("project_ref") ||
+    normalized.includes("project-ref")
+  );
+}
+
+function scanSecrets(relativePath, content) {
+  const findings = [];
+
+  if (/RGAPI-[A-Za-z0-9_-]+/.test(content)) {
+    findings.push("Riot API key real");
+  }
+
+  if (/NEXT_PUBLIC_RIOT/i.test(content)) {
+    findings.push("Riot key expuesta en NEXT_PUBLIC");
+  }
+
+  for (const match of content.matchAll(/JWT_SECRET\s*=\s*["']?([^"'\r\n#]+)/gi)) {
+    const value = match[1].trim();
+    if (value.length >= 24 && !looksLikePlaceholder(value)) {
+      findings.push("JWT literal largo");
+      break;
+    }
+  }
+
+  for (const match of content.matchAll(/postgresql:\/\/[^\s"']+/gi)) {
+    const value = match[0].trim();
+    const isLocal = value.includes("localhost") || value.includes("127.0.0.1");
+    const isExampleFile = relativePath.endsWith(".env.example") || relativePath.endsWith(".env.render.example") || relativePath.endsWith(".env.server.example");
+    if (!isLocal && !isExampleFile && !looksLikePlaceholder(value)) {
+      findings.push("Postgres URL literal");
+      break;
+    }
+  }
+
+  return findings;
 }
 
 console.log("Darkside.cool release readiness check");
@@ -98,28 +168,26 @@ check("Env example documenta RIOT_API_KEY", envText.includes("RIOT_API_KEY"));
 check("Env example documenta CORS/FRONTEND", envText.includes("CORS_ORIGIN") || envText.includes("CORS_ORIGINS"));
 
 const suspicious = [];
-const secretPatterns = [
-  { name: "Riot API key real", pattern: /RGAPI-[A-Za-z0-9_-]+/ },
-  { name: "Riot key expuesta en NEXT_PUBLIC", pattern: /NEXT_PUBLIC_RIOT/i },
-  { name: "JWT literal largo", pattern: /JWT_SECRET\s*=\s*["']?[A-Za-z0-9_-]{24,}/ },
-  { name: "Postgres URL literal", pattern: /postgresql:\/\/[^\s"']+/i }
-];
-
-for (const full of walk(root)) {
-  const rel = path.relative(root, full).replaceAll(path.sep, "/");
-  if (rel.startsWith("scripts/")) continue;
+for (const relativePath of trackedFiles()) {
+  const full = path.join(root, relativePath);
   let content = "";
   try {
     content = readFileSync(full, "utf8");
   } catch {
     continue;
   }
-  for (const { name, pattern } of secretPatterns) {
-    if (pattern.test(content)) suspicious.push(`${rel} :: ${name}`);
+
+  const findings = scanSecrets(relativePath, content);
+  for (const finding of findings) {
+    suspicious.push(`${relativePath} :: ${finding}`);
   }
 }
 
-check("No hay patrones obvios de secretos en archivos revisados", suspicious.length === 0, suspicious.slice(0, 10).join(" | "));
+check(
+  "No hay patrones obvios de secretos en archivos versionados",
+  suspicious.length === 0,
+  suspicious.slice(0, 10).join(" | ")
+);
 
 console.log("\nResumen:");
 if (failed) {

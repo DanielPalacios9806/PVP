@@ -33,6 +33,17 @@ git apply -p1 --ignore-whitespace D:\Codex\darkside_v0_7_1_production_guardrails
 
 npm.cmd run build
 npm.cmd run check:release
+```
+
+Para el smoke test local, primero deja web y API corriendo en otra terminal:
+
+```powershell
+npm.cmd run dev
+```
+
+Luego, en una segunda terminal:
+
+```powershell
 npm.cmd run check:smoke
 ```
 
@@ -42,6 +53,24 @@ Si todo pasa:
 git add package.json scripts docs/PRODUCTION_LAUNCH_RUNBOOK.md
 git commit -m "chore: add production readiness guardrails"
 git push -u origin chore/production-readiness-v0.7.1
+```
+
+## Nota sobre check:release
+
+El script `check:release` escanea principalmente archivos versionados con `git ls-files`. Esto evita falsos positivos por `.env` locales ignorados por Git. Si aparece una coincidencia de secreto en un archivo versionado, no hagas merge hasta corregirlo.
+
+## Smoke test local
+
+`check:smoke` hace peticiones HTTP reales. Si `localhost:3000` y `localhost:4000` no están levantados, fallará aunque el build esté correcto.
+
+```powershell
+# Terminal 1
+cd D:\Codex
+npm.cmd run dev
+
+# Terminal 2
+cd D:\Codex
+npm.cmd run check:smoke
 ```
 
 ## Smoke test contra producción
@@ -58,7 +87,7 @@ npm.cmd run check:smoke
 
 - `npm run build` pasa.
 - `npm run check:release` pasa.
-- `npm run check:smoke` pasa local.
+- `npm run check:smoke` pasa local con `npm run dev` activo, o pasa contra producción usando `SMOKE_WEB_URL` y `SMOKE_API_URL`.
 - Render Web despliega.
 - Render API despliega.
 - Smoke test producción pasa.
