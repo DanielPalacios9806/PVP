@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
     devtoolSegmentExplorer: false
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "ddragon.leagueoflegends.com"
+      }
+    ]
   }
 };
 

@@ -1,4 +1,4 @@
-import { AccountCenter } from "../../../components/account-center";
+import { AccountCenter } from "@/components/account-center";
 
 export default function AccountPage() {
   return (

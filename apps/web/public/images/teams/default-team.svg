@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Darkside team shield">
+  <defs>
+    <linearGradient id="g" x1="14" y1="8" x2="106" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18E6F2"/>
+      <stop offset=".52" stop-color="#111827"/>
+      <stop offset="1" stop-color="#FF2941"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="32" fill="#06111D"/>
+  <path d="M60 12 100 32v37c0 23-17 38-40 47C37 107 20 92 20 69V32l40-20Z" fill="#0B1220" stroke="url(#g)" stroke-width="4"/>
+  <path d="M43 37h20c17 0 29 10 29 25S80 87 63 87H43V37Zm18 16v18h4c6 0 10-3 10-9s-4-9-10-9h-4Z" fill="url(#g)"/>
+</svg>

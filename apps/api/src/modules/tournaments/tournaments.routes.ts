@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { RegistrationStatus, TeamMemberRole, TeamStatus, TournamentStatus } from "@prisma/client";
+import { ExternalAccountProvider, RegistrationStatus, RiotLinkedAccountStatus, TeamMemberRole, TeamStatus, TournamentStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import type { AuthenticatedRequest, AuthUser } from "../../types.js";
@@ -349,6 +349,110 @@ async function assertNoParticipantScheduleConflict(params: {
 }
 
 
+
+function normalizeGameName(value?: string | null) {
+  return String(value || "")
+    .toUpperCase()
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .trim();
+}
+
+function tournamentRequiresRiotAccount(game?: string | null) {
+  const normalized = normalizeGameName(game);
+  return normalized.includes("LEAGUE") || normalized === "LOL" || normalized.includes("VALORANT");
+}
+
+function riotAccountGameKeys(game?: string | null) {
+  const normalized = normalizeGameName(game);
+
+  if (normalized.includes("VALORANT")) {
+    return ["VALORANT"];
+  }
+
+  if (normalized.includes("LEAGUE") || normalized === "LOL") {
+    return ["LEAGUE_OF_LEGENDS", "LEAGUE OF LEGENDS", "LOL"];
+  }
+
+  return [normalized || "LEAGUE_OF_LEGENDS"];
+}
+
+const riotTechnicalValidationStatuses: RiotLinkedAccountStatus[] = [
+  RiotLinkedAccountStatus.MANUAL,
+  RiotLinkedAccountStatus.VERIFIED,
+  RiotLinkedAccountStatus.RSO_PENDING,
+  RiotLinkedAccountStatus.RSO_VERIFIED
+];
+
+async function assertRiotRequirementForRegistration(params: {
+  tournament: { id: string; name: string; game: string | null };
+  participantUserIds: string[];
+}) {
+  if (!tournamentRequiresRiotAccount(params.tournament.game)) {
+    return {
+      required: false,
+      status: "NOT_REQUIRED" as const,
+      message: "Este torneo no requiere Riot ID."
+    };
+  }
+
+  if (!params.participantUserIds.length) {
+    throw badRequest("Este torneo requiere Riot ID, pero no se pudo identificar a los participantes.");
+  }
+
+  const accounts = await prisma.userGameAccount.findMany({
+    where: {
+      userId: { in: params.participantUserIds },
+      provider: ExternalAccountProvider.RIOT,
+      game: { in: riotAccountGameKeys(params.tournament.game) }
+    },
+    select: {
+      id: true,
+      userId: true,
+      game: true,
+      riotGameName: true,
+      riotTagLine: true,
+      puuid: true,
+      platformRoute: true,
+      regionalRoute: true,
+      verified: true,
+      verificationStatus: true
+    }
+  });
+
+  const validAccounts = accounts.filter(
+    (account) => Boolean(account.puuid) && riotTechnicalValidationStatuses.includes(account.verificationStatus)
+  );
+  const usersWithAccount = new Set(validAccounts.map((account) => account.userId));
+  const missingUserIds = params.participantUserIds.filter((userId) => !usersWithAccount.has(userId));
+
+  if (missingUserIds.length) {
+    const isTeamRequirement = params.participantUserIds.length > 1;
+    throw badRequest(
+      isTeamRequirement
+        ? "Este torneo requiere Riot ID validado técnicamente para todos los integrantes del equipo. Cada jugador debe validar su Riot ID en Mi cuenta antes de inscribirse."
+        : "Este torneo requiere Riot ID validado técnicamente. Valida tu Riot ID en Mi cuenta antes de inscribirte."
+    );
+  }
+
+  const officialCount = validAccounts.filter(
+    (account) => account.verified && account.verificationStatus === RiotLinkedAccountStatus.RSO_VERIFIED
+  ).length;
+
+  return {
+    required: true,
+    status: officialCount === validAccounts.length ? ("RSO_VERIFIED" as const) : ("LOOKUP_ONLY_ALLOWED" as const),
+    game: params.tournament.game,
+    participantCount: params.participantUserIds.length,
+    accountCount: validAccounts.length,
+    officialCount,
+    message:
+      officialCount === validAccounts.length
+        ? "Todos los participantes tienen Riot Sign On verificado."
+        : "Riot ID validado técnicamente para modo MVP. La propiedad oficial seguirá pendiente hasta Riot Sign On."
+  };
+}
+
 async function createTournamentRegistration(params: {
   request: AuthenticatedRequest;
   tournamentId: string;
@@ -426,6 +530,11 @@ async function createTournamentRegistration(params: {
       ? registeringTeam?.members.map((member) => member.userId) ?? []
       : [params.userId ?? params.request.user!.sub];
 
+  const riotRequirement = await assertRiotRequirementForRegistration({
+    tournament,
+    participantUserIds
+  });
+
   await assertNoParticipantScheduleConflict({
     tournament,
     participantUserIds
@@ -445,7 +554,10 @@ async function createTournamentRegistration(params: {
     action: "tournament.register",
     entityType: "tournament_registration",
     entityId: registration.id,
-    after: registration,
+    after: {
+      ...registration,
+      riotRequirement
+    },
     ipAddress: getRequestIp(params.request)
   });
 

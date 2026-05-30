@@ -7,10 +7,10 @@ import { badRequest } from "../../utils/http-error.js";
 import { getRequestIp } from "../../utils/request-ip.js";
 import { getRequestParam } from "../../utils/request-param.js";
 import { createAuditLog } from "../audit/audit.service.js";
-import { processRiotCallback } from "./riot-callback.service.js";
+import { processRiotCallback, processSandboxTournamentCallback } from "./riot-callback.service.js";
 import { getRiotRuntimeConfig } from "./riot.client.js";
-import { checkRiotAccountSchema, finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema } from "./riot.schemas.js";
-import { checkRiotAccount, getMyRiotAccounts, getRiotMode, linkRiotAccount, unlinkRiotAccount } from "./riot.service.js";
+import { finishMockMatchSchema, generateTournamentCodeSchema, linkRiotAccountSchema, riotAccountLookupSchema, riotCapabilitiesCheckSchema, tournamentCallbackSandboxSchema } from "./riot.schemas.js";
+import { checkRiotAccount, checkRiotCapabilities, getMyRiotAccounts, getMyRiotCompetitiveSummary, getRiotComplianceReadiness, getRiotMode, getRiotRsoCallbackPreview, getRiotRsoStatus, linkRiotAccount, startRiotRso, unlinkRiotAccount } from "./riot.service.js";
 import { finishMockRiotMatch, generateMockableTournamentCode } from "./riot-tournament.service.js";
 
 export const riotRouter = Router();
@@ -29,6 +29,93 @@ function requireParam(value: string | string[] | undefined, name: string) {
   return param;
 }
 
+
+riotRouter.get(
+  "/health",
+  requireAuth,
+  asyncHandler(async (_request, response) => {
+    const config = getRiotRuntimeConfig();
+    response.json({
+      ok: true,
+      ...config,
+      message: config.readyForAccountLookup
+        ? "Riot integration is ready for safe backend account checks."
+        : "Riot lookup is not ready. Configure RIOT_API_KEY or use mock mode."
+    });
+  })
+);
+
+riotRouter.post(
+  "/accounts/check",
+  riotRateLimiter,
+  requireAuth,
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const payload = riotAccountLookupSchema.parse(request.body);
+    const result = await checkRiotAccount({
+      gameName: payload.gameName,
+      tagLine: payload.tagLine,
+      platformRoute: payload.platformRoute,
+      regionalRoute: payload.regionalRoute,
+      userId: request.user!.sub
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "riot.account.lookup",
+      entityType: "riot_account",
+      entityId: `${payload.gameName}#${payload.tagLine}`,
+      after: {
+        gameName: payload.gameName,
+        tagLine: payload.tagLine,
+        platformRoute: payload.platformRoute,
+        regionalRoute: payload.regionalRoute,
+        ownershipVerified: false,
+        verificationMethod: "LOOKUP_ONLY",
+        mode: getRiotMode()
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
+  })
+);
+
+
+riotRouter.post(
+  "/capabilities/check",
+  riotRateLimiter,
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const payload = riotCapabilitiesCheckSchema.parse(request.body);
+    const result = await checkRiotCapabilities({
+      gameName: payload.gameName,
+      tagLine: payload.tagLine,
+      platformRoute: payload.platformRoute,
+      regionalRoute: payload.regionalRoute,
+      userId: request.user!.sub
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "riot.capabilities.check",
+      entityType: "riot_api",
+      entityId: `${payload.gameName}#${payload.tagLine}`,
+      after: {
+        mode: getRiotMode(),
+        accountV1: (result as Record<string, unknown>).accountV1,
+        summonerV4: (result as Record<string, unknown>).summonerV4,
+        leagueV4: (result as Record<string, unknown>).leagueV4,
+        matchV5: (result as Record<string, unknown>).matchV5,
+        matchDetailV5: (result as Record<string, unknown>).matchDetailV5
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
+  })
+);
+
 riotRouter.get(
   "/status",
   requireAuth,
@@ -39,48 +126,36 @@ riotRouter.get(
 
 
 riotRouter.get(
-  "/health",
+  "/rso/status",
   requireAuth,
   asyncHandler(async (_request, response) => {
-    const config = getRiotRuntimeConfig();
-
-    response.json({
-      ok: true,
-      mode: config.mode,
-      readyForAccountLookup: config.readyForAccountLookup,
-      readyForTournamentCodes: config.readyForTournamentCodes,
-      missingRequirements: config.missingRequirements,
-      message: config.readyForAccountLookup
-        ? "Riot integration is ready for safe backend account checks."
-        : "Riot integration is not ready for real account checks. Review backend environment variables."
-    });
+    response.json(getRiotRsoStatus());
   })
 );
 
-riotRouter.post(
-  "/accounts/check",
-  riotRateLimiter,
+riotRouter.get(
+  "/rso/start",
   requireAuth,
-  asyncHandler(async (request: AuthenticatedRequest, response) => {
-    const payload = checkRiotAccountSchema.parse(request.body);
-    const result = await checkRiotAccount(payload);
+  asyncHandler(async (_request, response) => {
+    response.status(202).json(startRiotRso());
+  })
+);
 
-    await createAuditLog({
-      actorUserId: request.user!.sub,
-      action: "riot.account.check",
-      entityType: "riot_account",
-      after: {
-        gameName: result.account.gameName,
-        tagLine: result.account.tagLine,
-        platformRoute: result.account.platformRoute,
-        regionalRoute: result.account.regionalRoute,
-        mode: getRiotMode(),
-        puuidPresent: result.account.puuidPresent
-      },
-      ipAddress: getRequestIp(request)
-    });
 
-    response.json(result);
+riotRouter.get(
+  "/rso/callback-preview",
+  requireAuth,
+  asyncHandler(async (_request, response) => {
+    response.json(getRiotRsoCallbackPreview());
+  })
+);
+
+riotRouter.get(
+  "/compliance/readiness",
+  requireAuth,
+  requireRole(["ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (_request, response) => {
+    response.json(getRiotComplianceReadiness());
   })
 );
 
@@ -101,7 +176,7 @@ riotRouter.post(
 
     await createAuditLog({
       actorUserId: request.user!.sub,
-      action: "riot.account.link",
+      action: "riot.account.lookup_save",
       entityType: "user_game_account",
       entityId: account.id,
       after: {
@@ -110,12 +185,25 @@ riotRouter.post(
         riotGameName: account.riotGameName,
         riotTagLine: account.riotTagLine,
         puuid: account.puuid,
-        mode: getRiotMode()
+        mode: getRiotMode(),
+        ownershipVerified: false,
+        verificationMethod: "LOOKUP_ONLY"
       },
       ipAddress: getRequestIp(request)
     });
 
     response.status(201).json(account);
+  })
+);
+
+
+riotRouter.get(
+  "/profile/summary",
+  riotRateLimiter,
+  requireAuth,
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const summary = await getMyRiotCompetitiveSummary(request.user!.sub);
+    response.json(summary);
   })
 );
 
@@ -211,6 +299,38 @@ riotRouter.post(
         winnerRegistrationId: result.match.winnerRegistrationId,
         riotGameId: result.match.riotGameId,
         resultSource: result.match.resultSource
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
+  })
+);
+
+
+riotRouter.post(
+  "/tournament/callback/sandbox",
+  requireAuth,
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const payload = tournamentCallbackSandboxSchema.parse(request.body);
+    const result = await processSandboxTournamentCallback({
+      actor: request.user!,
+      body: payload,
+      sourceIp: getRequestIp(request)
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "riot.callback.sandbox.process",
+      entityType: "match",
+      entityId: result.match.id,
+      after: {
+        eventId: result.eventId,
+        winnerRegistrationId: result.match.winnerRegistrationId,
+        riotGameId: result.match.riotGameId,
+        resultSource: result.match.resultSource,
+        source: payload.source ?? "SIMULATED_TOURNAMENT_CODE"
       },
       ipAddress: getRequestIp(request)
     });

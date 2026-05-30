@@ -302,6 +302,53 @@ function findRegistrationById(match: any, registrationId?: string | null) {
   return null;
 }
 
+
+function simulatedLobbyCode(match: any) {
+  const base = match?.tournament?.slug || match?.tournament?.id || match?.id || "darkside";
+  return `DS-${String(base).replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase() || "MATCH"}`;
+}
+
+function LobbyAutomationCard({ match }: { match: any }) {
+  const lobbyCode = simulatedLobbyCode(match);
+  const steps = [
+    "Entrar al cliente del juego y crear lobby personalizado.",
+    "Usar el código manual/simulado como referencia de sala.",
+    "Jugar la serie BO" + (match.bestOf ?? 1) + " según reglas del torneo.",
+    "Reportar resultado con marcador y evidencia al finalizar."
+  ];
+
+  return (
+    <SectionCard title="Lobby y automatización" description="Guía competitiva hasta que Riot Tournament Codes esté aprobado.">
+      <div className="overflow-hidden rounded-[24px] border border-[#18e6f2]/20 bg-[linear-gradient(135deg,rgba(24,230,242,0.10),rgba(255,79,99,0.08)_55%,rgba(0,0,0,0.28))]">
+        <div className="border-b border-white/10 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#18e6f2]">Código de sala manual</p>
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+            <strong className="font-mono text-xl tracking-[0.18em] text-white">{lobbyCode}</strong>
+            <span className="rounded-full border border-[#ff4f63]/30 bg-[#ff4f63]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#ffb0ba]">
+              Riot pendiente
+            </span>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-white/52">
+            Este código no es un Tournament Code oficial. Sirve para operar el MVP con reglas, evidencia y moderación mientras se prepara Production Key + provider + callback de Riot.
+          </p>
+        </div>
+
+        <div className="grid gap-0 divide-y divide-white/10">
+          {steps.map((step, index) => (
+            <div key={step} className="flex gap-3 p-3 text-sm text-white/68">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/10 bg-black/35 text-[11px] font-black text-[#18e6f2]">
+                {index + 1}
+              </span>
+              <span className="leading-6">{step}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
+
 function ParticipantCard({
   label,
   side,
@@ -813,6 +860,8 @@ export function MatchRoom({ matchId }: { matchId: string }) {
         </div>
 
         <div className="space-y-6">
+          <LobbyAutomationCard match={match} />
+
           <SectionCard title="Reportar resultado" description="Flujo manual para capitanes y jugadores autorizados.">
             {canReport ? (
               <form action={reportResult} className="space-y-4">

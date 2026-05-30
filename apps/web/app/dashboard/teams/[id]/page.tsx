@@ -1,5 +1,5 @@
-import { LayoutShell } from "../../../../components/layout-shell";
-import { TeamDetail } from "../../../../components/team-detail";
+import { LayoutShell } from "@/components/layout-shell";
+import { TeamDetail } from "@/components/team-detail";
 
 export default async function TeamDetailPage({
   params

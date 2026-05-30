@@ -115,6 +115,16 @@ const curatedCards = [
 const liveStatuses = ["IN_PROGRESS", "CHECK_IN"];
 const openStatuses = ["REGISTRATION_OPEN", "PUBLISHED", "CHECK_IN", "IN_PROGRESS"];
 
+function tournamentRequiresRiotAccount(game?: string | null) {
+  const normalized = String(game || "")
+    .toUpperCase()
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .trim();
+
+  return normalized.includes("LEAGUE") || normalized === "LOL" || normalized.includes("VALORANT");
+}
+
 function tournamentDateLabel(value?: string | Date | null, status?: string) {
   if (status === "IN_PROGRESS") {
     return "En curso ahora";
@@ -200,6 +210,7 @@ function mapTournamentCard(item: any, user?: StoredUser | null) {
     status: statusToCardStatus(item.status),
     copy: item.publicRules || item.rules || item.description || "Torneo competitivo listo para inscripciones y seguimiento.",
     prize: item.prizes || `${item.maxParticipants || 8} slots`,
+    requiresRiot: tournamentRequiresRiotAccount(item.game),
     participating
   };
 }
@@ -381,6 +392,11 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
                     <Image src={config.cover} alt={card.name} fill className="object-cover opacity-72 transition group-hover:scale-[1.03]" />
                     <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(8,12,18,0.12),rgba(8,12,18,0.86))]" />
                     {card.participating ? <span className="absolute left-3 top-3 rounded-full bg-[#18e6f2] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-black">Participando</span> : null}
+                    {(card as any).requiresRiot ?? tournamentRequiresRiotAccount(card.game) ? (
+                      <span className="absolute bottom-3 left-3 rounded-full border border-[#18e6f2]/35 bg-black/60 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#bffaff] backdrop-blur">
+                        Riot ID requerido
+                      </span>
+                    ) : null}
                   </div>
 
                   <div className="p-5">
@@ -390,7 +406,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
                     <div className="mt-5 grid gap-3 text-sm text-white/55 sm:grid-cols-4">
                       <span>{card.prize}</span>
                       <span>{card.mode}</span>
-                      <span>Bracket activo</span>
+                      <span>{(card as any).requiresRiot ?? tournamentRequiresRiotAccount(card.game) ? "Riot ID requerido" : "Sin requisito Riot"}</span>
                       <span>{card.startsAt}</span>
                     </div>
                   </div>

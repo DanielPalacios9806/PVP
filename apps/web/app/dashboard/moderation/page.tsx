@@ -1,5 +1,5 @@
-import { ModerationPanel } from "../../../components/moderation-panel";
-import { RoleGate } from "../../../components/role-gate";
+import { ModerationPanel } from "@/components/moderation-panel";
+import { RoleGate } from "@/components/role-gate";
 
 export default function ModerationPage() {
   return (

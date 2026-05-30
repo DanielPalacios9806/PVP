@@ -1,6 +1,7 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 const riotGameNameSchema = z.string().trim().min(2).max(32);
+
 const riotTagLineSchema = z
   .string()
   .trim()
@@ -22,15 +23,25 @@ const regionalRouteSchema = z
   .max(30)
   .transform((value) => value.toUpperCase());
 
-export const checkRiotAccountSchema = z.object({
+export const riotAccountLookupSchema = z.object({
   gameName: riotGameNameSchema,
   tagLine: riotTagLineSchema,
+  game: z.string().trim().min(2).max(50).default("LEAGUE_OF_LEGENDS"),
   platformRoute: platformRouteSchema.default("LA1"),
   regionalRoute: regionalRouteSchema.default("AMERICAS")
 });
 
-export const linkRiotAccountSchema = checkRiotAccountSchema.extend({
-  game: z.string().trim().min(2).max(50).default("LEAGUE_OF_LEGENDS")
+export const checkRiotAccountSchema = riotAccountLookupSchema.omit({
+  game: true
+});
+
+export const linkRiotAccountSchema = riotAccountLookupSchema;
+
+export const riotCapabilitiesCheckSchema = riotAccountLookupSchema.pick({
+  gameName: true,
+  tagLine: true,
+  platformRoute: true,
+  regionalRoute: true
 });
 
 export const generateTournamentCodeSchema = z.object({
@@ -46,3 +57,19 @@ export const finishMockMatchSchema = z.object({
   awayScore: z.number().int().min(0),
   riotGameId: z.string().optional()
 });
+
+export const tournamentCallbackSandboxSchema = z
+  .object({
+    matchId: z.string().min(1),
+    winningSide: z.enum(["HOME", "AWAY", "A", "B", "home", "away", "a", "b"]).optional(),
+    winnerRegistrationId: z.string().min(1).optional(),
+    homeScore: z.number().int().min(0).default(1),
+    awayScore: z.number().int().min(0).default(0),
+    riotGameId: z.string().min(1).optional(),
+    source: z.string().default("SIMULATED_TOURNAMENT_CODE"),
+    notes: z.string().max(500).optional()
+  })
+  .refine((value) => Boolean(value.winningSide || value.winnerRegistrationId), {
+    message: "winningSide or winnerRegistrationId is required",
+    path: ["winningSide"]
+  });

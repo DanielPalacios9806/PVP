@@ -58,3 +58,18 @@ temp
 # Local review/export artifacts
 review_pack
 review_pack.zip
+
+# Local ChatGPT/Codex review artifacts
+collect_darkside_review.ps1
+README_collect_darkside_review.md
+darkside_local_review_*/
+darkside_local_review_*.zip
+riot_final_qa_review/
+riot_final_qa_review.zip
+riot_visual_assets_review/
+riot_visual_assets_review.zip
+competitive_dashboard_review/
+competitive_dashboard_review.zip
+*_review/
+*_review.zip
+/*.patch

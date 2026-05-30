@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiUrl, getAuthHeaders } from "@/lib/config";
 
 type RiotAccount = {
@@ -12,11 +12,26 @@ type RiotAccount = {
   regionalRoute?: string | null;
   verified: boolean;
   verificationStatus?: string | null;
+  metadata?: {
+    verificationMethod?: string;
+    ownershipVerified?: boolean;
+    warning?: string;
+  } | null;
 };
 
-type RiotCheckResult = {
+type RiotStatus = {
+  mode: string;
+  readyForAccountLookup?: boolean;
+  readyForOfficialRso?: boolean;
+  realRequestsEnabled?: boolean;
+};
+
+type LookupResult = {
   ok: boolean;
   mode: string;
+  ownershipVerified: boolean;
+  verificationMethod: string;
+  message: string;
   account: {
     gameName: string;
     tagLine: string;
@@ -27,13 +42,49 @@ type RiotCheckResult = {
   };
 };
 
+function statusLabel(account?: RiotAccount | null) {
+  if (!account) {
+    return "No conectado";
+  }
+
+  if (account.verified && account.verificationStatus === "RSO_VERIFIED") {
+    return "Vinculado oficialmente";
+  }
+
+  if (account.verificationStatus === "RSO_PENDING") {
+    return "Validado tecnicamente";
+  }
+
+  return account.verificationStatus ?? "Validacion manual";
+}
+
+function statusDescription(account?: RiotAccount | null) {
+  if (!account) {
+    return "Valida tu Riot ID para pruebas internas. La propiedad oficial se confirmara con Riot Sign On cuando Riot apruebe el acceso.";
+  }
+
+  if (account.verified && account.verificationStatus === "RSO_VERIFIED") {
+    return "Esta cuenta fue vinculada mediante Riot Sign On.";
+  }
+
+  return "Este Riot ID existe y fue guardado para pruebas internas, pero aun no confirma propiedad oficial de la cuenta.";
+}
+
 export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
   const [accounts, setAccounts] = useState<RiotAccount[]>([]);
   const [message, setMessage] = useState("");
-  const [mode, setMode] = useState("mock");
+  const [status, setStatus] = useState<RiotStatus>({ mode: "mock" });
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(false);
-  const [checkResult, setCheckResult] = useState<RiotCheckResult | null>(null);
+  const [lookup, setLookup] = useState<LookupResult | null>(null);
+
+  const primaryAccount = accounts[0];
+  const formDefaults = useMemo(
+    () => ({
+      gameName: lookup?.account.gameName ?? primaryAccount?.riotGameName ?? "",
+      tagLine: lookup?.account.tagLine ?? primaryAccount?.riotTagLine ?? ""
+    }),
+    [lookup, primaryAccount]
+  );
 
   async function loadAccounts() {
     try {
@@ -46,12 +97,12 @@ export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
         })
       ]);
       const data = await accountsResponse.json();
-      const status = await statusResponse.json();
+      const runtime = await statusResponse.json();
       if (accountsResponse.ok && Array.isArray(data)) {
         setAccounts(data);
       }
-      if (statusResponse.ok && status.mode) {
-        setMode(status.mode);
+      if (statusResponse.ok && runtime.mode) {
+        setStatus(runtime);
       }
     } catch {
       setAccounts([]);
@@ -62,15 +113,21 @@ export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
     void loadAccounts();
   }, []);
 
-  async function checkAccount(form: HTMLFormElement | null) {
-    if (!form) {
-      return;
-    }
+  function readForm(form: FormData) {
+    return {
+      gameName: String(form.get("gameName") || "").trim(),
+      tagLine: String(form.get("tagLine") || "").trim(),
+      game: "LEAGUE_OF_LEGENDS",
+      platformRoute: "LA1",
+      regionalRoute: "AMERICAS"
+    };
+  }
 
-    const formData = new FormData(form);
-    setChecking(true);
+  async function validateRiotId(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setLoading(true);
     setMessage("");
-    setCheckResult(null);
 
     try {
       const response = await fetch(`${apiUrl}/riot/accounts/check`, {
@@ -79,32 +136,33 @@ export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
           "Content-Type": "application/json",
           ...getAuthHeaders()
         },
-        body: JSON.stringify({
-          gameName: String(formData.get("gameName") || ""),
-          tagLine: String(formData.get("tagLine") || ""),
-          platformRoute: "LA1",
-          regionalRoute: "AMERICAS"
-        })
+        body: JSON.stringify(readForm(form))
       });
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.message ?? "No se pudo validar ese Riot ID.");
+        setMessage(data.message ?? "No se pudo validar Riot ID.");
         return;
       }
 
-      setCheckResult(data);
-      setMessage(data.mode === "mock" ? "Riot ID validado en modo mock." : "Riot ID validado desde Riot API en backend.");
+      setLookup(data);
+      setMessage("Riot ID encontrado. Esta validacion no confirma propiedad oficial de la cuenta.");
     } catch {
-      setMessage("No se pudo conectar con la API Riot del backend.");
+      setMessage("No se pudo conectar con la API Riot desde backend.");
     } finally {
-      setChecking(false);
+      setLoading(false);
     }
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
+  async function saveTechnicalValidation() {
+    const gameName = lookup?.account.gameName ?? primaryAccount?.riotGameName;
+    const tagLine = lookup?.account.tagLine ?? primaryAccount?.riotTagLine;
+
+    if (!gameName || !tagLine) {
+      setMessage("Primero valida un Riot ID antes de guardar la validacion tecnica.");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
@@ -116,8 +174,8 @@ export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
           ...getAuthHeaders()
         },
         body: JSON.stringify({
-          gameName: String(form.get("gameName")),
-          tagLine: String(form.get("tagLine")),
+          gameName,
+          tagLine,
           game: "LEAGUE_OF_LEGENDS",
           platformRoute: "LA1",
           regionalRoute: "AMERICAS"
@@ -126,11 +184,11 @@ export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.message ?? "No se pudo vincular Riot ID.");
+        setMessage(data.message ?? "No se pudo guardar la validacion tecnica.");
         return;
       }
 
-      setMessage(mode === "mock" ? "Riot ID vinculado manualmente en modo mock." : "Riot ID verificado desde backend.");
+      setMessage("Validacion tecnica guardada. Riot Sign On seguira pendiente para confirmar propiedad oficial.");
       await loadAccounts();
     } catch {
       setMessage("No se pudo conectar con la API.");
@@ -139,74 +197,81 @@ export function RiotLinkCard({ compact = false }: { compact?: boolean }) {
     }
   }
 
-  const primaryAccount = accounts[0];
+  async function startRso() {
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(`${apiUrl}/riot/rso/start`, {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      setMessage(data.message ?? "Riot Sign On requiere aprobacion de Riot para activarse.");
+    } catch {
+      setMessage("No se pudo consultar el estado de Riot Sign On.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <section className={`surface-panel ${compact ? "p-5" : "p-6"}`}>
+    <section className={`surface-panel overflow-hidden ${compact ? "p-5" : "p-6"}`}>
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#18e6f2] via-[#8b5cf6] to-[#ff3d81]" />
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="page-kicker">Riot ID</p>
+          <p className="page-kicker">Riot ID / RSO</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">
-            {primaryAccount ? "Riot ID vinculado" : "Completa tu perfil competitivo"}
+            {primaryAccount ? "Perfil competitivo Riot" : "Prepara tu perfil competitivo"}
           </h2>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-white/62">
-            {primaryAccount
-              ? "Tu Riot ID queda asociado a Darkside.cool. La verificacion oficial con Riot Sign On se activara solo cuando exista aprobacion de produccion."
-              : "Valida y vincula tu Riot ID desde backend. La API key se mantiene protegida en Render/API y nunca se expone al frontend."}
-          </p>
+          <p className="mt-3 max-w-xl text-sm leading-7 text-white/62">{statusDescription(primaryAccount)}</p>
         </div>
-        <span className="status-badge status-open">RIOT_API_MODE={mode}</span>
+        <div className="flex flex-wrap gap-2">
+          <span className="status-badge status-open">RIOT_API_MODE={status.mode}</span>
+          <span className="status-badge border-white/10 bg-white/8 text-white/70">
+            RSO {status.readyForOfficialRso ? "configurado" : "pendiente"}
+          </span>
+        </div>
       </div>
 
-      {primaryAccount ? (
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <div className="surface-tile">
-            <p className="text-xs uppercase tracking-[0.18em] text-white/38">Riot ID</p>
-            <p className="mt-2 font-semibold text-white">
-              {primaryAccount.riotGameName}#{primaryAccount.riotTagLine}
-            </p>
-          </div>
-          <div className="surface-tile">
-            <p className="text-xs uppercase tracking-[0.18em] text-white/38">Region</p>
-            <p className="mt-2 font-semibold text-white">
-              {primaryAccount.platformRoute ?? "LA1"} / {primaryAccount.regionalRoute ?? "AMERICAS"}
-            </p>
-          </div>
-          <div className="surface-tile">
-            <p className="text-xs uppercase tracking-[0.18em] text-white/38">Estado</p>
-            <p className="mt-2 font-semibold text-white">
-              {primaryAccount.verificationStatus ?? (primaryAccount.verified ? "VERIFIED" : "MANUAL")}
-            </p>
-          </div>
+      <div className="mt-5 grid gap-3 md:grid-cols-4">
+        <div className="surface-tile md:col-span-2">
+          <p className="text-xs uppercase tracking-[0.18em] text-white/38">Riot ID</p>
+          <p className="mt-2 font-semibold text-white">
+            {primaryAccount ? `${primaryAccount.riotGameName}#${primaryAccount.riotTagLine}` : lookup ? `${lookup.account.gameName}#${lookup.account.tagLine}` : "Sin Riot ID"}
+          </p>
         </div>
-      ) : (
-        <form onSubmit={onSubmit} className="mt-5 grid gap-3 md:grid-cols-[1fr_0.65fr_auto_auto]">
-          <input name="gameName" placeholder="Nombre Riot" required />
-          <input name="tagLine" placeholder="Tagline, ej. LAN" required />
-          <button
-            className="btn-secondary rounded-[10px] !px-4"
-            disabled={checking || loading}
-            type="button"
-            onClick={(event) => void checkAccount(event.currentTarget.form)}
-          >
-            {checking ? "Validando..." : "Validar"}
-          </button>
-          <button className="btn-primary rounded-[10px]" disabled={loading || checking}>
-            {loading ? "Vinculando..." : "Vincular"}
-          </button>
-        </form>
-      )}
+        <div className="surface-tile">
+          <p className="text-xs uppercase tracking-[0.18em] text-white/38">Region</p>
+          <p className="mt-2 font-semibold text-white">
+            {primaryAccount?.platformRoute ?? lookup?.account.platformRoute ?? "LA1"} / {primaryAccount?.regionalRoute ?? lookup?.account.regionalRoute ?? "AMERICAS"}
+          </p>
+        </div>
+        <div className="surface-tile">
+          <p className="text-xs uppercase tracking-[0.18em] text-white/38">Estado</p>
+          <p className="mt-2 font-semibold text-white">{statusLabel(primaryAccount)}</p>
+        </div>
+      </div>
 
-      {checkResult ? (
-        <div className="mt-4 rounded-2xl border border-[#18e6f2]/25 bg-[#18e6f2]/10 p-4 text-sm text-[#bffaff]">
-          <p className="font-semibold">
-            {checkResult.account.gameName}#{checkResult.account.tagLine} validado para {checkResult.account.platformRoute}/{checkResult.account.regionalRoute}
-          </p>
-          <p className="mt-1 text-white/65">
-            Modo: {checkResult.mode}. PUUID: {checkResult.account.puuidPresent ? "detectado" : "pendiente"}.
-          </p>
-        </div>
-      ) : null}
+      <div className="mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100/90">
+        Validar un Riot ID solo confirma que existe. La propiedad oficial requiere iniciar sesion en Riot mediante Riot Sign On cuando Riot apruebe el acceso de produccion.
+      </div>
+
+      <form onSubmit={validateRiotId} className="mt-5 grid gap-3 md:grid-cols-[1fr_0.65fr_auto]">
+        <input name="gameName" placeholder="Nombre Riot" required defaultValue={formDefaults.gameName} />
+        <input name="tagLine" placeholder="Tagline, ej. LAN" required defaultValue={formDefaults.tagLine} />
+        <button className="btn-primary rounded-[10px]" disabled={loading}>
+          {loading ? "Validando..." : "Validar Riot ID"}
+        </button>
+      </form>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <button type="button" className="btn-secondary rounded-[10px]" onClick={saveTechnicalValidation} disabled={loading || !lookup}>
+          Guardar validacion tecnica
+        </button>
+        <button type="button" className="rounded-[10px] border border-[#18e6f2]/35 bg-[#18e6f2]/10 px-4 py-2 text-sm font-semibold text-[#bffaff] hover:border-[#18e6f2]/70" onClick={startRso} disabled={loading}>
+          Conectar con Riot
+        </button>
+      </div>
 
       {message ? <p className="mt-4 text-sm text-[#43d3ff]">{message}</p> : null}
     </section>

@@ -1,4 +1,4 @@
-import { MatchRoom } from "../../../../components/match-room";
+import { MatchRoom } from "@/components/match-room";
 
 export default async function MatchDetailPage({
   params

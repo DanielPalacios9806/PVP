@@ -1,6 +1,6 @@
-import { AdminUserActivityPanel } from "../../../../components/admin-user-activity-panel";
-import { AdminUsersPanel } from "../../../../components/admin-users-panel";
-import { RoleGate } from "../../../../components/role-gate";
+import { AdminUserActivityPanel } from "@/components/admin-user-activity-panel";
+import { AdminUsersPanel } from "@/components/admin-users-panel";
+import { RoleGate } from "@/components/role-gate";
 
 export default function AdminProfilesPage() {
   return (

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+﻿import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
 import { HttpError } from "../../utils/http-error.js";
@@ -160,12 +160,29 @@ export function getRiotRuntimeConfig() {
   const tournamentProviderIdConfigured = Boolean(providerId);
   const tournamentIdConfigured = Boolean(env.RIOT_TOURNAMENT_ID);
 
+  const rsoClientIdConfigured = Boolean(env.RIOT_RSO_CLIENT_ID);
+  const rsoClientSecretConfigured = Boolean(env.RIOT_RSO_CLIENT_SECRET);
+  const rsoRedirectUriConfigured = Boolean(env.RIOT_RSO_REDIRECT_URI);
+
+  const readyForAccountLookup = isMock || apiKeyConfigured;
+  const readyForTournamentCodes =
+    env.RIOT_TOURNAMENT_API_ENABLED &&
+    apiKeyConfigured &&
+    callbackUrlConfigured &&
+    tournamentProviderIdConfigured &&
+    tournamentIdConfigured;
+
+  const readyForOfficialRso = rsoClientIdConfigured && rsoClientSecretConfigured && rsoRedirectUriConfigured;
+
   const missingRequirements = [
-    !isMock && !apiKeyConfigured ? "RIOT_API_KEY" : null,
+    !readyForAccountLookup ? "RIOT_API_KEY" : null,
     env.RIOT_TOURNAMENT_API_ENABLED && !callbackUrlConfigured ? "RIOT_CALLBACK_URL" : null,
     env.RIOT_TOURNAMENT_API_ENABLED && !tournamentProviderIdConfigured ? "RIOT_TOURNAMENT_PROVIDER_ID" : null,
-    env.RIOT_TOURNAMENT_API_ENABLED && !tournamentIdConfigured ? "RIOT_TOURNAMENT_ID" : null
-  ].filter(Boolean);
+    env.RIOT_TOURNAMENT_API_ENABLED && !tournamentIdConfigured ? "RIOT_TOURNAMENT_ID" : null,
+    !readyForOfficialRso ? "RIOT_RSO_CLIENT_ID" : null,
+    !readyForOfficialRso ? "RIOT_RSO_CLIENT_SECRET" : null,
+    !readyForOfficialRso ? "RIOT_RSO_REDIRECT_URI" : null
+  ].filter((item): item is string => Boolean(item));
 
   return {
     mode: env.RIOT_API_MODE,
@@ -176,18 +193,15 @@ export function getRiotRuntimeConfig() {
     tournamentProviderIdConfigured,
     tournamentIdConfigured,
     tournamentApiEnabled: env.RIOT_TOURNAMENT_API_ENABLED,
+    readyForAccountLookup,
+    readyForTournamentCodes,
+    rsoClientIdConfigured,
+    rsoRedirectUriConfigured,
+    readyForOfficialRso,
     realRequestsEnabled: !isMock && apiKeyConfigured,
-    readyForAccountLookup: isMock || apiKeyConfigured,
-    readyForTournamentCodes:
-      env.RIOT_TOURNAMENT_API_ENABLED &&
-      apiKeyConfigured &&
-      callbackUrlConfigured &&
-      tournamentProviderIdConfigured &&
-      tournamentIdConfigured,
-    missingRequirements
+    missingRequirements: Array.from(new Set(missingRequirements))
   };
 }
-
 export async function riotRequest<T>(options: RiotRequestOptions): Promise<T> {
   if (!env.RIOT_API_KEY) {
     throw new RiotApiError("Riot API key is not configured on the backend.", {
@@ -284,3 +298,4 @@ export async function riotRequest<T>(options: RiotRequestOptions): Promise<T> {
     errorType: "RIOT_RETRY_EXHAUSTED"
   });
 }
+

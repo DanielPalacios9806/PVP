@@ -1,4 +1,4 @@
-import { TokenCenter } from "../../../components/token-center";
+import { TokenCenter } from "@/components/token-center";
 
 export default function TokensPage() {
   return (
