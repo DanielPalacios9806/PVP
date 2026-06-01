@@ -1,4 +1,4 @@
-# Darkside.cool / PVP — Runbook de producción v0.7.1
+# Darkside.cool — Runbook de producción v0.7.1
 
 ## Objetivo
 
