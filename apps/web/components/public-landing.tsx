@@ -374,7 +374,7 @@ export function PublicLanding() {
                       <h3 className="mt-2 font-heading text-lg font-bold text-white">{item.title}</h3>
                       <p className="mt-1 text-xs leading-5 text-white/58">{item.meta}</p>
                     </div>
-                    <span className="hidden rounded-[6px] border border-[var(--ds-border-red)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--ds-red-primary)] sm:inline-flex">MVP</span>
+                    <span className="hidden rounded-[6px] border border-[var(--ds-border-red)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--ds-red-primary)] sm:inline-flex">Beta controlada</span>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>

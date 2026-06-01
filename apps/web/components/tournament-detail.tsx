@@ -113,7 +113,7 @@ function buildRiotRequirement(tournament: any, accounts: any[]) {
     canRegister: true,
     status: "LOOKUP_ONLY",
     title: "Riot ID validado técnicamente",
-    description: `${account.riotGameName}#${account.riotTagLine} existe y puede usarse en modo MVP. La propiedad oficial requiere Riot Sign On.`,
+    description: `${account.riotGameName}#${account.riotTagLine} existe y puede usarse en modo seguro previo a RSO. La propiedad oficial requiere Riot Sign On.`,
     tone: "border-[#18e6f2]/25 bg-[#18e6f2]/10 text-[#bffaff]",
     account
   };
@@ -1759,7 +1759,7 @@ function TournamentOperationsPanel({
             </p>
           </div>
           <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">
-            MVP simulado
+            Simulacion controlada
           </span>
         </div>
       </div>

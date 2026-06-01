@@ -530,7 +530,7 @@ export function CompetitiveDashboard() {
               ["Mi Equipo", "/dashboard/teams"],
               ["Partidos", nextMatch ? `/dashboard/matches/${nextMatch.id}` : "/dashboard/tournaments"],
               ["Torneos", "/dashboard/tournaments"],
-              ["Rankings", "/dashboard/tournaments?game=lol"],
+              ["Torneos LoL", "/dashboard/tournaments?game=lol"],
               ["Estadisticas", "/dashboard"],
               ["Configuracion", "/dashboard/account"]
             ].map(([label, href], index) => (
@@ -564,7 +564,7 @@ export function CompetitiveDashboard() {
                 <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[520px]">
                   <Link href="/dashboard/teams" className="rounded-2xl border border-[#18e6f2]/35 bg-[#18e6f2]/7 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-[#18e6f2]/12">Crear equipo</Link>
                   <Link href="/dashboard/tournaments" className="rounded-2xl border border-[#18e6f2]/25 bg-white/5 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-white/8">Buscar torneo</Link>
-                  <Link href={nextMatch ? `/dashboard/matches/${nextMatch.id}` : "/dashboard/tournaments"} className="rounded-2xl border border-[#ff2941]/35 bg-[#ff2941]/8 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-[#ff2941]/12">Ver scrims</Link>
+                  <Link href={nextMatch ? `/dashboard/matches/${nextMatch.id}` : "/dashboard/tournaments"} className="rounded-2xl border border-[#ff2941]/35 bg-[#ff2941]/8 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-[#ff2941]/12">Ver partida</Link>
                 </div>
               </div>
             </div>

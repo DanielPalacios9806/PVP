@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import { apiUrl, getAuthHeaders } from "../lib/config";
@@ -219,7 +219,7 @@ export function AdminRiotPanel() {
       }
 
       setCapabilities(data);
-      setMessage(data.ok ? "Compatibilidad Riot revisada." : data.message ?? "RevisiÃ³n Riot finalizada con advertencias.");
+      setMessage(data.ok ? "Compatibilidad Riot revisada." : data.message ?? "Revision Riot finalizada con advertencias.");
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo revisar compatibilidad Riot.");
@@ -304,9 +304,9 @@ export function AdminRiotPanel() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="page-kicker">RSO readiness</p>
-              <h3 className="mt-2 text-2xl font-black text-white">PreparaciÃ³n para Production Key y Riot Sign On</h3>
+              <h3 className="mt-2 text-2xl font-black text-white">Preparacion para Production Key y Riot Sign On</h3>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
-                Este panel no ejecuta OAuth real todavÃ­a. Verifica que Darkside tenga dominio, polÃ­ticas, callback y separaciÃ³n entre lookup tÃ©cnico y propiedad oficial.
+                Este panel no ejecuta OAuth real todavia. Verifica que Darkside tenga dominio, politicas, callback y separacion entre lookup tecnico y propiedad oficial.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-black/20 p-2 text-center text-xs">
@@ -339,15 +339,15 @@ export function AdminRiotPanel() {
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-xs uppercase tracking-[0.22em] text-[#7bb7ff]">Legal visible</p>
               <div className="mt-3 space-y-2 text-sm text-white/68">
-                <a className="block text-[#18e6f2] hover:text-white" href="/legal/terms">TÃ©rminos del servicio</a>
-                <a className="block text-[#18e6f2] hover:text-white" href="/legal/privacy">PolÃ­tica de privacidad</a>
-                <a className="block text-[#18e6f2] hover:text-white" href="/legal/data-deletion">EliminaciÃ³n de datos</a>
+                <a className="block text-[#18e6f2] hover:text-white" href="/legal/terms">Terminos del servicio</a>
+                <a className="block text-[#18e6f2] hover:text-white" href="/legal/privacy">Politica de privacidad</a>
+                <a className="block text-[#18e6f2] hover:text-white" href="/legal/data-deletion">Eliminacion de datos</a>
               </div>
             </div>
             <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
               <p className="text-xs uppercase tracking-[0.22em] text-amber-100/75">Siguientes acciones</p>
               <ul className="mt-3 space-y-2 text-xs leading-5 text-amber-50/80">
-                {readiness.nextActions.slice(0, 5).map((action) => <li key={action}>â€¢ {action}</li>)}
+                {readiness.nextActions.slice(0, 5).map((action) => <li key={action}>- {action}</li>)}
               </ul>
             </div>
           </div>
@@ -368,7 +368,7 @@ export function AdminRiotPanel() {
             <p className="page-kicker">Compatibility spike</p>
             <h3 className="mt-2 text-2xl font-black text-white">Mapa real de compatibilidad Riot</h3>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
-              Usa una cuenta de prueba para comprobar Account-V1, Summoner-V4, League-V4 y Match-V5 antes de diseÃ±ar automatizaciones.
+              Usa una cuenta de prueba para comprobar Account-V1, Summoner-V4, League-V4 y Match-V5 antes de disenar automatizaciones.
             </p>
           </div>
         </div>
@@ -388,9 +388,9 @@ export function AdminRiotPanel() {
             <div className="grid gap-3 md:grid-cols-4">
               <CapabilityCard title="Account-V1" block={capabilities.accountV1} detail={capabilities.accountV1?.data?.puuidPresent ? "PUUID disponible" : "Sin PUUID"} />
               <CapabilityCard title="Summoner-V4" block={capabilities.summonerV4} detail={capabilities.summonerV4?.data?.summonerLevel ? `Nivel ${capabilities.summonerV4.data.summonerLevel}` : "Perfil LoL"} />
-              <CapabilityCard title="League-V4" block={capabilities.leagueV4} detail={soloQueue ? `${soloQueue.tier} ${soloQueue.rank} Â· ${soloQueue.leaguePoints} LP` : flexQueue ? `${flexQueue.tier} ${flexQueue.rank} Â· ${flexQueue.leaguePoints} LP` : "Ranked"} />
+              <CapabilityCard title="League-V4" block={capabilities.leagueV4} detail={soloQueue ? `${soloQueue.tier} ${soloQueue.rank} - ${soloQueue.leaguePoints} LP` : flexQueue ? `${flexQueue.tier} ${flexQueue.rank} - ${flexQueue.leaguePoints} LP` : "Ranked"} />
               <CapabilityCard title="Match-V5" block={capabilities.matchV5} detail={`${capabilities.matchV5?.data?.recentMatches ?? 0} partidas`} />
-              <CapabilityCard title="Match detail" block={capabilities.matchDetailV5} detail={capabilities.matchDetailV5?.data?.championName ? `${capabilities.matchDetailV5.data.championName} Â· ${capabilities.matchDetailV5.data.result}` : "Detalle"} />
+              <CapabilityCard title="Match detail" block={capabilities.matchDetailV5} detail={capabilities.matchDetailV5?.data?.championName ? `${capabilities.matchDetailV5.data.championName} - ${capabilities.matchDetailV5.data.result}` : "Detalle"} />
               <CapabilityCard title="RSO" block={capabilities.rso} detail="Requiere aprobacion" />
               <CapabilityCard title="Tournament Codes" block={capabilities.tournamentCodes} detail="Futuro" />
               <CapabilityCard title="Riot ID" block={{ status: capabilities.ok ? "ok" : "unavailable" }} detail={capabilities.requestedRiotId ?? "Sin Riot ID"} />
@@ -405,7 +405,7 @@ export function AdminRiotPanel() {
                       <strong className="text-2xl text-white">{queue.tier} {queue.rank}</strong>
                       <span className="text-sm text-white/60">{queue.leaguePoints} LP</span>
                     </div>
-                    <p className="mt-2 text-sm text-white/55">{queue.wins}V / {queue.losses}D Â· winrate {queue.winRate}%</p>
+                    <p className="mt-2 text-sm text-white/55">{queue.wins}V / {queue.losses}D - winrate {queue.winRate}%</p>
                   </article>
                 ))}
               </div>
@@ -432,7 +432,7 @@ export function AdminRiotPanel() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="page-kicker">Tournament callback sandbox</p>
-            <h3 className="mt-2 text-2xl font-black text-white">Simulador de resultado automÃ¡tico</h3>
+            <h3 className="mt-2 text-2xl font-black text-white">Simulador de resultado automatico</h3>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
               Prueba el flujo futuro de Tournament Codes sin usar Riot real: registra callback, confirma resultado, marca ganador y dispara avance de bracket.
             </p>
@@ -473,7 +473,7 @@ export function AdminRiotPanel() {
           </article>
         ) : (
           <p className="mt-4 text-xs leading-5 text-white/45">
-            Usa un match existente. Este flujo no reemplaza Tournament Codes reales; solo valida que Darkside puede recibir un resultado automÃ¡tico y actualizar bracket de forma controlada.
+            Usa un match existente. Este flujo no reemplaza Tournament Codes reales; solo valida que Darkside puede recibir un resultado automatico y actualizar bracket de forma controlada.
           </p>
         )}
       </div>

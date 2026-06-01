@@ -114,7 +114,7 @@ These are server-side only. Safe for secrets:
 **Example**:
 ```
 DATABASE_URL=postgresql://user:password@host:5432/db
-JWT_SECRET=super-secret-string
+JWT_SECRET=<server-only-random-secret>
 ```
 
 ---

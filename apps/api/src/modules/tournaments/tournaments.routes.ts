@@ -492,7 +492,12 @@ async function createTournamentRegistration(params: {
   }
 
   if (tournament.type === "SOLO" && params.userId && params.userId !== params.request.user!.sub) {
-    if (!["ADMIN", "SUPER_ADMIN", "ORGANIZER"].includes(params.request.user!.role)) {
+    const canRegisterOtherUser =
+      params.request.user!.role === "ADMIN" ||
+      params.request.user!.role === "SUPER_ADMIN" ||
+      (params.request.user!.role === "ORGANIZER" && tournament.organizerId === params.request.user!.sub);
+
+    if (!canRegisterOtherUser) {
       throw forbidden("Users can only register themselves");
     }
   }

@@ -19,7 +19,7 @@ const hubConfig = {
   },
   valorant: {
     title: "VALORANT",
-    subtitle: "Circuitos tacticos, scrims y competencias por escuadras.",
+    subtitle: "Circuitos tacticos, partidas programadas y competencias por escuadras.",
     cover: "/assets/games/valorant-viper.png",
     avatar: "/assets/games/valorant-viper.png",
     owner: "Darkside Ops",
@@ -52,7 +52,7 @@ const gameShowcase = [
   {
     id: "valorant",
     title: "Circuito tactico VALORANT",
-    copy: "Calendarios, scrims y copas por escuadra con una identidad visual mas agresiva y contemporanea.",
+    copy: "Calendarios, partidas y copas por escuadra con una identidad visual mas agresiva y contemporanea.",
     href: "/dashboard/tournaments?game=valorant",
     image: "/assets/games/valorant-viper.png"
   }
