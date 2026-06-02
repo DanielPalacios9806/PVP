@@ -1,4 +1,5 @@
 import { AdminAuditPanel } from "@/components/admin-audit-panel";
+import { AdminOpsCommandCenter } from "@/components/admin-ops-command-center";
 import { AdminQuickAccess } from "@/components/admin-quick-access";
 import { AdminRiotPanel } from "@/components/admin-riot-panel";
 import { AdminTokenPanel } from "@/components/admin-token-panel";
@@ -8,28 +9,23 @@ import { TournamentOpsPanel } from "@/components/tournament-ops-panel";
 export default function AdminPage() {
   return (
     <div className="page-section space-y-6">
-      <section className="surface-panel">
-        <div className="page-header">
-          <div>
-            <p className="page-kicker">Administracion</p>
-            <h1 className="page-title">Panel interno de administracion</h1>
-            <p className="page-copy mt-3">
-              Este espacio esta separado del dashboard de jugador. Solo perfiles administrativos pueden crear torneos, revisar auditoria y operar configuraciones internas.
-            </p>
-          </div>
-        </div>
-      </section>
+      <AdminOpsCommandCenter />
+
       <RoleGate allowedRoles={["ADMIN", "SUPER_ADMIN"]} title="Administracion">
         <div className="space-y-6">
           <AdminQuickAccess />
-          <div id="riot-api">
+          <div id="riot-api" className="scroll-mt-28">
             <AdminRiotPanel />
           </div>
-          <div id="operacion-torneos">
+          <div id="operacion-torneos" className="scroll-mt-28">
             <TournamentOpsPanel />
           </div>
-          <AdminTokenPanel />
-          <AdminAuditPanel />
+          <div id="tokens-internos" className="scroll-mt-28">
+            <AdminTokenPanel />
+          </div>
+          <div id="auditoria-operativa" className="scroll-mt-28">
+            <AdminAuditPanel />
+          </div>
         </div>
       </RoleGate>
     </div>
