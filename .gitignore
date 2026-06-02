@@ -73,3 +73,8 @@ competitive_dashboard_review.zip
 *_review/
 *_review.zip
 /*.patch
+
+# Patches locales de trabajo
+_patches/
+*.patch
+

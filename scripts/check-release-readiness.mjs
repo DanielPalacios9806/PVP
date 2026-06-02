@@ -167,6 +167,9 @@ check("Legal Privacy existe", file("apps/web/app/legal/privacy/page.tsx"));
 check("Legal Data Deletion existe", file("apps/web/app/legal/data-deletion/page.tsx"));
 check("Plan Riot existe", file("docs/RIOT_INTEGRATION_PLAN.md"));
 check("QA checklist existe", file("docs/QA_CHECKLIST.md"));
+check("Design system Darkside documentado", file("docs/DARKSIDE_DESIGN_SYSTEM.md"));
+check("Design tokens frontend existen", file("apps/web/lib/design-tokens.ts"));
+check("Primitivos UI Darkside existen", file("apps/web/components/ui/ds-primitives.tsx"));
 
 check(
   "No existe ruta duplicada dashboard/dashboard",
