@@ -340,3 +340,243 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+@layer components {
+  .ds-page-shell {
+    position: relative;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background:
+      radial-gradient(circle at 75% 8%, rgba(255, 36, 56, 0.18), transparent 24%),
+      radial-gradient(circle at 18% 0%, rgba(24, 230, 242, 0.14), transparent 26%),
+      linear-gradient(180deg, var(--ds-bg-900) 0%, var(--ds-bg-950) 58%, #020407 100%);
+  }
+
+  .ds-page-shell::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: linear-gradient(to bottom, black, transparent 78%);
+  }
+
+  .ds-container {
+    width: min(100% - 2rem, 1500px);
+    margin-inline: auto;
+  }
+
+  .ds-nav-shell {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(3, 6, 10, 0.78);
+    backdrop-filter: blur(18px);
+  }
+
+  .ds-panel-premium {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    background:
+      linear-gradient(180deg, rgba(18, 27, 36, 0.94), rgba(8, 13, 18, 0.88)),
+      radial-gradient(circle at 90% 0%, rgba(255, 36, 56, 0.14), transparent 28%);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(18px);
+  }
+
+  .ds-panel-premium::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 28%, transparent 72%, rgba(24, 230, 242, 0.08));
+    opacity: 0.55;
+  }
+
+  .ds-hero-canvas {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background:
+      linear-gradient(90deg, rgba(5, 8, 12, 0.98) 0%, rgba(5, 8, 12, 0.78) 46%, rgba(5, 8, 12, 0.34) 100%),
+      radial-gradient(circle at 72% 45%, rgba(255, 36, 56, 0.2), transparent 28%),
+      radial-gradient(circle at 55% 70%, rgba(24, 230, 242, 0.2), transparent 26%);
+  }
+
+  .ds-card-premium {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    background: rgba(14, 21, 28, 0.78);
+    box-shadow: var(--ds-shadow-card);
+    backdrop-filter: blur(16px);
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      background 180ms ease;
+  }
+
+  .ds-card-premium:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 36, 56, 0.42);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32), var(--ds-glow-red);
+  }
+
+  .ds-card-cyan:hover {
+    border-color: rgba(24, 230, 242, 0.42);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32), var(--ds-glow-cyan);
+  }
+
+  .ds-kicker-red {
+    color: var(--ds-red-primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+  }
+
+  .ds-title-display {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.96;
+    text-wrap: balance;
+  }
+
+  .ds-gradient-text-cyan {
+    background: linear-gradient(135deg, #e8feff, var(--ds-cyan-primary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .ds-gradient-text-red {
+    background: linear-gradient(135deg, #fff0f2, var(--ds-red-primary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .ds-focus-ring:focus-visible {
+    outline: 2px solid var(--ds-cyan-primary);
+    outline-offset: 3px;
+  }
+}
+
+
+@layer components {
+  .darkside-flow-shell .react-flow__viewport {
+    transition: transform 220ms ease;
+  }
+
+  .darkside-flow-shell .react-flow__pane {
+    cursor: grab;
+  }
+
+  .darkside-flow-shell .react-flow__pane:active {
+    cursor: grabbing;
+  }
+
+  .darkside-flow-shell .react-flow__node-default,
+  .darkside-flow-shell .react-flow__node-input,
+  .darkside-flow-shell .react-flow__node-output,
+  .darkside-flow-shell .react-flow__node-group {
+    width: auto;
+    min-width: 250px;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .darkside-flow-shell .react-flow__node.selected .darkside-bracket-node-card,
+  .darkside-flow-shell .react-flow__node:focus .darkside-bracket-node-card {
+    border-color: rgba(24, 230, 242, 0.72);
+    box-shadow: 0 0 0 1px rgba(24, 230, 242, 0.28), 0 0 36px rgba(24, 230, 242, 0.12);
+  }
+
+  .darkside-flow-shell .react-flow__handle {
+    width: 9px;
+    height: 9px;
+    border: 1px solid rgba(24, 230, 242, 0.7);
+    background: #071018;
+  }
+
+  .darkside-flow-shell .react-flow__edge-path {
+    filter: drop-shadow(0 0 8px rgba(24, 230, 242, 0.18));
+  }
+
+  .darkside-flow-shell .react-flow__controls {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: rgba(3, 6, 10, 0.74);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.36);
+    backdrop-filter: blur(16px);
+  }
+
+  .darkside-flow-shell .react-flow__controls-button {
+    color: rgba(255, 255, 255, 0.76);
+    background: rgba(255, 255, 255, 0.035);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .darkside-flow-shell .react-flow__controls-button:hover {
+    color: #18e6f2;
+    background: rgba(24, 230, 242, 0.12);
+  }
+
+  .darkside-bracket-node-card {
+    width: 264px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(255, 36, 56, 0.16), transparent 34%),
+      linear-gradient(180deg, rgba(17, 24, 36, 0.98), rgba(6, 10, 16, 0.96));
+    padding: 14px;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  }
+
+  .darkside-flow-final-node .darkside-bracket-node-card {
+    border-color: rgba(255, 36, 56, 0.34);
+    box-shadow: 0 0 42px rgba(255, 36, 56, 0.12), 0 18px 42px rgba(0, 0, 0, 0.34);
+  }
+}
+
+
+/* Tournament detail layout fidelity */
+.tournament-main-stage {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(24, 230, 242, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(10, 16, 24, 0.88), rgba(3, 6, 10, 0.96));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.tournament-tabs-scroll {
+  scrollbar-width: none;
+}
+
+.tournament-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .darkside-flow-shell {
+    display: none;
+  }
+
+  .tournament-main-stage {
+    border-radius: 20px;
+  }
+}

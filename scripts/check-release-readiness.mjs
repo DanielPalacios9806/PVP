@@ -167,6 +167,81 @@ check("Legal Privacy existe", file("apps/web/app/legal/privacy/page.tsx"));
 check("Legal Data Deletion existe", file("apps/web/app/legal/data-deletion/page.tsx"));
 check("Plan Riot existe", file("docs/RIOT_INTEGRATION_PLAN.md"));
 check("QA checklist existe", file("docs/QA_CHECKLIST.md"));
+check("Design system Darkside documentado", file("docs/DARKSIDE_DESIGN_SYSTEM.md"));
+check("Design tokens frontend existen", file("apps/web/lib/design-tokens.ts"));
+check("Primitivos UI Darkside existen", file("apps/web/components/ui/ds-primitives.tsx"));
+
+check("External UI Fusion documentado", file("docs/EXTERNAL_UI_FUSION.md"));
+check("Mapa funcional UX documentado", file("docs/UX_NAVIGATION_FUNCTIONAL_MAP.md"));
+check("Mapa de navegación frontend existe", file("apps/web/lib/navigation-map.ts"));
+check("Mapa de librerías externas existe", file("apps/web/lib/external-ui-map.ts"));
+check("Home External UI Fusion documentado", file("docs/HOME_EXTERNAL_UI_FUSION.md"));
+check("Tournament detail mockup fidelity documentado", file("docs/TOURNAMENT_DETAIL_MOCKUP_FIDELITY.md"));
+check("Tournament detail pro bracket documentado", file("docs/TOURNAMENT_DETAIL_PRO_BRACKET.md"));
+check("Tournament detail layout fidelity documentado", file("docs/TOURNAMENT_DETAIL_LAYOUT_FIDELITY.md"));
+check("Tournaments hub layout fidelity documentado", file("docs/TOURNAMENTS_HUB_LAYOUT_FIDELITY.md"));
+check("Tournaments hub mobile polish documentado", file("docs/TOURNAMENTS_HUB_MOBILE_POLISH.md"));
+check("Right activity rail UX documentado", file("docs/RIGHT_ACTIVITY_RAIL_UX.md"));
+check("Right activity rail global documentado", file("docs/RIGHT_ACTIVITY_RAIL_GLOBAL.md"));
+
+const publicLanding = file("apps/web/components/public-landing.tsx") ? read("apps/web/components/public-landing.tsx") : "";
+check("Home pública usa Motion", publicLanding.includes('from "motion/react"'));
+check("Home pública usa Lucide React", publicLanding.includes('from "lucide-react"'));
+check("Home pública mantiene hero Darkside oficial", publicLanding.includes("heroDesktop") && publicLanding.includes("heroMobile"));
+check("Home pública oculta navegación admin directa", !publicLanding.includes("/dashboard/admin") && !publicLanding.includes("/dashboard/moderation"));
+
+const tournamentDetail = file("apps/web/components/tournament-detail.tsx") ? read("apps/web/components/tournament-detail.tsx") : "";
+check("Tournament detail usa hero oficial Darkside", tournamentDetail.includes("hero-desktop.jpg"));
+check("Tournament detail no expone tab Automatización pública", !tournamentDetail.includes('"Automatización"'));
+check("Tournament detail usa panel lateral contextual", tournamentDetail.includes("TournamentEntryPanel") && tournamentDetail.includes("Información del torneo"));
+check("Tournament detail contador vivo", tournamentDetail.includes("setInterval") && tournamentDetail.includes("countdownNow"));
+check("Tournament detail usa layout 70/30", tournamentDetail.includes("xl:grid-cols-[minmax(0,1fr)_330px]") && tournamentDetail.includes("tournament-main-stage"));
+const bracketBoard = file("apps/web/components/bracket-board.tsx") ? read("apps/web/components/bracket-board.tsx") : "";
+check("Bracket usa XYFlow", bracketBoard.includes("@xyflow/react") && bracketBoard.includes("ReactFlow") && bracketBoard.includes("fitView"));
+check("Bracket permite pan y zoom", bracketBoard.includes("panOnScroll") && bracketBoard.includes("Controls"));
+check("Bracket mobile usa vista por rondas", bracketBoard.includes("MobileRoundCards") && bracketBoard.includes("md:hidden"));
+check("Layout carga estilos XYFlow", file("apps/web/app/layout.tsx") && read("apps/web/app/layout.tsx").includes("@xyflow/react/dist/style.css"));
+
+const tournamentsHub = file("apps/web/components/tournaments-hub.tsx") ? read("apps/web/components/tournaments-hub.tsx") : "";
+check("Tournaments hub usa stage dedicado", tournamentsHub.includes("tournaments-hub-stage") && tournamentsHub.includes("Arena competitiva"));
+check("Tournaments hub tiene busqueda funcional", tournamentsHub.includes("normalizeForSearch") && tournamentsHub.includes("setQuery"));
+check("Tournaments hub distribuye cards premium", tournamentsHub.includes("tournaments-hub-card") && tournamentsHub.includes("xl:grid-cols-[260px_minmax(0,1fr)_210px]"));
+check("Tournaments hub usa filtros mobile drawer", tournamentsHub.includes("tournaments-mobile-command") && tournamentsHub.includes("mobileFilterPanel") && tournamentsHub.includes("Dialog.Content"));
+check("Tournaments hub oculta sidebar en mobile", tournamentsHub.includes("hidden space-y-5 lg:sticky") && tournamentsHub.includes("lg:block"));
+
+const dashboardGridWrapper = file("apps/web/components/dashboard-grid-wrapper.tsx") ? read("apps/web/components/dashboard-grid-wrapper.tsx") : "";
+check("Dashboard mantiene rail derecho colapsable en torneos", dashboardGridWrapper.includes("rightRailExpandedColumns") && dashboardGridWrapper.includes("rightRailCollapsedColumns") && dashboardGridWrapper.includes("shouldRenderRightRail = showRightSidebar && Boolean(rightSidebar)"));
+check("Dashboard rail derecho es colapsable", dashboardGridWrapper.includes("darkside:right-activity-rail-collapsed") && dashboardGridWrapper.includes("CollapsedActivityRail"));
+
+const sidebarRight = file("apps/web/components/sidebar-right.tsx") ? read("apps/web/components/sidebar-right.tsx") : "";
+check("Right rail muestra actividad util", sidebarRight.includes("Your activities") && sidebarRight.includes("Your party") && sidebarRight.includes("Your teams"));
+
+const webPackageJson = file("apps/web/package.json") ? read("apps/web/package.json") : "";
+const requiredWebDeps = [
+  "@radix-ui/react-dialog",
+  "@radix-ui/react-dropdown-menu",
+  "@radix-ui/react-tabs",
+  "@radix-ui/react-tooltip",
+  "@radix-ui/react-popover",
+  "@radix-ui/react-navigation-menu",
+  "@radix-ui/react-accordion",
+  "@radix-ui/react-select",
+  "@radix-ui/react-switch",
+  "motion",
+  "lucide-react",
+  "embla-carousel-react",
+  "recharts",
+  "clsx",
+  "tailwind-merge"
+];
+
+for (const dependency of requiredWebDeps) {
+  check(`Dependencia UI externa declarada: ${dependency}`, webPackageJson.includes(`"${dependency}"`));
+}
+
+const rootPackageJsonForUi = file("package.json") ? read("package.json") : "";
+check("Dependencia UI externa declarada: @xyflow/react", webPackageJson.includes('"@xyflow/react"') || rootPackageJsonForUi.includes('"@xyflow/react"'));
+check("Playwright declarado para QA visual", rootPackageJsonForUi.includes('"@playwright/test"'));
 
 check(
   "No existe ruta duplicada dashboard/dashboard",

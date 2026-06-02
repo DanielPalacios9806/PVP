@@ -28,11 +28,15 @@
     "release:preflight": "npm run build && npm run check:release"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@prisma/client": "^6.8.2",
     "bcryptjs": "^3.0.2",
     "concurrently": "^9.1.2",
     "prisma": "^6.8.2",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.11.0"
   }
 }
