@@ -184,11 +184,18 @@ check("Tournaments hub mobile polish documentado", file("docs/TOURNAMENTS_HUB_MO
 check("Right activity rail UX documentado", file("docs/RIGHT_ACTIVITY_RAIL_UX.md"));
 check("Right activity rail global documentado", file("docs/RIGHT_ACTIVITY_RAIL_GLOBAL.md"));
 check("Teams hub layout fidelity documentado", file("docs/TEAMS_HUB_LAYOUT_FIDELITY.md"));
+check("Account Riot profile UX documentado", file("docs/ACCOUNT_RIOT_PROFILE_UX.md"));
 check("Riot key rotation y Render env documentado", file("docs/RIOT_KEY_ROTATION_AND_RENDER_ENV.md"));
 check("Pre-beta deploy checklist documentado", file("docs/PRE_BETA_DEPLOY_CHECKLIST.md"));
 check("Main release bridge documentado", file("docs/MAIN_RELEASE_BRIDGE.md"));
 check("Script Riot readiness existe", file("scripts/riot-readiness-check.mjs"));
 check("Script pre-beta smoke existe", file("scripts/prebeta-smoke-check.mjs"));
+
+const accountCenter = file("apps/web/components/account-center.tsx") ? read("apps/web/components/account-center.tsx") : "";
+check("Account dashboard muestra estado Riot", accountCenter.includes("Riot readiness") && accountCenter.includes("RiotLinkCard") && accountCenter.includes("RIOT backend protegido"));
+check("Account dashboard no expone RIOT_API_KEY", !accountCenter.includes("RIOT_API_KEY") && !accountCenter.includes("NEXT_PUBLIC_RIOT_API_KEY"));
+check("Account dashboard tiene accesos competitivos", accountCenter.includes("Mis torneos") && accountCenter.includes("Mis equipos") && accountCenter.includes("Mis tokens"));
+check("Account dashboard separa Admin por rol", accountCenter.includes("adminLike") && accountCenter.includes("/dashboard/admin") && accountCenter.includes("rol autorizado"));
 
 const publicLanding = file("apps/web/components/public-landing.tsx") ? read("apps/web/components/public-landing.tsx") : "";
 check("Home pÃºblica usa Motion", publicLanding.includes('from "motion/react"'));
