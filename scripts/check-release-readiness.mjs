@@ -171,6 +171,37 @@ check("Design system Darkside documentado", file("docs/DARKSIDE_DESIGN_SYSTEM.md
 check("Design tokens frontend existen", file("apps/web/lib/design-tokens.ts"));
 check("Primitivos UI Darkside existen", file("apps/web/components/ui/ds-primitives.tsx"));
 
+check("External UI Fusion documentado", file("docs/EXTERNAL_UI_FUSION.md"));
+check("Mapa funcional UX documentado", file("docs/UX_NAVIGATION_FUNCTIONAL_MAP.md"));
+check("Mapa de navegación frontend existe", file("apps/web/lib/navigation-map.ts"));
+check("Mapa de librerías externas existe", file("apps/web/lib/external-ui-map.ts"));
+
+const webPackageJson = file("apps/web/package.json") ? read("apps/web/package.json") : "";
+const requiredWebDeps = [
+  "@radix-ui/react-dialog",
+  "@radix-ui/react-dropdown-menu",
+  "@radix-ui/react-tabs",
+  "@radix-ui/react-tooltip",
+  "@radix-ui/react-popover",
+  "@radix-ui/react-navigation-menu",
+  "@radix-ui/react-accordion",
+  "@radix-ui/react-select",
+  "@radix-ui/react-switch",
+  "motion",
+  "lucide-react",
+  "embla-carousel-react",
+  "recharts",
+  "clsx",
+  "tailwind-merge"
+];
+
+for (const dependency of requiredWebDeps) {
+  check(`Dependencia UI externa declarada: ${dependency}`, webPackageJson.includes(`"${dependency}"`));
+}
+
+const rootPackageJsonForUi = file("package.json") ? read("package.json") : "";
+check("Playwright declarado para QA visual", rootPackageJsonForUi.includes('"@playwright/test"'));
+
 check(
   "No existe ruta duplicada dashboard/dashboard",
   !file("apps/web/app/dashboard/dashboard"),
