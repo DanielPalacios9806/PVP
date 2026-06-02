@@ -185,6 +185,7 @@ check("Right activity rail UX documentado", file("docs/RIGHT_ACTIVITY_RAIL_UX.md
 check("Right activity rail global documentado", file("docs/RIGHT_ACTIVITY_RAIL_GLOBAL.md"));
 check("Teams hub layout fidelity documentado", file("docs/TEAMS_HUB_LAYOUT_FIDELITY.md"));
 check("Account Riot profile UX documentado", file("docs/ACCOUNT_RIOT_PROFILE_UX.md"));
+check("Admin Ops center polish documentado", file("docs/ADMIN_OPS_CENTER_POLISH.md"));
 check("Riot key rotation y Render env documentado", file("docs/RIOT_KEY_ROTATION_AND_RENDER_ENV.md"));
 check("Pre-beta deploy checklist documentado", file("docs/PRE_BETA_DEPLOY_CHECKLIST.md"));
 check("Main release bridge documentado", file("docs/MAIN_RELEASE_BRIDGE.md"));
@@ -196,6 +197,17 @@ check("Account dashboard muestra estado Riot", accountCenter.includes("Riot read
 check("Account dashboard no expone RIOT_API_KEY", !accountCenter.includes("RIOT_API_KEY") && !accountCenter.includes("NEXT_PUBLIC_RIOT_API_KEY"));
 check("Account dashboard tiene accesos competitivos", accountCenter.includes("Mis torneos") && accountCenter.includes("Mis equipos") && accountCenter.includes("Mis tokens"));
 check("Account dashboard separa Admin por rol", accountCenter.includes("adminLike") && accountCenter.includes("/dashboard/admin") && accountCenter.includes("rol autorizado"));
+
+const adminPage = file("apps/web/app/dashboard/admin/page.tsx") ? read("apps/web/app/dashboard/admin/page.tsx") : "";
+const adminOpsCenter = file("apps/web/components/admin-ops-command-center.tsx") ? read("apps/web/components/admin-ops-command-center.tsx") : "";
+const adminQuickAccess = file("apps/web/components/admin-quick-access.tsx") ? read("apps/web/components/admin-quick-access.tsx") : "";
+const adminTokenPanel = file("apps/web/components/admin-token-panel.tsx") ? read("apps/web/components/admin-token-panel.tsx") : "";
+const moderationPage = file("apps/web/app/dashboard/moderation/page.tsx") ? read("apps/web/app/dashboard/moderation/page.tsx") : "";
+check("Admin page usa Ops Command Center", adminPage.includes("AdminOpsCommandCenter") && adminPage.includes("auditoria-operativa") && adminPage.includes("tokens-internos"));
+check("Admin Ops center separa roles", adminOpsCenter.includes("opsCards") && adminOpsCenter.includes("SUPER_ADMIN") && adminOpsCenter.includes("MODERATOR") && adminOpsCenter.includes("API key vive solo en backend"));
+check("Admin quick access usa rutas operativas", adminQuickAccess.includes("Operacion Riot") && adminQuickAccess.includes("Auditoria") && adminQuickAccess.includes("/dashboard/moderation"));
+check("Admin token panel declara tokens no monetarios", adminTokenPanel.includes("Token Ledger") && adminTokenPanel.includes("no monetarios") && adminTokenPanel.includes("No representa dinero real"));
+check("Moderation page usa war room", moderationPage.includes("Moderacion / War room") && moderationPage.includes("integridad competitiva"));
 
 const publicLanding = file("apps/web/components/public-landing.tsx") ? read("apps/web/components/public-landing.tsx") : "";
 check("Home pÃºblica usa Motion", publicLanding.includes('from "motion/react"'));
