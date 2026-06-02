@@ -20,9 +20,11 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: CORS_ORIGIN
-        value: https://darkside.cool
+        value: https://arena-os-web-staging-6x5f.onrender.com
+      - key: CORS_ORIGINS
+        value: https://arena-os-web-staging-6x5f.onrender.com,https://darkside.cool
       - key: FRONTEND_URL
-        value: https://darkside.cool
+        value: https://arena-os-web-staging-6x5f.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -70,7 +72,7 @@ services:
       - key: WEB_PORT
         value: 3000
       - key: NEXT_PUBLIC_API_URL
-        value: https://api.darkside.cool/api
+        value: https://arena-os-api-staging.onrender.com/api
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY

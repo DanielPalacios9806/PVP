@@ -25,10 +25,13 @@
     "docker:seed": "docker compose run --rm seed",
     "check:release": "node scripts/check-release-readiness.mjs",
     "check:smoke": "node scripts/production-smoke-check.mjs",
-    "release:preflight": "npm run build && npm run check:release && npm run check:riot",
+    "release:preflight": "npm run build && npm run check:release && npm run check:riot && npm run check:render",
     "check:riot": "node scripts/riot-readiness-check.mjs",
     "check:prebeta": "node scripts/prebeta-smoke-check.mjs",
-    "release:prebeta": "npm run build && npm run check:release && npm run check:riot && npm run check:prebeta"
+    "release:prebeta": "npm run build && npm run check:release && npm run check:riot && npm run check:prebeta",
+    "check:render": "node scripts/render-env-audit.mjs",
+    "check:prodhealth": "node scripts/production-health-check.mjs",
+    "release:production": "npm run build && npm run check:release && npm run check:riot && npm run check:render"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

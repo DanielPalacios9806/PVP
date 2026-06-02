@@ -9,6 +9,8 @@ const checks = [
   { name: "Terms", url: `${webBaseUrl}/legal/terms`, ok: [200] },
   { name: "Privacy", url: `${webBaseUrl}/legal/privacy`, ok: [200] },
   { name: "Data deletion", url: `${webBaseUrl}/legal/data-deletion`, ok: [200] },
+  { name: "API health", url: `${apiBaseUrl}/health`, ok: [200] },
+  { name: "API runtime", url: `${apiBaseUrl}/health/runtime`, ok: [200] },
   { name: "Riot health protegido", url: `${apiBaseUrl}/riot/health`, ok: [200, 401, 403] },
   { name: "RSO status protegido", url: `${apiBaseUrl}/riot/rso/status`, ok: [200, 401, 403] }
 ];
