@@ -38,7 +38,9 @@
     "release:production": "npm run build && npm run check:release && npm run check:riot && npm run check:riotapp && npm run check:render",
     "release:riotapp": "npm run check:release && npm run check:riot && npm run check:riotapp",
     "check:beta": "node scripts/beta-launch-checklist.mjs",
-    "release:beta": "npm run build && npm run check:release && npm run check:riot && npm run check:riotapp && npm run check:prodhealth && npm run check:beta"
+    "release:beta": "npm run build && npm run check:release && npm run check:riot && npm run check:riotapp && npm run check:prodhealth && npm run check:beta",
+    "check:riotsubmit": "node scripts/riot-submission-final-check.mjs",
+    "release:riotsubmit": "npm run build && npm run check:release && npm run check:riot && npm run check:riotapp && npm run check:beta && npm run check:prodhealth && npm run check:riotsubmit"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
