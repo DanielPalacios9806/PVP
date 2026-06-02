@@ -176,12 +176,36 @@ check("Mapa funcional UX documentado", file("docs/UX_NAVIGATION_FUNCTIONAL_MAP.m
 check("Mapa de navegación frontend existe", file("apps/web/lib/navigation-map.ts"));
 check("Mapa de librerías externas existe", file("apps/web/lib/external-ui-map.ts"));
 check("Home External UI Fusion documentado", file("docs/HOME_EXTERNAL_UI_FUSION.md"));
+check("Tournament detail mockup fidelity documentado", file("docs/TOURNAMENT_DETAIL_MOCKUP_FIDELITY.md"));
+check("Tournament detail pro bracket documentado", file("docs/TOURNAMENT_DETAIL_PRO_BRACKET.md"));
+check("Tournament detail layout fidelity documentado", file("docs/TOURNAMENT_DETAIL_LAYOUT_FIDELITY.md"));
+check("Right activity rail UX documentado", file("docs/RIGHT_ACTIVITY_RAIL_UX.md"));
+check("Right activity rail global documentado", file("docs/RIGHT_ACTIVITY_RAIL_GLOBAL.md"));
 
 const publicLanding = file("apps/web/components/public-landing.tsx") ? read("apps/web/components/public-landing.tsx") : "";
 check("Home pública usa Motion", publicLanding.includes('from "motion/react"'));
 check("Home pública usa Lucide React", publicLanding.includes('from "lucide-react"'));
 check("Home pública mantiene hero Darkside oficial", publicLanding.includes("heroDesktop") && publicLanding.includes("heroMobile"));
 check("Home pública oculta navegación admin directa", !publicLanding.includes("/dashboard/admin") && !publicLanding.includes("/dashboard/moderation"));
+
+const tournamentDetail = file("apps/web/components/tournament-detail.tsx") ? read("apps/web/components/tournament-detail.tsx") : "";
+check("Tournament detail usa hero oficial Darkside", tournamentDetail.includes("hero-desktop.jpg"));
+check("Tournament detail no expone tab Automatización pública", !tournamentDetail.includes('"Automatización"'));
+check("Tournament detail usa panel lateral contextual", tournamentDetail.includes("TournamentEntryPanel") && tournamentDetail.includes("Información del torneo"));
+check("Tournament detail contador vivo", tournamentDetail.includes("setInterval") && tournamentDetail.includes("countdownNow"));
+check("Tournament detail usa layout 70/30", tournamentDetail.includes("xl:grid-cols-[minmax(0,1fr)_330px]") && tournamentDetail.includes("tournament-main-stage"));
+const bracketBoard = file("apps/web/components/bracket-board.tsx") ? read("apps/web/components/bracket-board.tsx") : "";
+check("Bracket usa XYFlow", bracketBoard.includes("@xyflow/react") && bracketBoard.includes("ReactFlow") && bracketBoard.includes("fitView"));
+check("Bracket permite pan y zoom", bracketBoard.includes("panOnScroll") && bracketBoard.includes("Controls"));
+check("Bracket mobile usa vista por rondas", bracketBoard.includes("MobileRoundCards") && bracketBoard.includes("md:hidden"));
+check("Layout carga estilos XYFlow", file("apps/web/app/layout.tsx") && read("apps/web/app/layout.tsx").includes("@xyflow/react/dist/style.css"));
+
+const dashboardGridWrapper = file("apps/web/components/dashboard-grid-wrapper.tsx") ? read("apps/web/components/dashboard-grid-wrapper.tsx") : "";
+check("Dashboard mantiene rail derecho colapsable en torneos", dashboardGridWrapper.includes("rightRailExpandedColumns") && dashboardGridWrapper.includes("rightRailCollapsedColumns") && dashboardGridWrapper.includes("shouldRenderRightRail = showRightSidebar && Boolean(rightSidebar)"));
+check("Dashboard rail derecho es colapsable", dashboardGridWrapper.includes("darkside:right-activity-rail-collapsed") && dashboardGridWrapper.includes("CollapsedActivityRail"));
+
+const sidebarRight = file("apps/web/components/sidebar-right.tsx") ? read("apps/web/components/sidebar-right.tsx") : "";
+check("Right rail muestra actividad util", sidebarRight.includes("Your activities") && sidebarRight.includes("Your party") && sidebarRight.includes("Your teams"));
 
 const webPackageJson = file("apps/web/package.json") ? read("apps/web/package.json") : "";
 const requiredWebDeps = [
@@ -207,6 +231,7 @@ for (const dependency of requiredWebDeps) {
 }
 
 const rootPackageJsonForUi = file("package.json") ? read("package.json") : "";
+check("Dependencia UI externa declarada: @xyflow/react", webPackageJson.includes('"@xyflow/react"') || rootPackageJsonForUi.includes('"@xyflow/react"'));
 check("Playwright declarado para QA visual", rootPackageJsonForUi.includes('"@playwright/test"'));
 
 check(

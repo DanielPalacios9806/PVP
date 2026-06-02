@@ -9,7 +9,7 @@ import { getStoredUser, type AppRole, type StoredUser } from "../lib/session";
 import { BracketBoard } from "./bracket-board";
 import { ConfirmActionDialog, type ConfirmActionRequest } from "./confirm-action-dialog";
 
-const tabs = ["Información", "Bracket", "Automatización", "Equipos", "Reglas", "Partidos"];
+const tabs = ["Información", "Bracket", "Equipos", "Reglas", "Partidos"];
 
 const gameAssets: Record<string, { bg: string; logo: string; label: string }> = {
   "LEAGUE OF LEGENDS": {
@@ -132,10 +132,10 @@ function tournamentHeroImage(tournament: any, game: { bg: string }) {
     return explicitHero.trim();
   }
 
-  return game.bg;
+  return "/assets/darkside/official/hero-desktop.jpg";
 }
 
-function getCountdownParts(value?: string | Date | null) {
+function getCountdownParts(value?: string | Date | null, now = Date.now()) {
   if (!value) {
     return [
       ["--", "dias"],
@@ -145,7 +145,7 @@ function getCountdownParts(value?: string | Date | null) {
     ];
   }
 
-  const diff = Math.max(new Date(value).getTime() - Date.now(), 0);
+  const diff = Math.max(new Date(value).getTime() - now, 0);
   const days = Math.floor(diff / 86_400_000);
   const hours = Math.floor((diff % 86_400_000) / 3_600_000);
   const minutes = Math.floor((diff % 3_600_000) / 60_000);
@@ -455,6 +455,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
   const [operationMessage, setOperationMessage] = useState("");
   const [operatingAction, setOperatingAction] = useState("");
   const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmActionRequest | null>(null);
+  const [countdownNow, setCountdownNow] = useState(() => Date.now());
 
   const isMockTournament = tournamentId.startsWith("mock-") || tournament?.id?.startsWith("mock-");
   const game = gameAssets[normalizeGameKey(tournament?.game)] ?? gameAssets.VALORANT;
@@ -478,7 +479,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     teamRosterCount(selectedTeam) < tournament.teamSize
   );
   const needsTeam = Boolean(tournament?.type === "TEAM" && user && !ownedTeams.length && !hasRegistration);
-  const countdownParts = useMemo(() => getCountdownParts(tournament?.startsAt), [tournament?.startsAt]);
+  const countdownParts = useMemo(() => getCountdownParts(tournament?.startsAt, countdownNow), [tournament?.startsAt, countdownNow]);
   const riotRequirement = useMemo(() => buildRiotRequirement(tournament, riotAccounts), [tournament, riotAccounts]);
   const baseActionLabel = primaryActionLabel({
     user,
@@ -580,6 +581,19 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     void loadTeams(storedUser);
     void loadRiotAccounts(storedUser);
   }, [tournamentId]);
+
+  useEffect(() => {
+    if (!tournament?.startsAt) {
+      return;
+    }
+
+    setCountdownNow(Date.now());
+    const intervalId = window.setInterval(() => {
+      setCountdownNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [tournament?.startsAt]);
 
   async function register() {
     if (!user) {
@@ -846,19 +860,6 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
 
   function renderMainTab() {
 
-    if (activeTab === "Automatización") {
-      return (
-        <TournamentAutomationFlow
-          tournament={tournament}
-          matches={matches}
-          registrations={tournament.registrations ?? []}
-          canManage={canManageTournament}
-          onAction={requestTournamentOperation}
-          operatingAction={operatingAction}
-        />
-      );
-    }
-
     if (activeTab === "Equipos") {
       const registrations = tournament.registrations ?? [];
 
@@ -956,19 +957,19 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_34%,rgba(255,36,56,0.24),transparent_28%),radial-gradient(circle_at_76%_58%,rgba(24,230,242,0.18),transparent_24%)]" />
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05080d] to-transparent" />
 
-        <div className="relative z-10 mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <div className="relative z-10 mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
           <div className="mb-7 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
             <Link href="/dashboard/tournaments" className="transition hover:text-white">Torneos</Link>
             <span>/</span>
             <span className="text-white/70">{tournament.name}</span>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_240px] xl:items-start">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_260px] xl:items-start">
             <div className="min-w-0">
               <span className="inline-flex rounded-full border border-[#ff2438]/35 bg-[#ff2438]/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#ff5868]">
                 {isMockTournament ? "Modo demo" : statusLabel(tournament.status)}
               </span>
-              <h1 className="mt-5 max-w-5xl break-words font-heading text-[2.35rem] font-semibold leading-[0.94] text-white sm:text-5xl xl:text-[4.85rem]">
+              <h1 className="mt-5 max-w-5xl break-words font-heading text-[clamp(2.1rem,11vw,4.85rem)] font-semibold leading-[0.94] text-white sm:text-5xl xl:text-[4.85rem]">
                 {tournament.name}
               </h1>
 
@@ -992,19 +993,6 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
                 <HeroMetric label="Equipos" value={`${registeredCount}/${maxParticipants}`} />
               </div>
 
-              {tournament.type === "TEAM" && user && !hasRegistration ? (
-                <TeamEligibilityPanel
-                  teams={ownedTeams}
-                  selectedTeamId={selectedTeamId}
-                  onSelectTeam={setSelectedTeamId}
-                  teamSize={tournament.teamSize}
-                  needsTeam={needsTeam}
-                  selectedTeamMissingRoster={selectedTeamMissingRoster}
-                />
-              ) : null}
-
-              <RiotRequirementPanel requirement={riotRequirement} />
-
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={handlePrimaryAction}
@@ -1013,21 +1001,14 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
                 >
                   {isSubmitting ? "Procesando..." : actionLabel}
                 </button>
-                <Link href="#bracket" className="btn-secondary motion-press w-full sm:w-auto">
-                  Ver bracket
-                </Link>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(window.location.href)}
+                  className="btn-secondary motion-press w-full sm:w-auto"
+                >
+                  Compartir
+                </button>
               </div>
-              <EligibilityHint
-                user={user}
-                tournament={tournament}
-                hasRegistration={hasRegistration}
-                myRegistration={myRegistration}
-                registrationOpen={registrationOpen}
-                capacityFull={capacityFull}
-                needsTeam={needsTeam}
-                selectedTeamMissingRoster={selectedTeamMissingRoster}
-                riotRequirement={riotRequirement}
-              />
               {(message || checkInMessage) ? (
                 <p className="mt-4 max-w-2xl rounded-[14px] border border-[#18e6f2]/25 bg-[#18e6f2]/10 px-4 py-3 text-sm text-[#bffaff]">
                   {message || checkInMessage}
@@ -1048,25 +1029,28 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
             </div>
           </div>
 
-          <div className="mt-8 flex gap-2 overflow-x-auto border-b border-white/10">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`shrink-0 px-4 py-4 text-sm font-semibold transition ${
-                  activeTab === tab ? "border-b-2 border-[#ff2438] text-white" : "text-white/50 hover:text-white"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="mt-8 flex gap-2 overflow-x-auto border-b border-white/10 tournament-tabs-scroll">
+            {tabs.map((tab) => {
+              const label = tab === "Equipos" ? `Equipos ${registeredCount}` : tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`shrink-0 px-4 py-4 text-sm font-semibold transition ${
+                    activeTab === tab ? "border-b-2 border-[#ff2438] text-white" : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-[1280px] gap-5 px-4 py-5 sm:px-6 2xl:grid-cols-[minmax(0,1fr)_310px] lg:px-8" id="bracket">
+      <section className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_330px] lg:px-8" id="bracket">
         <div className="min-w-0 space-y-5">
-          <div className="surface-panel motion-section min-w-0 p-4 sm:p-6">
+          <div className="tournament-main-stage motion-section min-w-0 p-3 sm:p-5">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="page-kicker">{activeTab}</p>
@@ -1084,7 +1068,25 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
           <FeaturedMatches matches={featuredMatches} />
         </div>
 
-        <aside className="space-y-5">
+        <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+          <TournamentEntryPanel
+            user={user}
+            tournament={tournament}
+            hasRegistration={hasRegistration}
+            myRegistration={myRegistration}
+            registrationOpen={registrationOpen}
+            capacityFull={capacityFull}
+            needsTeam={needsTeam}
+            selectedTeamMissingRoster={selectedTeamMissingRoster}
+            riotRequirement={riotRequirement}
+            teams={ownedTeams}
+            selectedTeamId={selectedTeamId}
+            onSelectTeam={setSelectedTeamId}
+            teamSize={tournament.teamSize}
+          />
+          <InfoPanel tournament={tournament} game={game.label} registeredCount={registeredCount} maxParticipants={maxParticipants} />
+          <RewardPanel />
+          <OrganizerPanel />
           {canManageTournament ? (
             <TournamentOperationsPanel
               tournament={tournament}
@@ -1094,9 +1096,6 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
               onRegistrationDecision={requestRegistrationDecision}
             />
           ) : null}
-          <InfoPanel tournament={tournament} game={game.label} registeredCount={registeredCount} maxParticipants={maxParticipants} />
-          <RewardPanel />
-          <OrganizerPanel />
         </aside>
       </section>
 
@@ -1469,7 +1468,7 @@ function TournamentAutomationSnapshot({ tournament, matches, registrations }: { 
       <div className="absolute inset-y-0 right-0 w-1/3 bg-[radial-gradient(circle_at_50%_30%,rgba(24,230,242,0.20),transparent_55%)]" />
       <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
         <div>
-          <p className="page-kicker">Automatización simulada</p>
+          <p className="page-kicker">Flujo competitivo simulado</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Flujo competitivo tipo plataforma</h2>
           <p className="mt-2 max-w-3xl text-sm leading-7 text-white/62">
             Darkside ya opera el ciclo completo: registro, check-in, bracket, match rooms, reportes, disputas y avance de bracket. Los Tournament Codes reales quedan listos para una fase posterior con Riot Production.
@@ -1753,7 +1752,7 @@ function TournamentOperationsPanel({
       <div className="mt-5 rounded-[16px] border border-[#18e6f2]/18 bg-[#18e6f2]/8 p-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#18e6f2]">Automatización</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#18e6f2]">Flujo competitivo</p>
             <p className="mt-1 text-sm text-white/58">
               Bracket {hasBracket ? "listo" : "pendiente"} · {confirmedRegistrations.length} confirmados · Tournament Codes reales pendientes de Riot.
             </p>
@@ -1841,26 +1840,89 @@ function TournamentOperationsPanel({
   );
 }
 
+function TournamentEntryPanel({
+  user,
+  tournament,
+  hasRegistration,
+  myRegistration,
+  registrationOpen,
+  capacityFull,
+  needsTeam,
+  selectedTeamMissingRoster,
+  riotRequirement,
+  teams,
+  selectedTeamId,
+  onSelectTeam,
+  teamSize
+}: {
+  user: StoredUser | null;
+  tournament: any;
+  hasRegistration: boolean;
+  myRegistration?: any;
+  registrationOpen: boolean;
+  capacityFull: boolean;
+  needsTeam: boolean;
+  selectedTeamMissingRoster: boolean;
+  riotRequirement: ReturnType<typeof buildRiotRequirement>;
+  teams: any[];
+  selectedTeamId: string;
+  onSelectTeam: (value: string) => void;
+  teamSize?: number | null;
+}) {
+  return (
+    <div className="surface-panel border-[#18e6f2]/18 p-5">
+      <p className="page-kicker">Estado de inscripción</p>
+      <EligibilityHint
+        user={user}
+        tournament={tournament}
+        hasRegistration={hasRegistration}
+        myRegistration={myRegistration}
+        registrationOpen={registrationOpen}
+        capacityFull={capacityFull}
+        needsTeam={needsTeam}
+        selectedTeamMissingRoster={selectedTeamMissingRoster}
+        riotRequirement={riotRequirement}
+      />
+      <RiotRequirementPanel requirement={riotRequirement} />
+      {tournament.type === "TEAM" && user && !hasRegistration ? (
+        <TeamEligibilityPanel
+          teams={teams}
+          selectedTeamId={selectedTeamId}
+          onSelectTeam={onSelectTeam}
+          teamSize={teamSize}
+          needsTeam={needsTeam}
+          selectedTeamMissingRoster={selectedTeamMissingRoster}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function InfoPanel({ tournament, game, registeredCount, maxParticipants }: { tournament: any; game: string; registeredCount: number; maxParticipants: number }) {
   return (
     <div className="surface-panel p-5">
-      <p className="page-kicker">Información del torneo</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="page-kicker">Información del torneo</p>
+        <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-100">
+          {statusLabel(tournament.status)}
+        </span>
+      </div>
       <dl className="mt-5 space-y-3 text-sm">
         {[
-          ["Organizador", tournament.organizer?.displayName || tournament.organizer?.username || "Darkside Ops"],
+          ["Organizador", tournament.organizer?.displayName || tournament.organizer?.username || "Darkside.gg"],
           ["Juego", game],
-          ["Región", tournament.regionalRoute || "AMERICAS"],
+          ["Región", tournament.regionalRoute || "LATAM"],
           ["Formato", String(tournament.format || "SINGLE_ELIMINATION").replaceAll("_", " ")],
           ["Equipos", `${registeredCount}/${maxParticipants}`],
-          ["Estado", statusLabel(tournament.status)]
+          ["Requisito", tournamentRequiresRiotAccount(tournament.game) ? "Riot ID requerido" : "Cuenta Darkside"]
         ].map(([label, value]) => (
-          <div key={label} className="flex items-start justify-between gap-4">
+          <div key={label} className="flex items-start justify-between gap-4 border-b border-white/6 pb-3 last:border-0 last:pb-0">
             <dt className="text-white/45">{label}</dt>
-            <dd className="text-right font-semibold text-white/80">{value}</dd>
+            <dd className="text-right font-semibold text-white/85">{value}</dd>
           </div>
         ))}
       </dl>
-      <button className="mt-5 w-full rounded-[12px] border border-[#ff2438]/55 px-4 py-3 text-sm font-semibold text-[#ff5868]">
+      <button onClick={() => window.dispatchEvent(new HashChangeEvent("hashchange"))} className="mt-5 w-full rounded-[12px] border border-[#ff2438]/55 px-4 py-3 text-sm font-semibold text-[#ff5868]">
         Ver reglas completas
       </button>
     </div>

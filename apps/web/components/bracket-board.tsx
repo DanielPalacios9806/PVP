@@ -1,4 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo } from "react";
+import {
+  Background,
+  Controls,
+  MarkerType,
+  Position,
+  ReactFlow,
+  type Edge,
+  type Node
+} from "@xyflow/react";
 
 type RegistrationView = {
   id?: string;
@@ -87,9 +99,11 @@ function statusTone(status: string) {
 
 function roundLabel(sequence: number, fallback: string) {
   const labels: Record<number, string> = {
-    1: "Apertura",
-    2: "Semifinal",
-    3: "Final"
+    1: "Ronda 1",
+    2: "Ronda 2",
+    3: "Cuartos",
+    4: "Semifinal",
+    5: "Gran final"
   };
 
   return labels[sequence] ?? fallback;
@@ -213,41 +227,207 @@ function bracketProgress(rounds: RoundView[]) {
   };
 }
 
+function matchScore(match: MatchView, registration?: RegistrationView | null, hasRealRounds = true) {
+  if (!registration) {
+    return "-";
+  }
+
+  if (!hasRealRounds) {
+    return isWinner(match, registration) ? "1" : "0";
+  }
+
+  if (!match.winnerRegistration?.id) {
+    return "-";
+  }
+
+  return isWinner(match, registration) ? "1" : "0";
+}
+
 function TeamLine({ registration, score, winner }: { registration?: RegistrationView | null; score: string; winner: boolean }) {
   const label = registrationLabel(registration);
 
   return (
     <div
-      className={`group flex items-center justify-between gap-3 rounded-[14px] border px-3 py-2.5 text-sm transition ${
+      className={`flex items-center justify-between gap-3 rounded-[12px] border px-3 py-2 text-sm transition ${
         winner
-          ? "border-[#18e6f2]/50 bg-[#18e6f2]/12 text-white shadow-[0_0_24px_rgba(24,230,242,0.12)]"
-          : "border-white/10 bg-white/[0.035] text-white/70 hover:border-white/20 hover:bg-white/[0.055]"
+          ? "border-[#40ff91]/45 bg-[#40ff91]/12 text-white shadow-[0_0_22px_rgba(64,255,145,0.12)]"
+          : "border-white/10 bg-black/24 text-white/70"
       }`}
     >
       <span className="flex min-w-0 items-center gap-2.5">
         <span
-          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-[10px] font-black ${
+          className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[9px] font-black ${
             winner
-              ? "border-[#18e6f2]/55 bg-[#18e6f2]/18 text-[#d9fdff]"
-              : "border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),rgba(0,0,0,0.35))] text-white/58"
+              ? "border-[#40ff91]/50 bg-[#40ff91]/14 text-[#d8ffe8]"
+              : "border-white/10 bg-[radial-gradient(circle_at_30%_20%,rgba(24,230,242,0.18),rgba(0,0,0,0.55))] text-white/58"
           }`}
         >
           {teamInitials(label)}
         </span>
-        <span className="min-w-0">
-          <span className="block truncate font-semibold">{label}</span>
-          <span className="block text-[10px] uppercase tracking-[0.14em] text-white/32">Equipo</span>
-        </span>
+        <span className="min-w-0 truncate font-semibold">{label}</span>
       </span>
       <span
         className={`grid h-7 min-w-7 place-items-center rounded-lg border px-2 text-xs font-black ${
-          winner ? "border-[#40ff91]/40 bg-[#40ff91]/12 text-[#b8ffd7]" : "border-white/10 bg-black/25 text-white/42"
+          winner ? "border-[#40ff91]/40 bg-[#40ff91]/12 text-[#b8ffd7]" : "border-white/10 bg-black/25 text-white/46"
         }`}
       >
         {score}
       </span>
     </div>
   );
+}
+
+function MatchNodeCard({ match, hasRealRounds }: { match: MatchView; hasRealRounds: boolean }) {
+  const homeWinner = isWinner(match, match.homeRegistration);
+  const awayWinner = isWinner(match, match.awayRegistration);
+
+  return (
+    <div className="darkside-bracket-node-card">
+      <div className="mb-3 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em]">
+        <span className="text-white/42">BO{match.bestOf}</span>
+        <span className={`rounded-full border px-2 py-1 font-bold ${statusTone(match.status)}`}>{statusLabel(match.status)}</span>
+      </div>
+      <div className="space-y-2">
+        <TeamLine registration={match.homeRegistration} score={matchScore(match, match.homeRegistration, hasRealRounds)} winner={homeWinner} />
+        <TeamLine registration={match.awayRegistration} score={matchScore(match, match.awayRegistration, hasRealRounds)} winner={awayWinner} />
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.12em]">
+        <span className="text-white/35">Match room</span>
+        {hasRealRounds ? (
+          <Link href={`/dashboard/matches/${match.id}`} className="font-bold text-[#18e6f2] hover:text-white">
+            Abrir
+          </Link>
+        ) : (
+          <span className="font-semibold text-white/35">Preview</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+function MobileRoundCards({ rounds, hasRealRounds }: { rounds: RoundView[]; hasRealRounds: boolean }) {
+  return (
+    <div className="space-y-4 md:hidden">
+      {rounds.map((round) => (
+        <section key={round.id} className="rounded-[20px] border border-white/10 bg-white/[0.035] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#ff5868]">
+                {roundLabel(round.sequence, round.name)}
+              </p>
+              <h4 className="mt-1 text-sm font-black uppercase tracking-[0.14em] text-white/86">{round.name}</h4>
+            </div>
+            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${statusTone(round.status)}`}>
+              {statusLabel(round.status)}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {round.matches.map((match) => {
+              const homeWinner = isWinner(match, match.homeRegistration);
+              const awayWinner = isWinner(match, match.awayRegistration);
+
+              return (
+                <article key={match.id} className="rounded-[18px] border border-white/10 bg-[linear-gradient(180deg,rgba(13,19,30,0.96),rgba(5,8,13,0.98))] p-3 shadow-[0_16px_34px_rgba(0,0,0,0.28)]">
+                  <div className="mb-3 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.14em]">
+                    <span className="text-white/42">BO{match.bestOf}</span>
+                    <span className={`rounded-full border px-2 py-1 font-bold ${statusTone(match.status)}`}>{statusLabel(match.status)}</span>
+                  </div>
+                  <div className="space-y-2">
+                    <TeamLine registration={match.homeRegistration} score={matchScore(match, match.homeRegistration, hasRealRounds)} winner={homeWinner} />
+                    <TeamLine registration={match.awayRegistration} score={matchScore(match, match.awayRegistration, hasRealRounds)} winner={awayWinner} />
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.12em]">
+                    <span className="text-white/35">Match room</span>
+                    {hasRealRounds ? (
+                      <Link href={`/dashboard/matches/${match.id}`} className="font-bold text-[#18e6f2] hover:text-white">
+                        Abrir
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-white/35">Preview</span>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function buildFlow(rounds: RoundView[], hasRealRounds: boolean) {
+  const roundGap = 345;
+  const rowGap = 166;
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+
+  rounds.forEach((round, roundIndex) => {
+    const roundOffset = Math.max(0, (Math.pow(2, roundIndex) - 1) * 42);
+
+    nodes.push({
+      id: `round-${round.id}`,
+      position: { x: roundIndex * roundGap, y: -74 },
+      draggable: false,
+      selectable: false,
+      data: {
+        label: (
+          <div className="min-w-[250px] rounded-[16px] border border-white/10 bg-white/[0.035] px-4 py-3 text-left">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#ff5868]">
+              {roundLabel(round.sequence, round.name)}
+            </p>
+            <h3 className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-white/88">{round.name}</h3>
+          </div>
+        )
+      },
+      className: "darkside-flow-round-node",
+      type: "default"
+    });
+
+    round.matches.forEach((match, matchIndex) => {
+      const nodeId = `match-${match.id}`;
+      const y = matchIndex * rowGap + roundOffset;
+
+      nodes.push({
+        id: nodeId,
+        position: { x: roundIndex * roundGap, y },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        draggable: false,
+        selectable: true,
+        data: {
+          label: <MatchNodeCard match={match} hasRealRounds={hasRealRounds} />
+        },
+        className: `darkside-flow-match-node ${roundIndex === rounds.length - 1 ? "darkside-flow-final-node" : ""}`,
+        type: "default"
+      });
+
+      const nextRound = rounds[roundIndex + 1];
+      const nextMatch = nextRound?.matches?.[Math.floor(matchIndex / 2)];
+      if (nextMatch) {
+        edges.push({
+          id: `edge-${match.id}-${nextMatch.id}`,
+          source: nodeId,
+          target: `match-${nextMatch.id}`,
+          type: "smoothstep",
+          animated: match.status === "IN_PROGRESS" || match.status === "READY",
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 14,
+            height: 14,
+            color: "rgba(24,230,242,0.72)"
+          },
+          style: {
+            stroke: match.status === "COMPLETED" ? "rgba(64,255,145,0.62)" : "rgba(24,230,242,0.52)",
+            strokeWidth: 2
+          }
+        });
+      }
+    });
+  });
+
+  return { nodes, edges };
 }
 
 export function BracketBoard({
@@ -258,21 +438,28 @@ export function BracketBoard({
   previewRegistrations?: RegistrationView[];
 }) {
   const hasRealRounds = rounds.length > 0;
-  const visibleRounds = hasRealRounds ? rounds : buildPreviewRounds(previewRegistrations);
+  const visibleRounds = useMemo(
+    () => (hasRealRounds ? rounds : buildPreviewRounds(previewRegistrations)),
+    [hasRealRounds, previewRegistrations, rounds]
+  );
   const champion = finalWinnerFromRounds(visibleRounds);
   const progress = bracketProgress(visibleRounds);
+  const { nodes, edges } = useMemo(() => buildFlow(visibleRounds, hasRealRounds), [visibleRounds, hasRealRounds]);
 
   return (
-    <div className="relative overflow-hidden rounded-[22px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(24,230,242,0.12),transparent_28%),linear-gradient(180deg,rgba(10,16,25,0.92),rgba(4,7,11,0.98))] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.36)] sm:p-5">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(24,230,242,0.13),transparent_28%),linear-gradient(180deg,rgba(10,16,25,0.92),rgba(4,7,11,0.98))] p-3 shadow-[0_24px_70px_rgba(0,0,0,0.34)] sm:p-5">
+      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#18e6f2]">Mapa competitivo</p>
-          <h3 className="mt-2 text-2xl font-semibold text-white">Llaves del torneo</h3>
+          <h3 className="mt-2 text-2xl font-semibold text-white">Playoffs interactivos</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
+            Explora las rondas con pan y zoom. Los nodos enlazan a salas de partida cuando el bracket real ya fue generado.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.14em] text-white/48">
           <span className="rounded-full border border-[#40ff91]/25 bg-[#40ff91]/8 px-3 py-1 text-[#b8ffd7]">Ganador</span>
-          <span className="rounded-full border border-[#18e6f2]/25 bg-[#18e6f2]/8 px-3 py-1 text-[#bffaff]">Sala</span>
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">BO</span>
+          <span className="rounded-full border border-[#18e6f2]/25 bg-[#18e6f2]/8 px-3 py-1 text-[#bffaff]">Conectado</span>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">Zoom</span>
         </div>
       </div>
 
@@ -310,86 +497,26 @@ export function BracketBoard({
         </div>
       ) : null}
 
-      <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
-        <div className="flex min-w-max items-start gap-9 py-2">
-          {visibleRounds.map((round, roundIndex) => (
-            <section
-              key={round.id}
-              className="relative w-[265px] shrink-0 sm:w-[300px]"
-              style={{ paddingTop: roundIndex === 0 ? 0 : `${Math.min(roundIndex * 50, 150)}px` }}
-            >
-              {roundIndex < visibleRounds.length - 1 ? (
-                <div className="pointer-events-none absolute -right-9 top-[52%] hidden h-px w-9 bg-gradient-to-r from-[#18e6f2]/60 via-[#18e6f2]/25 to-transparent lg:block" />
-              ) : null}
+      <MobileRoundCards rounds={visibleRounds} hasRealRounds={hasRealRounds} />
 
-              <div className="mb-4 rounded-[16px] border border-white/10 bg-white/[0.035] px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#ff5868]">
-                      {roundLabel(round.sequence, round.name)}
-                    </p>
-                    <h3 className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-white/86">{round.name}</h3>
-                  </div>
-                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${statusTone(round.status)}`}>
-                    {statusLabel(round.status)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                {round.matches.map((match, matchIndex) => {
-                  const homeWinner = isWinner(match, match.homeRegistration);
-                  const awayWinner = isWinner(match, match.awayRegistration);
-
-                  return (
-                    <article
-                      key={match.id}
-                      className={`motion-card relative overflow-visible rounded-[18px] border bg-[linear-gradient(180deg,rgba(17,24,36,0.98),rgba(7,11,17,0.96))] p-3.5 shadow-[0_18px_36px_rgba(0,0,0,0.32)] ${
-                        match.status === "IN_PROGRESS"
-                          ? "border-[#40ff91]/32"
-                          : roundIndex === visibleRounds.length - 1
-                            ? "border-[#ff2438]/30 shadow-[0_0_40px_rgba(255,36,56,0.12)]"
-                            : "border-white/10"
-                      }`}
-                    >
-                      {roundIndex < visibleRounds.length - 1 ? (
-                        <div className="pointer-events-none absolute -right-9 top-1/2 hidden h-px w-9 bg-[#18e6f2]/42 lg:block" />
-                      ) : null}
-                      <div className="absolute inset-y-0 left-0 w-[3px] rounded-l-[18px] bg-gradient-to-b from-[#18e6f2] via-[#ff2438] to-transparent" />
-                      <div className="mb-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.14em]">
-                        <span className="text-white/42">Match {matchIndex + 1}</span>
-                        <span className={`rounded-full border px-2.5 py-1 font-semibold ${statusTone(match.status)}`}>
-                          {statusLabel(match.status)}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <TeamLine registration={match.homeRegistration} score={homeWinner ? "1" : hasRealRounds ? "-" : "0"} winner={homeWinner} />
-                        <TeamLine registration={match.awayRegistration} score={awayWinner ? "1" : hasRealRounds ? "-" : "0"} winner={awayWinner} />
-                      </div>
-
-                      <div className="mt-4 flex items-center justify-between gap-3">
-                        <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                          BO{match.bestOf}
-                        </span>
-                        {hasRealRounds ? (
-                          <Link href={`/dashboard/matches/${match.id}`} className="text-sm font-semibold text-[#18e6f2] hover:text-white">
-                            Abrir sala
-                          </Link>
-                        ) : (
-                          <p className="text-sm font-semibold text-white/40">Sala pendiente</p>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
+      <div className="darkside-flow-shell hidden h-[560px] min-h-[500px] overflow-hidden rounded-[22px] border border-white/10 bg-black/32 md:block">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          fitView
+          fitViewOptions={{ padding: 0.18 }}
+          minZoom={0.35}
+          maxZoom={1.35}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          panOnScroll
+          proOptions={{ hideAttribution: true }}
+          className="darkside-flow"
+        >
+          <Background color="rgba(24,230,242,0.14)" gap={28} size={1} />
+          <Controls showInteractive={false} position="bottom-right" />
+        </ReactFlow>
       </div>
     </div>
   );
-
-
 }

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AccountMenu } from "@/components/account-menu";
+import { MobileAccountSheet } from "@/components/mobile-account-sheet";
 import { brand } from "@/lib/brand";
 import { getStoredUser, subscribeSessionChange, type AppRole } from "@/lib/session";
 
@@ -98,8 +99,11 @@ export function NavbarTop() {
           >
             Mis tokens
           </Link>
-          <div className="border-l border-white/10 pl-3">
+          <div className="hidden border-l border-white/10 pl-3 lg:block">
             <AccountMenu onSessionChange={syncRole} />
+          </div>
+          <div className="lg:hidden">
+            <MobileAccountSheet onSessionChange={syncRole} />
           </div>
         </div>
       </div>

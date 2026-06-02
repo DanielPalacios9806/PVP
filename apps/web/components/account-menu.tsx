@@ -187,10 +187,21 @@ export function AccountMenu({ onSessionChange }: AccountMenuProps) {
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 top-[calc(100%+12px)] z-[70] max-h-[calc(100vh-5.5rem)] w-[min(24rem,calc(100vw-1.5rem))] overflow-y-auto rounded-[20px] border border-white/10 bg-[rgba(5,8,12,0.98)] shadow-[0_24px_70px_rgba(0,0,0,0.58)] backdrop-blur-xl">
+        <div className="fixed inset-x-3 bottom-[5.25rem] top-[4.25rem] z-[90] flex max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[20px] border border-white/10 bg-[rgba(5,8,12,0.98)] shadow-[0_24px_70px_rgba(0,0,0,0.58)] backdrop-blur-xl lg:absolute lg:inset-auto lg:right-0 lg:top-[calc(100%+12px)] lg:z-[70] lg:max-h-[calc(100vh-5.5rem)] lg:w-[min(24rem,calc(100vw-1.5rem))]">
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-bold text-white/70 transition hover:border-[var(--ds-border-cyan)] hover:text-white lg:hidden"
+            aria-label="Cerrar menu de cuenta"
+            title="Cerrar"
+          >
+            ×
+          </button>
+
           {user ? (
             <>
-              <div className="border-b border-white/8 p-5">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                <div className="border-b border-white/8 p-4 pr-12 lg:p-5">
                 <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--ds-cyan-primary)]">Cuenta Darkside</p>
                 <div className="mt-4 flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--ds-border-red)] bg-[rgba(255,36,56,0.14)] text-sm font-bold uppercase text-white">
@@ -213,12 +224,12 @@ export function AccountMenu({ onSessionChange }: AccountMenuProps) {
                     </p>
                   </div>
                 </div>
-                <p className="mt-3 rounded-[14px] border border-white/8 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-white/58">
+                <p className="mt-3 hidden rounded-[14px] border border-white/8 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-white/58 lg:block">
                   {roleDescriptions[user.role]}
                 </p>
               </div>
 
-              <div className="grid gap-4 p-3">
+              <div className="grid gap-2 p-3 lg:gap-4">
                 {visibleSections.map((section) => (
                   <div key={section.title}>
                     <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/36">{section.title}</p>
@@ -228,10 +239,10 @@ export function AccountMenu({ onSessionChange }: AccountMenuProps) {
                           key={`${section.title}-${link.label}`}
                           href={link.href}
                           onClick={() => setIsOpen(false)}
-                          className="group rounded-[14px] px-4 py-3 transition hover:bg-white/[0.06]"
+                          className="group rounded-[14px] px-4 py-2.5 transition hover:bg-white/[0.06] lg:py-3"
                         >
                           <span className="block text-sm font-semibold text-white/82 group-hover:text-white">{link.label}</span>
-                          <span className="mt-1 block text-xs leading-5 text-white/42 group-hover:text-white/58">{link.description}</span>
+                          <span className="mt-1 hidden text-xs leading-5 text-white/42 group-hover:text-white/58 lg:block">{link.description}</span>
                         </Link>
                       ))}
                     </div>
@@ -239,22 +250,24 @@ export function AccountMenu({ onSessionChange }: AccountMenuProps) {
                 ))}
               </div>
 
-              <div className="border-t border-white/8 p-4">
+              </div>
+
+              <div className="shrink-0 border-t border-white/8 bg-[rgba(5,8,12,0.99)] p-3 lg:p-4">
                 <Link
                   href="/dashboard/tokens"
                   onClick={() => setIsOpen(false)}
-                  className="mb-3 flex items-center justify-between rounded-[14px] border border-[var(--ds-border-cyan)] bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white"
+                  className="mb-2 flex items-center justify-between rounded-[14px] border border-[var(--ds-border-cyan)] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white lg:mb-3 lg:py-3"
                 >
                   {tokenActionLabel}
                   <Image src="/assets/darkside/icons/icon-arrow-right.svg" alt="" width={14} height={14} />
                 </Link>
-                <p className="mb-3 text-xs leading-5 text-white/45">
+                <p className="mb-3 hidden text-xs leading-5 text-white/45 lg:block">
                   Los tokens son internos y no se pueden retirar ni convertir a dinero.
                 </p>
                 <button
                   type="button"
                   onClick={logout}
-                  className="w-full rounded-[14px] border border-[var(--ds-border-red)] px-4 py-3 text-sm font-bold text-[var(--ds-red-primary)] transition hover:bg-[rgba(255,36,56,0.12)]"
+                  className="w-full rounded-[14px] border border-[var(--ds-border-red)] bg-[rgba(255,36,56,0.08)] px-4 py-3 text-sm font-bold text-[var(--ds-red-primary)] transition hover:bg-[rgba(255,36,56,0.12)]"
                 >
                   Cerrar sesion
                 </button>

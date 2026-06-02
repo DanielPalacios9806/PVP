@@ -38,6 +38,14 @@ export const externalUiLibraries: ExternalUiLibrary[] = [
     darksideUsage: ["nav icons", "dashboard widgets", "tournament metadata", "empty states"],
     applyNow: true
   },
+
+  {
+    name: "XYFlow / React Flow",
+    packageNames: ["@xyflow/react"],
+    role: "Brackets interactivos con nodos, conexiones, pan y zoom.",
+    darksideUsage: ["tournament bracket", "match nodes", "round connectors", "admin bracket preview"],
+    applyNow: true
+  },
   {
     name: "Recharts",
     packageNames: ["recharts"],
@@ -86,7 +94,7 @@ export const externalUiScreens = {
   },
   tournamentDetail: {
     objective: "Event page cinematográfica con bracket y operación contextual.",
-    externalPatterns: ["event hero", "Radix tabs", "bracket panel", "right activity rail"],
+    externalPatterns: ["event hero", "Radix tabs", "XYFlow bracket", "right activity rail"],
     files: ["apps/web/components/tournament-detail.tsx", "apps/web/components/bracket-board.tsx"]
   }
 } as const;

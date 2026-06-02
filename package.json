@@ -35,5 +35,8 @@
     "prisma": "^6.8.2",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.11.0"
   }
 }

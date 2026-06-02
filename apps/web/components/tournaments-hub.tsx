@@ -33,10 +33,7 @@ const topTabs = [
   "Torneos",
   "Equipos inscritos",
   "Reglas",
-  "Brackets",
-  "Match rooms",
-  "Comunidad",
-  "Riot mock"
+  "Brackets"
 ];
 
 const formatFilters = ["1vs1", "2vs2", "3vs3", "4vs4", "5vs5"];
