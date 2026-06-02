@@ -2,16 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import * as Dialog from "@radix-ui/react-dialog";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Flame,
+  ListFilter,
   Plus,
   Search,
   ShieldCheck,
   SlidersHorizontal,
   Trophy,
+  X,
   UsersRound
 } from "lucide-react";
 import { apiUrl, getAuthHeaders } from "@/lib/config";
@@ -274,6 +277,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
   const [activeFormats, setActiveFormats] = useState<string[]>([]);
   const [activeStatus, setActiveStatus] = useState<HubStatus | "ALL">("ALL");
   const [query, setQuery] = useState("");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -333,10 +337,92 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
     setQuery("");
   }
 
+  function clearAndCloseMobileFilters() {
+    resetFilters();
+    setMobileFiltersOpen(false);
+  }
+
+  const hasActiveFilters = Boolean(query.trim()) || activeFormats.length > 0 || activeStatus !== "ALL";
+
+  const mobileFilterPanel = (
+    <div className="space-y-5">
+      <section className="rounded-[20px] border border-white/10 bg-white/[0.035] p-4">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-[#ff4254]">Juego activo</p>
+        <div className="mt-4 grid gap-3">
+          {gameShowcase.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              onClick={() => setMobileFiltersOpen(false)}
+              className={`flex items-center justify-between rounded-[16px] border px-4 py-3 text-sm font-semibold transition ${
+                item.id === gameKey
+                  ? "border-[#18e6f2]/45 bg-[#18e6f2]/10 text-white"
+                  : "border-white/10 bg-black/24 text-white/70 hover:border-white/20"
+              }`}
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <Image src={item.image} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+                <span className="truncate">{item.title}</span>
+              </span>
+              <span className="text-[#18e6f2]">{item.id === "lol" ? cards.length * 2 : cards.length}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-[20px] border border-white/10 bg-white/[0.035] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">Formato</p>
+          <button onClick={clearAndCloseMobileFilters} className="text-xs font-bold text-[#18e6f2]">Limpiar</button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {formatFilters.map((format) => (
+            <button
+              key={format}
+              onClick={() => toggleFormat(format)}
+              className={`rounded-[14px] border px-4 py-3 text-left text-sm font-bold transition ${
+                activeFormats.includes(format)
+                  ? "border-[#ff2438]/45 bg-[#ff2438]/10 text-white"
+                  : "border-white/10 bg-black/24 text-white/62 hover:border-white/20 hover:text-white"
+              }`}
+            >
+              {format}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-[20px] border border-white/10 bg-white/[0.035] p-4">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">Estado</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setActiveStatus("ALL")}
+            className={`rounded-[14px] border px-3 py-3 text-xs font-black uppercase tracking-[0.12em] ${
+              activeStatus === "ALL" ? "border-white/25 bg-white/10 text-white" : "border-white/10 text-white/48"
+            }`}
+          >
+            Todos
+          </button>
+          {statusFilters.map((status) => (
+            <button
+              key={status}
+              onClick={() => setActiveStatus(status)}
+              className={`rounded-[14px] border px-3 py-3 text-xs font-black uppercase tracking-[0.12em] ${
+                activeStatus === status ? statusClass(status) : "border-white/10 text-white/48"
+              }`}
+            >
+              {status === "OPEN" ? "Abiertos" : status === "LIVE" ? "En vivo" : "Final"}
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+
   return (
-    <div className="tournaments-hub-stage min-w-0 overflow-hidden bg-[#05080d] pb-12 text-white">
-      <div className="mx-auto grid max-w-[1480px] gap-5 px-4 py-5 lg:grid-cols-[292px_minmax(0,1fr)] lg:px-6 2xl:px-8">
-        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+    <div className="tournaments-hub-stage min-w-0 overflow-hidden bg-[#05080d] pb-20 text-white lg:pb-12">
+      <div className="mx-auto grid max-w-[1480px] gap-5 px-3 py-4 sm:px-4 lg:grid-cols-[292px_minmax(0,1fr)] lg:px-6 lg:py-5 2xl:px-8">
+        <aside className="hidden space-y-5 lg:sticky lg:top-24 lg:block lg:self-start">
           <section className="rounded-[22px] border border-white/10 bg-[#0b111b]/94 p-5 shadow-[0_18px_44px_rgba(0,0,0,0.28)]">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-[#18e6f2]/25 bg-[#18e6f2]/10">
@@ -432,8 +518,62 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
           </section>
         </aside>
 
-        <main className="min-w-0 space-y-5">
-          <section className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[#0b111b] p-5 shadow-[0_22px_50px_rgba(0,0,0,0.26)] lg:p-6">
+        <main className="min-w-0 space-y-4 lg:space-y-5">
+          <section className="tournaments-mobile-command rounded-[22px] border border-white/10 bg-[#0b111b]/94 p-4 shadow-[0_16px_36px_rgba(0,0,0,0.28)] lg:hidden">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#ff4254]">Arena competitiva</p>
+                <h1 className="mt-1 text-2xl font-black text-white">Torneos Darkside</h1>
+                <p className="mt-2 text-sm leading-6 text-white/55">Explora juegos, estados y formatos sin perder el centro de entretenimiento.</p>
+              </div>
+
+              <Dialog.Root open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+                <Dialog.Trigger asChild>
+                  <button className="relative inline-flex shrink-0 items-center gap-2 rounded-[14px] border border-[#18e6f2]/35 bg-[#18e6f2]/10 px-4 py-3 text-sm font-black text-[#bffaff] shadow-[0_12px_30px_rgba(24,230,242,0.12)]">
+                    <ListFilter className="h-4 w-4" />
+                    Filtros
+                    {hasActiveFilters ? <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border border-[#05080d] bg-[#ff2438]" /> : null}
+                  </button>
+                </Dialog.Trigger>
+                <Dialog.Portal>
+                  <Dialog.Overlay className="fixed inset-0 z-[80] bg-black/72 backdrop-blur-sm lg:hidden" />
+                  <Dialog.Content className="fixed inset-x-3 bottom-[82px] top-4 z-[90] overflow-hidden rounded-[24px] border border-white/10 bg-[#070b12]/98 text-white shadow-[0_26px_90px_rgba(0,0,0,0.62)] lg:hidden">
+                    <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                      <div>
+                        <Dialog.Title className="text-lg font-black text-white">Filtros de torneos</Dialog.Title>
+                        <Dialog.Description className="mt-1 text-xs text-white/45">Juego, estado y formato competitivo.</Dialog.Description>
+                      </div>
+                      <Dialog.Close asChild>
+                        <button className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/70">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </Dialog.Close>
+                    </div>
+                    <div className="max-h-[calc(100vh-168px)] overflow-y-auto px-4 py-5">
+                      {mobileFilterPanel}
+                    </div>
+                  </Dialog.Content>
+                </Dialog.Portal>
+              </Dialog.Root>
+            </div>
+
+            <label className="mt-4 flex min-w-0 items-center gap-3 rounded-[16px] border border-white/10 bg-black/28 px-4 py-3 text-sm text-white/45 focus-within:border-[#18e6f2]/45 focus-within:text-white/70">
+              <Search className="h-4 w-4 text-[#18e6f2]" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar torneo, formato o comunidad..."
+                className="min-w-0 flex-1 bg-transparent text-white outline-none placeholder:text-white/35"
+              />
+            </label>
+
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-[14px] border border-white/10 bg-white/[0.035] p-3"><strong className="block text-lg text-[#40ff91]">{openCount}</strong><span className="text-[10px] uppercase tracking-[0.12em] text-white/35">Abiertos</span></div>
+              <div className="rounded-[14px] border border-white/10 bg-white/[0.035] p-3"><strong className="block text-lg text-[#18e6f2]">{liveCount}</strong><span className="text-[10px] uppercase tracking-[0.12em] text-white/35">En vivo</span></div>
+              <div className="rounded-[14px] border border-white/10 bg-white/[0.035] p-3"><strong className="block text-lg text-white">{visibleCards.length}</strong><span className="text-[10px] uppercase tracking-[0.12em] text-white/35">Visibles</span></div>
+            </div>
+          </section>
+          <section className="relative overflow-hidden rounded-[22px] border border-white/10 bg-[#0b111b] p-4 shadow-[0_22px_50px_rgba(0,0,0,0.26)] sm:p-5 lg:rounded-[24px] lg:p-6">
             <Image src={config.cover} alt={config.title} fill className="object-cover object-center opacity-45" priority />
             <div className={`absolute inset-0 bg-gradient-to-r ${config.accent}`} />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_35%,rgba(255,36,56,0.24),transparent_25%),radial-gradient(circle_at_78%_70%,rgba(24,230,242,0.16),transparent_24%)]" />
@@ -441,7 +581,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-[#ff4254]">Destacado</p>
                 <div className="mt-3 flex flex-wrap items-center gap-4">
-                  <h2 className="font-heading text-[clamp(2.25rem,6vw,4.7rem)] font-black leading-[0.95] text-white">Darkside Cup</h2>
+                  <h2 className="font-heading text-[clamp(2rem,14vw,4.7rem)] font-black leading-[0.92] text-white sm:text-[clamp(2.25rem,6vw,4.7rem)]">Darkside Cup</h2>
                   <Image src={config.logo} alt={config.title} width={62} height={62} className="hidden h-14 w-14 object-contain sm:block" />
                 </div>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-white/70">Torneos competitivos con brackets, check-in, salas y recompensas internas no monetarias. Tu centro de entretenimiento competitivo.</p>
@@ -494,7 +634,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
             </div>
           </section>
 
-          <section className="rounded-[22px] border border-white/10 bg-[#0b111b]/92 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.25)]">
+          <section className="hidden rounded-[22px] border border-white/10 bg-[#0b111b]/92 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.25)] lg:block">
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px] xl:items-center">
               <label className="flex min-w-0 items-center gap-3 rounded-[16px] border border-white/10 bg-black/28 px-4 py-3 text-sm text-white/45 focus-within:border-[#18e6f2]/45 focus-within:text-white/70">
                 <Search className="h-4 w-4 text-[#18e6f2]" />
@@ -520,7 +660,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
                 className="tournaments-hub-card group block overflow-hidden rounded-[22px] border border-white/10 bg-[#0b111b]/94 transition hover:border-[#18e6f2]/25 hover:shadow-[0_18px_50px_rgba(24,230,242,0.08)]"
               >
                 <div className="grid gap-0 xl:grid-cols-[260px_minmax(0,1fr)_210px]">
-                  <div className="relative min-h-[170px] bg-[#111722]">
+                  <div className="relative min-h-[128px] bg-[#111722] sm:min-h-[170px]">
                     <Image src={config.cover} alt={card.name} fill className="object-cover opacity-76 transition duration-500 group-hover:scale-[1.04]" />
                     <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(8,12,18,0.10),rgba(8,12,18,0.9))]" />
                     {card.participating ? <span className="absolute left-3 top-3 rounded-full bg-[#18e6f2] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-black">Participando</span> : null}
@@ -536,9 +676,9 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#18e6f2]">{card.game}</p>
                       <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${statusClass(card.status)}`}>{statusLabel(card.status)}</span>
                     </div>
-                    <h3 className="mt-3 text-2xl font-black text-white sm:text-3xl">{card.name}</h3>
-                    <p className="mt-3 max-w-3xl text-sm leading-7 text-white/58">{card.copy}</p>
-                    <div className="mt-5 grid gap-3 text-sm text-white/58 sm:grid-cols-2 xl:grid-cols-4">
+                    <h3 className="mt-3 text-xl font-black text-white sm:text-3xl">{card.name}</h3>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-white/58 sm:leading-7">{card.copy}</p>
+                    <div className="mt-5 grid gap-2 text-xs text-white/58 sm:grid-cols-2 sm:text-sm xl:grid-cols-4">
                       <span className="inline-flex items-center gap-2"><Trophy className="h-4 w-4 text-[#ffb21d]" />{card.prize}</span>
                       <span className="inline-flex items-center gap-2"><UsersRound className="h-4 w-4 text-[#ff4254]" />{card.mode}</span>
                       <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#18e6f2]" />{card.requiresRiot ?? tournamentRequiresRiotAccount(card.game) ? "Riot ID requerido" : "Sin requisito Riot"}</span>
@@ -546,7 +686,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
                     </div>
                   </div>
 
-                  <div className="flex flex-col justify-between border-t border-white/8 p-5 xl:border-l xl:border-t-0">
+                  <div className="flex flex-col justify-between border-t border-white/8 p-4 sm:p-5 xl:border-l xl:border-t-0">
                     <div>
                       <p className="text-xs font-black uppercase tracking-[0.16em] text-white/35">Inscripción</p>
                       <strong className="mt-2 block text-xl text-white">Tokens internos</strong>

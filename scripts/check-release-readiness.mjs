@@ -180,6 +180,7 @@ check("Tournament detail mockup fidelity documentado", file("docs/TOURNAMENT_DET
 check("Tournament detail pro bracket documentado", file("docs/TOURNAMENT_DETAIL_PRO_BRACKET.md"));
 check("Tournament detail layout fidelity documentado", file("docs/TOURNAMENT_DETAIL_LAYOUT_FIDELITY.md"));
 check("Tournaments hub layout fidelity documentado", file("docs/TOURNAMENTS_HUB_LAYOUT_FIDELITY.md"));
+check("Tournaments hub mobile polish documentado", file("docs/TOURNAMENTS_HUB_MOBILE_POLISH.md"));
 check("Right activity rail UX documentado", file("docs/RIGHT_ACTIVITY_RAIL_UX.md"));
 check("Right activity rail global documentado", file("docs/RIGHT_ACTIVITY_RAIL_GLOBAL.md"));
 
@@ -205,6 +206,8 @@ const tournamentsHub = file("apps/web/components/tournaments-hub.tsx") ? read("a
 check("Tournaments hub usa stage dedicado", tournamentsHub.includes("tournaments-hub-stage") && tournamentsHub.includes("Arena competitiva"));
 check("Tournaments hub tiene busqueda funcional", tournamentsHub.includes("normalizeForSearch") && tournamentsHub.includes("setQuery"));
 check("Tournaments hub distribuye cards premium", tournamentsHub.includes("tournaments-hub-card") && tournamentsHub.includes("xl:grid-cols-[260px_minmax(0,1fr)_210px]"));
+check("Tournaments hub usa filtros mobile drawer", tournamentsHub.includes("tournaments-mobile-command") && tournamentsHub.includes("mobileFilterPanel") && tournamentsHub.includes("Dialog.Content"));
+check("Tournaments hub oculta sidebar en mobile", tournamentsHub.includes("hidden space-y-5 lg:sticky") && tournamentsHub.includes("lg:block"));
 
 const dashboardGridWrapper = file("apps/web/components/dashboard-grid-wrapper.tsx") ? read("apps/web/components/dashboard-grid-wrapper.tsx") : "";
 check("Dashboard mantiene rail derecho colapsable en torneos", dashboardGridWrapper.includes("rightRailExpandedColumns") && dashboardGridWrapper.includes("rightRailCollapsedColumns") && dashboardGridWrapper.includes("shouldRenderRightRail = showRightSidebar && Boolean(rightSidebar)"));
