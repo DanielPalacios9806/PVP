@@ -41,12 +41,19 @@ tests/bruno/
 Ejecutar antes de push a `main`:
 
 ```powershell
-npx -y -p node@22 -p npm@10 npm run build:web
-npx -y -p node@22 -p npm@10 npm run build:api
-npx -y -p node@22 -p npm@10 npm run check:release
+npm run build
+npm run check:release
+npm run check:riot
+npm run check:riotapp
+npm run check:riotsubmit
+$env:SMOKE_WEB_URL="https://darkside.cool"
+$env:SMOKE_API_URL="https://api.darkside.cool/api"
+npm run check:prodhealth
+Remove-Item Env:\SMOKE_WEB_URL
+Remove-Item Env:\SMOKE_API_URL
 ```
 
-El push a `main` debe hacerse solo si los tres comandos pasan y `git status --short` contiene unicamente cambios esperados.
+El push a `main` debe hacerse solo si todos los comandos pasan y `git status --short` está limpio o contiene únicamente cambios esperados.
 
 ## Scripts principales
 - `npm run dev:web`
