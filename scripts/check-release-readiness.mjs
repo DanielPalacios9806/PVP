@@ -189,8 +189,13 @@ check("Admin Ops center polish documentado", file("docs/ADMIN_OPS_CENTER_POLISH.
 check("Riot key rotation y Render env documentado", file("docs/RIOT_KEY_ROTATION_AND_RENDER_ENV.md"));
 check("Pre-beta deploy checklist documentado", file("docs/PRE_BETA_DEPLOY_CHECKLIST.md"));
 check("Main release bridge documentado", file("docs/MAIN_RELEASE_BRIDGE.md"));
+check("Production hardening documentado", file("docs/PRODUCTION_HARDENING.md"));
+check("Render Supabase runtime documentado", file("docs/RENDER_SUPABASE_RUNTIME.md"));
+check("Incident rollback runbook documentado", file("docs/INCIDENT_ROLLBACK_RUNBOOK.md"));
 check("Script Riot readiness existe", file("scripts/riot-readiness-check.mjs"));
 check("Script pre-beta smoke existe", file("scripts/prebeta-smoke-check.mjs"));
+check("Script Render env audit existe", file("scripts/render-env-audit.mjs"));
+check("Script production health existe", file("scripts/production-health-check.mjs"));
 
 const accountCenter = file("apps/web/components/account-center.tsx") ? read("apps/web/components/account-center.tsx") : "";
 check("Account dashboard muestra estado Riot", accountCenter.includes("Riot readiness") && accountCenter.includes("RiotLinkCard") && accountCenter.includes("RIOT backend protegido"));
@@ -208,6 +213,13 @@ check("Admin Ops center separa roles", adminOpsCenter.includes("opsCards") && ad
 check("Admin quick access usa rutas operativas", adminQuickAccess.includes("Operacion Riot") && adminQuickAccess.includes("Auditoria") && adminQuickAccess.includes("/dashboard/moderation"));
 check("Admin token panel declara tokens no monetarios", adminTokenPanel.includes("Token Ledger") && adminTokenPanel.includes("no monetarios") && adminTokenPanel.includes("No representa dinero real"));
 check("Moderation page usa war room", moderationPage.includes("Moderacion / War room") && moderationPage.includes("integridad competitiva"));
+
+const apiRoutes = file("apps/api/src/routes/index.ts") ? read("apps/api/src/routes/index.ts") : "";
+const apiEnv = file("apps/api/src/config/env.ts") ? read("apps/api/src/config/env.ts") : "";
+check("API expone health runtime", apiRoutes.includes('/health/runtime') && apiRoutes.includes("corsOriginsConfigured") && apiRoutes.includes("getRiotRuntimeConfig"));
+check("API expone readiness DB", apiRoutes.includes('/health/readiness') && apiRoutes.includes("prisma.$queryRaw") && apiRoutes.includes("database"));
+check("API env declara SERVER_ENV", apiEnv.includes("SERVER_ENV") && apiEnv.includes("staging"));
+check("API env declara DIRECT_URL opcional", apiEnv.includes("DIRECT_URL"));
 
 const publicLanding = file("apps/web/components/public-landing.tsx") ? read("apps/web/components/public-landing.tsx") : "";
 check("Home pÃºblica usa Motion", publicLanding.includes('from "motion/react"'));
@@ -293,7 +305,10 @@ check("Script check:release existe", packageJson.includes('"check:release"'));
 check("Script check:smoke existe", packageJson.includes('"check:smoke"'));
 check("Script check:riot existe", packageJson.includes('"check:riot"') && packageJson.includes("riot-readiness-check.mjs"));
 check("Script check:prebeta existe", packageJson.includes('"check:prebeta"') && packageJson.includes("prebeta-smoke-check.mjs"));
+check("Script check:render existe", packageJson.includes('"check:render"') && packageJson.includes("render-env-audit.mjs"));
+check("Script check:prodhealth existe", packageJson.includes('"check:prodhealth"') && packageJson.includes("production-health-check.mjs"));
 check("Script release:prebeta existe", packageJson.includes('"release:prebeta"'));
+check("Script release:production existe", packageJson.includes('"release:production"'));
 
 const nextConfig = file("apps/web/next.config.ts") ? read("apps/web/next.config.ts") : "";
 check("Next standalone activo para Render", nextConfig.includes('output: "standalone"'));
@@ -301,12 +316,14 @@ check("Data Dragon permitido para imÃ¡genes", nextConfig.includes("ddragon.lea
 
 const renderYaml = file("render.yaml") ? read("render.yaml") : "";
 const renderServiceBlocks = renderYaml.split(/\n\s*-\s*type:\s*web\s*\n/g);
-const renderApiService = renderServiceBlocks.find((block) => /arena-os-api|api-staging|apps\/api|startCommand:\s*npm\s+--workspace\s+apps\/api/i.test(block)) ?? renderYaml;
-const renderWebService = renderServiceBlocks.find((block) => /arena-os-web|web-staging|apps\/web|startCommand:\s*cd\s+apps\/web/i.test(block)) ?? "";
+const renderApiService = renderServiceBlocks.find((block) => /^\s*name:\s*arena-os-api-staging\s*$/m.test(block) || /startCommand:\s*npm\s+--workspace\s+apps\/api/i.test(block)) ?? renderYaml;
+const renderWebService = renderServiceBlocks.find((block) => /^\s*name:\s*arena-os-web-staging\s*$/m.test(block) || /startCommand:\s*cd\s+apps\/web/i.test(block)) ?? "";
 check("Render API declara RIOT_API_KEY sync:false", /^\s*-\s*key:\s*RIOT_API_KEY\s*$/m.test(renderApiService) && /RIOT_API_KEY[\s\S]{0,120}sync:\s*false/m.test(renderApiService));
 check("Render API queda en modo Riot development para pre-beta", /^\s*-\s*key:\s*RIOT_API_MODE\s*$/m.test(renderApiService) && /RIOT_API_MODE[\s\S]{0,120}value:\s*development/m.test(renderApiService));
 check("Render Web no declara RIOT_API_KEY privada", !/^\s*-\s*key:\s*RIOT_API_KEY\s*$/m.test(renderWebService));
 check("Render Web no declara NEXT_PUBLIC_RIOT_API_KEY", !/NEXT_PUBLIC_RIOT_API_KEY/m.test(renderWebService));
+check("Render Web apunta al API staging", /NEXT_PUBLIC_API_URL[\s\S]{0,120}arena-os-api-staging\.onrender\.com\/api/m.test(renderWebService));
+check("Render API CORS incluye Web staging", renderApiService.includes("arena-os-web-staging-6x5f.onrender.com"));
 
 const envExamples = [".env.example", ".env.render.example", ".env.server.example"].filter(file);
 check("Existe al menos un env example", envExamples.length > 0);
