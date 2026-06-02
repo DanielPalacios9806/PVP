@@ -104,3 +104,22 @@ La API key se mantiene exclusivamente en backend/variables de entorno de producc
 - No decir que Riot ID está oficialmente vinculado sin RSO.
 - No presentar DS_TOKEN como moneda, premio económico o retiro.
 - No usar logos de Riot como marca principal de Darkside.cool.
+
+## Paquete 2X-P de solicitud Riot
+
+Antes de enviar cualquier solicitud formal, revisar el paquete interno:
+
+- `docs/RIOT_APPLICATION_PACKAGE.md`
+- `docs/RIOT_API_USAGE_MAP.md`
+- `docs/RIOT_COMPLIANCE_MATRIX.md`
+- `docs/RIOT_DEMO_SCRIPT.md`
+- `docs/RIOT_SCREENSHOT_EVIDENCE.md`
+- `docs/RIOT_PRODUCTION_REQUEST_DRAFT.md`
+- `docs/RIOT_APPLICATION_CHECKLIST.md`
+
+Validar con:
+
+```powershell
+npm run check:riotapp
+npm run release:riotapp
+```

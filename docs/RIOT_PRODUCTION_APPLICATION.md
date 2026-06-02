@@ -78,3 +78,19 @@ Estados usados:
 - [ ] Demo de torneos funcionando.
 - [ ] Moderacion y auditoria funcionando.
 - [ ] Dominio verificado cuando Riot lo solicite.
+
+## Evidencia 2X-P para la solicitud
+
+El paquete de solicitud se mantiene separado de la configuración real de secretos. Los documentos de `RIOT_APPLICATION_PACKAGE`, `RIOT_COMPLIANCE_MATRIX`, `RIOT_DEMO_SCRIPT`, `RIOT_SCREENSHOT_EVIDENCE`, `RIOT_API_USAGE_MAP` y `RIOT_PRODUCTION_REQUEST_DRAFT` funcionan como guía de revisión previa.
+
+Antes de enviar a Riot:
+
+```powershell
+npm run check:release
+npm run check:riot
+npm run check:riotapp
+npm run check:prodhealth
+npm run check:visual
+```
+
+Si una development key apareció en consola, chat, logs o capturas, debe rotarse antes de enviar evidencia formal.
