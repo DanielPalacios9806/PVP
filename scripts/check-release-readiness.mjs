@@ -175,6 +175,13 @@ check("External UI Fusion documentado", file("docs/EXTERNAL_UI_FUSION.md"));
 check("Mapa funcional UX documentado", file("docs/UX_NAVIGATION_FUNCTIONAL_MAP.md"));
 check("Mapa de navegación frontend existe", file("apps/web/lib/navigation-map.ts"));
 check("Mapa de librerías externas existe", file("apps/web/lib/external-ui-map.ts"));
+check("Home External UI Fusion documentado", file("docs/HOME_EXTERNAL_UI_FUSION.md"));
+
+const publicLanding = file("apps/web/components/public-landing.tsx") ? read("apps/web/components/public-landing.tsx") : "";
+check("Home pública usa Motion", publicLanding.includes('from "motion/react"'));
+check("Home pública usa Lucide React", publicLanding.includes('from "lucide-react"'));
+check("Home pública mantiene hero Darkside oficial", publicLanding.includes("heroDesktop") && publicLanding.includes("heroMobile"));
+check("Home pública oculta navegación admin directa", !publicLanding.includes("/dashboard/admin") && !publicLanding.includes("/dashboard/moderation"));
 
 const webPackageJson = file("apps/web/package.json") ? read("apps/web/package.json") : "";
 const requiredWebDeps = [
