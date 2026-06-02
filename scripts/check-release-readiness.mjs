@@ -200,12 +200,17 @@ check("Riot API usage map documentado", file("docs/RIOT_API_USAGE_MAP.md"));
 check("Riot screenshot evidence documentado", file("docs/RIOT_SCREENSHOT_EVIDENCE.md"));
 check("Riot production request draft documentado", file("docs/RIOT_PRODUCTION_REQUEST_DRAFT.md"));
 check("Riot application checklist documentado", file("docs/RIOT_APPLICATION_CHECKLIST.md"));
+check("Beta launch checklist documentado", file("docs/BETA_LAUNCH_CHECKLIST.md"));
+check("Beta tester guide documentado", file("docs/BETA_TESTER_GUIDE.md"));
+check("Beta rollback and support documentado", file("docs/BETA_ROLLBACK_AND_SUPPORT.md"));
+check("Beta release notes draft documentado", file("docs/BETA_RELEASE_NOTES_DRAFT.md"));
 check("Script Riot readiness existe", file("scripts/riot-readiness-check.mjs"));
 check("Script pre-beta smoke existe", file("scripts/prebeta-smoke-check.mjs"));
 check("Script Render env audit existe", file("scripts/render-env-audit.mjs"));
 check("Script production health existe", file("scripts/production-health-check.mjs"));
 check("Script visual QA screenshots existe", file("scripts/visual-qa-screenshots.mjs"));
 check("Script Riot application package existe", file("scripts/riot-application-package-check.mjs"));
+check("Script beta launch checklist existe", file("scripts/beta-launch-checklist.mjs"));
 
 const riotApplicationPackage = file("docs/RIOT_APPLICATION_PACKAGE.md") ? read("docs/RIOT_APPLICATION_PACKAGE.md") : "";
 const riotComplianceMatrix = file("docs/RIOT_COMPLIANCE_MATRIX.md") ? read("docs/RIOT_COMPLIANCE_MATRIX.md") : "";
@@ -333,6 +338,8 @@ check("Script check:visual existe", packageJson.includes('"check:visual"') && pa
 check("Script check:riotapp existe", packageJson.includes('"check:riotapp"') && packageJson.includes("riot-application-package-check.mjs"));
 check("Script release:riotapp existe", packageJson.includes('"release:riotapp"'));
 check("Script release:production existe", packageJson.includes('"release:production"'));
+check("Script check:beta existe", packageJson.includes('"check:beta"') && packageJson.includes("beta-launch-checklist.mjs"));
+check("Script release:beta existe", packageJson.includes('"release:beta"'));
 
 const gitignore = file(".gitignore") ? read(".gitignore") : "";
 check("Visual QA artifacts ignorados", gitignore.includes("visual-qa-artifacts/"));
