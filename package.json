@@ -27,6 +27,7 @@
     "check:smoke": "node scripts/production-smoke-check.mjs",
     "release:preflight": "npm run build && npm run check:release && npm run check:riot && npm run check:render",
     "check:riot": "node scripts/riot-readiness-check.mjs",
+    "check:riotapp": "node scripts/riot-application-package-check.mjs",
     "check:prebeta": "node scripts/prebeta-smoke-check.mjs",
     "release:prebeta": "npm run build && npm run check:release && npm run check:riot && npm run check:prebeta",
     "check:render": "node scripts/render-env-audit.mjs",
@@ -34,7 +35,8 @@
     "check:visual": "node scripts/visual-qa-screenshots.mjs",
     "visual:screenshots": "node scripts/visual-qa-screenshots.mjs",
     "release:visual": "npm run check:visual",
-    "release:production": "npm run build && npm run check:release && npm run check:riot && npm run check:render"
+    "release:production": "npm run build && npm run check:release && npm run check:riot && npm run check:riotapp && npm run check:render",
+    "release:riotapp": "npm run check:release && npm run check:riot && npm run check:riotapp"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

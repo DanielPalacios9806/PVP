@@ -193,11 +193,30 @@ check("Production hardening documentado", file("docs/PRODUCTION_HARDENING.md"));
 check("Render Supabase runtime documentado", file("docs/RENDER_SUPABASE_RUNTIME.md"));
 check("Incident rollback runbook documentado", file("docs/INCIDENT_ROLLBACK_RUNBOOK.md"));
 check("Visual QA screenshots documentado", file("docs/VISUAL_QA_SCREENSHOTS.md"));
+check("Riot application package documentado", file("docs/RIOT_APPLICATION_PACKAGE.md"));
+check("Riot compliance matrix documentado", file("docs/RIOT_COMPLIANCE_MATRIX.md"));
+check("Riot demo script documentado", file("docs/RIOT_DEMO_SCRIPT.md"));
+check("Riot API usage map documentado", file("docs/RIOT_API_USAGE_MAP.md"));
+check("Riot screenshot evidence documentado", file("docs/RIOT_SCREENSHOT_EVIDENCE.md"));
+check("Riot production request draft documentado", file("docs/RIOT_PRODUCTION_REQUEST_DRAFT.md"));
+check("Riot application checklist documentado", file("docs/RIOT_APPLICATION_CHECKLIST.md"));
 check("Script Riot readiness existe", file("scripts/riot-readiness-check.mjs"));
 check("Script pre-beta smoke existe", file("scripts/prebeta-smoke-check.mjs"));
 check("Script Render env audit existe", file("scripts/render-env-audit.mjs"));
 check("Script production health existe", file("scripts/production-health-check.mjs"));
 check("Script visual QA screenshots existe", file("scripts/visual-qa-screenshots.mjs"));
+check("Script Riot application package existe", file("scripts/riot-application-package-check.mjs"));
+
+const riotApplicationPackage = file("docs/RIOT_APPLICATION_PACKAGE.md") ? read("docs/RIOT_APPLICATION_PACKAGE.md") : "";
+const riotComplianceMatrix = file("docs/RIOT_COMPLIANCE_MATRIX.md") ? read("docs/RIOT_COMPLIANCE_MATRIX.md") : "";
+const riotDemoScript = file("docs/RIOT_DEMO_SCRIPT.md") ? read("docs/RIOT_DEMO_SCRIPT.md") : "";
+const riotApiUsageMap = file("docs/RIOT_API_USAGE_MAP.md") ? read("docs/RIOT_API_USAGE_MAP.md") : "";
+const riotProductionDraft = file("docs/RIOT_PRODUCTION_REQUEST_DRAFT.md") ? read("docs/RIOT_PRODUCTION_REQUEST_DRAFT.md") : "";
+check("Riot package describe producto y arquitectura", riotApplicationPackage.includes("Darkside.cool") && riotApplicationPackage.includes("Arena OS") && /Modular monolith|monolito modular/i.test(riotApplicationPackage));
+check("Riot usage map cubre RSO y Tournament API", riotApiUsageMap.includes("RSO") && riotApiUsageMap.includes("Tournament API") && riotApiUsageMap.includes("backend"));
+check("Riot compliance matrix cubre no frontend key", riotComplianceMatrix.includes("NEXT_PUBLIC_RIOT_API_KEY") && riotComplianceMatrix.includes("non-monetary"));
+check("Riot demo script cubre flujos principales", riotDemoScript.includes("Tournaments Hub") && riotDemoScript.includes("Account") && riotDemoScript.includes("Admin"));
+check("Riot production draft listo", riotProductionDraft.includes("web-based esports tournament platform") && riotProductionDraft.includes("backend"));
 
 const accountCenter = file("apps/web/components/account-center.tsx") ? read("apps/web/components/account-center.tsx") : "";
 check("Account dashboard muestra estado Riot", accountCenter.includes("Riot readiness") && accountCenter.includes("RiotLinkCard") && accountCenter.includes("RIOT backend protegido"));
@@ -311,6 +330,8 @@ check("Script check:render existe", packageJson.includes('"check:render"') && pa
 check("Script check:prodhealth existe", packageJson.includes('"check:prodhealth"') && packageJson.includes("production-health-check.mjs"));
 check("Script release:prebeta existe", packageJson.includes('"release:prebeta"'));
 check("Script check:visual existe", packageJson.includes('"check:visual"') && packageJson.includes("visual-qa-screenshots.mjs"));
+check("Script check:riotapp existe", packageJson.includes('"check:riotapp"') && packageJson.includes("riot-application-package-check.mjs"));
+check("Script release:riotapp existe", packageJson.includes('"release:riotapp"'));
 check("Script release:production existe", packageJson.includes('"release:production"'));
 
 const gitignore = file(".gitignore") ? read(".gitignore") : "";
@@ -368,7 +389,3 @@ if (failed) {
 }
 
 console.log("OK RevisiÃ³n local lista. Ejecuta build y smoke test antes de producciÃ³n.");
-
-
-
-
