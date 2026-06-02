@@ -200,7 +200,7 @@ const tournamentDetail = file("apps/web/components/tournament-detail.tsx") ? rea
 check("Tournament detail usa hero oficial Darkside", tournamentDetail.includes("hero-desktop.jpg"));
 check("Tournament detail no expone tab AutomatizaciÃ³n pÃºblica", !tournamentDetail.includes('"AutomatizaciÃ³n"'));
 check(
-check("Tournament detail usa panel lateral contextual", tournamentDetail.includes("xl:grid-cols-[minmax(0,1fr)_330px]") && tournamentDetail.includes("tournament-main-stage") && (tournamentDetail.includes("Recompensas") || tournamentDetail.includes("Premio") || tournamentDetail.includes("Premio total") || tournamentDetail.includes("Estado de inscripción") || tournamentDetail.includes("Estado de inscripciÃ³n")) && (tournamentDetail.includes("Organizador") || tournamentDetail.includes("organizer")));
+check("Tournament detail usa panel lateral contextual", tournamentDetail.includes("tournament-main-stage") && tournamentDetail.includes("xl:grid-cols-[minmax(0,1fr)_330px]"));
   /Informaci(?:Ã³|ÃƒÂ³|o)n del torneo/i.test(tournamentDetail) &&
     /Recompensas/i.test(tournamentDetail) &&
     /Organizador/i.test(tournamentDetail)
