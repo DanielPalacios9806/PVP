@@ -31,6 +31,9 @@
     "release:prebeta": "npm run build && npm run check:release && npm run check:riot && npm run check:prebeta",
     "check:render": "node scripts/render-env-audit.mjs",
     "check:prodhealth": "node scripts/production-health-check.mjs",
+    "check:visual": "node scripts/visual-qa-screenshots.mjs",
+    "visual:screenshots": "node scripts/visual-qa-screenshots.mjs",
+    "release:visual": "npm run check:visual",
     "release:production": "npm run build && npm run check:release && npm run check:riot && npm run check:render"
   },
   "devDependencies": {

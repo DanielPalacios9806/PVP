@@ -192,10 +192,12 @@ check("Main release bridge documentado", file("docs/MAIN_RELEASE_BRIDGE.md"));
 check("Production hardening documentado", file("docs/PRODUCTION_HARDENING.md"));
 check("Render Supabase runtime documentado", file("docs/RENDER_SUPABASE_RUNTIME.md"));
 check("Incident rollback runbook documentado", file("docs/INCIDENT_ROLLBACK_RUNBOOK.md"));
+check("Visual QA screenshots documentado", file("docs/VISUAL_QA_SCREENSHOTS.md"));
 check("Script Riot readiness existe", file("scripts/riot-readiness-check.mjs"));
 check("Script pre-beta smoke existe", file("scripts/prebeta-smoke-check.mjs"));
 check("Script Render env audit existe", file("scripts/render-env-audit.mjs"));
 check("Script production health existe", file("scripts/production-health-check.mjs"));
+check("Script visual QA screenshots existe", file("scripts/visual-qa-screenshots.mjs"));
 
 const accountCenter = file("apps/web/components/account-center.tsx") ? read("apps/web/components/account-center.tsx") : "";
 check("Account dashboard muestra estado Riot", accountCenter.includes("Riot readiness") && accountCenter.includes("RiotLinkCard") && accountCenter.includes("RIOT backend protegido"));
@@ -308,8 +310,11 @@ check("Script check:prebeta existe", packageJson.includes('"check:prebeta"') && 
 check("Script check:render existe", packageJson.includes('"check:render"') && packageJson.includes("render-env-audit.mjs"));
 check("Script check:prodhealth existe", packageJson.includes('"check:prodhealth"') && packageJson.includes("production-health-check.mjs"));
 check("Script release:prebeta existe", packageJson.includes('"release:prebeta"'));
+check("Script check:visual existe", packageJson.includes('"check:visual"') && packageJson.includes("visual-qa-screenshots.mjs"));
 check("Script release:production existe", packageJson.includes('"release:production"'));
 
+const gitignore = file(".gitignore") ? read(".gitignore") : "";
+check("Visual QA artifacts ignorados", gitignore.includes("visual-qa-artifacts/"));
 const nextConfig = file("apps/web/next.config.ts") ? read("apps/web/next.config.ts") : "";
 check("Next standalone activo para Render", nextConfig.includes('output: "standalone"'));
 check("Data Dragon permitido para imÃ¡genes", nextConfig.includes("ddragon.leagueoflegends.com"));

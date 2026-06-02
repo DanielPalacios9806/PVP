@@ -78,3 +78,6 @@ competitive_dashboard_review.zip
 _patches/
 *.patch
 
+visual-qa-artifacts/
+visual-qa-artifacts.zip
+.runtime/visual-qa/

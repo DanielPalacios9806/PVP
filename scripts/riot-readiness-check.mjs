@@ -154,18 +154,31 @@ ok("API package no depende de NEXT_PUBLIC Riot", !apiPackage.includes("NEXT_PUBL
 ok("Web package no declara Riot key pÃºblica", !webPackage.includes("NEXT_PUBLIC_RIOT_API_KEY"));
 
 if (renderYaml) {
-  const serviceBlocks = renderYaml.split(/\n\s*-\s*type:\s*web\s*\n/g);
-  const apiService = serviceBlocks.find((block) => /arena-os-api|api-staging|apps\/api|startCommand:\s*npm\s+--workspace\s+apps\/api/i.test(block)) ?? renderYaml;
-  const webService = serviceBlocks.find((block) => /arena-os-web|web-staging|apps\/web|startCommand:\s*cd\s+apps\/web/i.test(block)) ?? "";
+  const renderServices = renderYaml
+    .split(/\n(?=\s*-\s*type:\s*web\s*\n)/g)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  const apiService =
+    renderServices.find((block) =>
+      /arena-os-api|api-staging|apps\/api|--workspace\s+apps\/api|name:\s*.*api/i.test(block)
+    ) ?? "";
+
+  const webService =
+    renderServices.find((block) =>
+      /arena-os-web|web-staging|apps\/web|name:\s*.*web/i.test(block) &&
+      !/arena-os-api|api-staging|apps\/api|--workspace\s+apps\/api/i.test(block)
+    ) ?? "";
+
+  warn("Render Web service identificado", Boolean(webService), "si usas Dashboard manual, valida variables en docs/PRE_BETA_DEPLOY_CHECKLIST.md");
   ok("Render API declara RIOT_API_KEY como sync:false", /^\s*-\s*key:\s*RIOT_API_KEY\s*$/m.test(apiService) && /RIOT_API_KEY[\s\S]{0,120}sync:\s*false/m.test(apiService));
   ok("Render Web no declara RIOT_API_KEY privada", !/^\s*-\s*key:\s*RIOT_API_KEY\s*$/m.test(webService));
   ok("Render Web no declara NEXT_PUBLIC_RIOT_API_KEY", !/NEXT_PUBLIC_RIOT_API_KEY/m.test(webService));
   ok("Render API declara RIOT_API_MODE", /^\s*-\s*key:\s*RIOT_API_MODE\s*$/m.test(apiService));
   ok("Render mantiene RIOT_TOURNAMENT_API_ENABLED declarado", /^\s*-\s*key:\s*RIOT_TOURNAMENT_API_ENABLED\s*$/m.test(apiService));
 } else {
-  warn("render.yaml disponible para auditorÃ­a", false, "si usas Render Dashboard manual, valida variables en docs/PRE_BETA_DEPLOY_CHECKLIST.md");
+  warn("render.yaml disponible para auditoría", false, "si usas Render Dashboard manual, valida variables en docs/PRE_BETA_DEPLOY_CHECKLIST.md");
 }
-
 ok("DocumentaciÃ³n de rotaciÃ³n Riot existe", docs.includes("RIOT_API_KEY") && docs.includes("Render"));
 ok("DocumentaciÃ³n advierte no usar NEXT_PUBLIC_RIOT_API_KEY", docs.includes("NEXT_PUBLIC_RIOT_API_KEY"));
 
