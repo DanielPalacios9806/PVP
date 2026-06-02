@@ -599,7 +599,7 @@ export function CompetitiveDashboard() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="truncate text-3xl font-black tracking-[-0.05em] text-white">{riotGameName ?? displayName}</h2>
-                    <span className="rounded-full border border-[#ff2941]/30 bg-[#ff2941]/12 px-2.5 py-1 text-xs font-black text-[#ffb8c0]">PRO</span>
+                    <span className="rounded-full border border-[#ff2941]/30 bg-[#ff2941]/12 px-2.5 py-1 text-xs font-black text-[#ffb8c0]">BETA</span>
                     <span className={`rounded-full border px-2.5 py-1 text-xs font-black ${toneClass(riot.tone)}`}>{riot.label}</span>
                   </div>
                   <p className="mt-2 text-sm text-white/58">{riotId} · {role} · Region {riotSummary?.account?.platformRoute ?? primaryRiot?.platformRoute ?? "LA1"}</p>

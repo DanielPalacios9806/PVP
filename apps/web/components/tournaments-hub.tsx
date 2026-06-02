@@ -222,6 +222,10 @@ function sortTournamentsForViewer(items: any[], user?: StoredUser | null) {
 
 function mapTournamentCard(item: any, user?: StoredUser | null): HubCard {
   const participating = isUserTournament(item, user);
+  const rawPrize = String(item.prizes || "").trim();
+  const safeReward = rawPrize && !/(\$|usd|d[oó]lar|cash|money|premio monetario)/i.test(rawPrize)
+    ? rawPrize
+    : `${item.maxParticipants || 8} cupos / tokens internos`;
 
   return {
     id: item.id,
@@ -231,7 +235,7 @@ function mapTournamentCard(item: any, user?: StoredUser | null): HubCard {
     mode: item.teamSize ? `${item.teamSize}vs${item.teamSize}` : item.type === "TEAM" ? "5vs5" : "1vs1",
     status: statusToCardStatus(item.status),
     copy: item.publicRules || item.rules || item.description || "Torneo competitivo listo para inscripciones y seguimiento.",
-    prize: item.prizes || `${item.maxParticipants || 8} slots`,
+    prize: safeReward,
     requiresRiot: tournamentRequiresRiotAccount(item.game),
     participating
   };
