@@ -170,6 +170,7 @@ check("QA checklist existe", file("docs/QA_CHECKLIST.md"));
 check("Design system Darkside documentado", file("docs/DARKSIDE_DESIGN_SYSTEM.md"));
 check("Design tokens frontend existen", file("apps/web/lib/design-tokens.ts"));
 check("Primitivos UI Darkside existen", file("apps/web/components/ui/ds-primitives.tsx"));
+check("Home mockup fidelity documentado", file("docs/HOME_MOCKUP_FIDELITY.md"));
 
 check(
   "No existe ruta duplicada dashboard/dashboard",
@@ -197,6 +198,11 @@ check("Script check:smoke existe", packageJson.includes('"check:smoke"'));
 const nextConfig = file("apps/web/next.config.ts") ? read("apps/web/next.config.ts") : "";
 check("Next standalone activo para Render", nextConfig.includes('output: "standalone"'));
 check("Data Dragon permitido para imágenes", nextConfig.includes("ddragon.leagueoflegends.com"));
+
+const homeLanding = file("apps/web/components/public-landing.tsx") ? read("apps/web/components/public-landing.tsx") : "";
+check("Home usa assets oficiales Darkside", homeLanding.includes("/assets/darkside/official/hero-desktop.jpg"));
+check("Home comunica beta cerrada", homeLanding.toLowerCase().includes("beta cerrada"));
+check("Home comunica Riot mock/development", homeLanding.toLowerCase().includes("riot mock") || homeLanding.toLowerCase().includes("modo mock"));
 
 const envExamples = [".env.example", ".env.render.example", ".env.server.example"].filter(file);
 check("Existe al menos un env example", envExamples.length > 0);
