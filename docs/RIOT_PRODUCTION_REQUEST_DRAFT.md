@@ -2,7 +2,9 @@
 
 ## Short description
 
-Darkside.cool / Arena OS is a web-based esports tournament platform for organizing competitive events, teams, brackets, match rooms, moderation workflows and administrative operations. The platform is currently in pre-beta with a functioning website and API deployed over HTTPS.
+Darkside.cool is a web-based esports tournament platform for organizing competitive events, teams, brackets, match rooms, moderation workflows and administrative operations. The platform is currently in pre-beta with a functioning website and API deployed over HTTPS.
+
+Arena OS is a legacy internal codename that may appear in infrastructure/service names; the public product name is Darkside.cool.
 
 ## Longer description
 

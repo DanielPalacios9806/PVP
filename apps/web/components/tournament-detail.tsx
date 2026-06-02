@@ -1909,7 +1909,7 @@ function InfoPanel({ tournament, game, registeredCount, maxParticipants }: { tou
       </div>
       <dl className="mt-5 space-y-3 text-sm">
         {[
-          ["Organizador", tournament.organizer?.displayName || tournament.organizer?.username || "Darkside.gg"],
+          ["Organizador", tournament.organizer?.displayName || tournament.organizer?.username || "Darkside.cool"],
           ["Juego", game],
           ["Región", tournament.regionalRoute || "LATAM"],
           ["Formato", String(tournament.format || "SINGLE_ELIMINATION").replaceAll("_", " ")],

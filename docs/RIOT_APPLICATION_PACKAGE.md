@@ -1,12 +1,14 @@
-# Riot Developer Application Package - Darkside.cool / Arena OS
+# Riot Developer Application Package - Darkside.cool
 
 ## Purpose
 
 This package summarizes the current pre-beta state of Darkside.cool for a future Riot Developer Portal application. It is intended to be used internally before submitting a production request. It does not contain API keys, secrets or private credentials.
 
+Note: Arena OS is a legacy internal codename that may still appear in infrastructure/service names and historical staging URLs. The public product name is Darkside.cool.
+
 ## Product summary
 
-**Product name:** Darkside.cool / Arena OS
+**Product name:** Darkside.cool
 
 **Product type:** Web-based esports tournament platform for community and competitive events.
 

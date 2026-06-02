@@ -2,7 +2,9 @@
 
 ## Objetivo
 
-Este documento define el cierre operativo antes de enviar Darkside.cool / Arena OS a Riot Developer Portal para solicitar una Production API Key o una revisión formal del producto.
+Este documento define el cierre operativo antes de enviar Darkside.cool a Riot Developer Portal para solicitar una Production API Key o una revisión formal del producto.
+
+Nota: Arena OS es un codename interno heredado que puede aparecer en nombres de servicios Render y URLs staging históricas. El producto público es Darkside.cool.
 
 ## Estado mínimo requerido
 

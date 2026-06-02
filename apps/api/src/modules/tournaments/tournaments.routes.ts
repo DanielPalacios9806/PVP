@@ -449,7 +449,7 @@ async function assertRiotRequirementForRegistration(params: {
     message:
       officialCount === validAccounts.length
         ? "Todos los participantes tienen Riot Sign On verificado."
-        : "Riot ID validado técnicamente para modo MVP. La propiedad oficial seguirá pendiente hasta Riot Sign On."
+        : "Riot ID validado técnicamente en modo pre-beta. La propiedad oficial seguirá pendiente hasta Riot Sign On."
   };
 }
 

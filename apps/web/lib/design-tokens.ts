@@ -1,6 +1,6 @@
 export const darksideTokens = {
   brand: {
-    name: "Darkside.gg",
+    name: "Darkside.cool",
     red: "#ff2438",
     redDeep: "#b90f24",
     redGlow: "#ff3a4e",

@@ -2,7 +2,9 @@
 
 ## Goal
 
-Demonstrate Darkside.cool / Arena OS as a working pre-beta product ready for Riot Developer Portal review.
+Demonstrate Darkside.cool as a working pre-beta product ready for Riot Developer Portal review.
+
+Note: Arena OS is a legacy internal codename that may appear in Render service names. The public product name is Darkside.cool.
 
 ## Preparation
 

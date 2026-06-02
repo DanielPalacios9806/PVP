@@ -2,7 +2,7 @@
 
 ## Product name
 
-Darkside.cool / Arena OS
+Darkside.cool
 
 ## Product type
 
@@ -14,7 +14,9 @@ Darkside.cool is a web platform for organizing esports tournaments, managing tea
 
 ## Long description
 
-Darkside.cool / Arena OS is a modular monolith web application designed to support esports tournament operations. The product includes a public landing page, user authentication, tournament hub, tournament detail pages with bracket visualization, teams area, account profile, Riot integration status, admin/ops center, moderation workflow, token ledger for internal non-monetary participation records, and production health checks.
+Darkside.cool is a modular monolith web application designed to support esports tournament operations. The product includes a public landing page, user authentication, tournament hub, tournament detail pages with bracket visualization, teams area, account profile, Riot integration status, admin/ops center, moderation workflow, token ledger for internal non-monetary participation records, and production health checks.
+
+Arena OS is a legacy internal codename retained only in some infrastructure/service names and historical staging URLs.
 
 The application is currently in a pre-beta staging environment hosted on Render with a web service and an API service. Riot API access is handled exclusively through the secured backend API. API keys are never exposed to the frontend, are never committed to the repository, and are configured only through environment variables.
 
