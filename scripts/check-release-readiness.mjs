@@ -179,6 +179,7 @@ check("Home External UI Fusion documentado", file("docs/HOME_EXTERNAL_UI_FUSION.
 check("Tournament detail mockup fidelity documentado", file("docs/TOURNAMENT_DETAIL_MOCKUP_FIDELITY.md"));
 check("Tournament detail pro bracket documentado", file("docs/TOURNAMENT_DETAIL_PRO_BRACKET.md"));
 check("Tournament detail layout fidelity documentado", file("docs/TOURNAMENT_DETAIL_LAYOUT_FIDELITY.md"));
+check("Tournaments hub layout fidelity documentado", file("docs/TOURNAMENTS_HUB_LAYOUT_FIDELITY.md"));
 check("Right activity rail UX documentado", file("docs/RIGHT_ACTIVITY_RAIL_UX.md"));
 check("Right activity rail global documentado", file("docs/RIGHT_ACTIVITY_RAIL_GLOBAL.md"));
 
@@ -199,6 +200,11 @@ check("Bracket usa XYFlow", bracketBoard.includes("@xyflow/react") && bracketBoa
 check("Bracket permite pan y zoom", bracketBoard.includes("panOnScroll") && bracketBoard.includes("Controls"));
 check("Bracket mobile usa vista por rondas", bracketBoard.includes("MobileRoundCards") && bracketBoard.includes("md:hidden"));
 check("Layout carga estilos XYFlow", file("apps/web/app/layout.tsx") && read("apps/web/app/layout.tsx").includes("@xyflow/react/dist/style.css"));
+
+const tournamentsHub = file("apps/web/components/tournaments-hub.tsx") ? read("apps/web/components/tournaments-hub.tsx") : "";
+check("Tournaments hub usa stage dedicado", tournamentsHub.includes("tournaments-hub-stage") && tournamentsHub.includes("Arena competitiva"));
+check("Tournaments hub tiene busqueda funcional", tournamentsHub.includes("normalizeForSearch") && tournamentsHub.includes("setQuery"));
+check("Tournaments hub distribuye cards premium", tournamentsHub.includes("tournaments-hub-card") && tournamentsHub.includes("xl:grid-cols-[260px_minmax(0,1fr)_210px]"));
 
 const dashboardGridWrapper = file("apps/web/components/dashboard-grid-wrapper.tsx") ? read("apps/web/components/dashboard-grid-wrapper.tsx") : "";
 check("Dashboard mantiene rail derecho colapsable en torneos", dashboardGridWrapper.includes("rightRailExpandedColumns") && dashboardGridWrapper.includes("rightRailCollapsedColumns") && dashboardGridWrapper.includes("shouldRenderRightRail = showRightSidebar && Boolean(rightSidebar)"));
