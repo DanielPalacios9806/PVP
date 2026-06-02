@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
@@ -173,8 +173,8 @@ check("Primitivos UI Darkside existen", file("apps/web/components/ui/ds-primitiv
 
 check("External UI Fusion documentado", file("docs/EXTERNAL_UI_FUSION.md"));
 check("Mapa funcional UX documentado", file("docs/UX_NAVIGATION_FUNCTIONAL_MAP.md"));
-check("Mapa de navegación frontend existe", file("apps/web/lib/navigation-map.ts"));
-check("Mapa de librerías externas existe", file("apps/web/lib/external-ui-map.ts"));
+check("Mapa de navegaciÃ³n frontend existe", file("apps/web/lib/navigation-map.ts"));
+check("Mapa de librerÃ­as externas existe", file("apps/web/lib/external-ui-map.ts"));
 check("Home External UI Fusion documentado", file("docs/HOME_EXTERNAL_UI_FUSION.md"));
 check("Tournament detail mockup fidelity documentado", file("docs/TOURNAMENT_DETAIL_MOCKUP_FIDELITY.md"));
 check("Tournament detail pro bracket documentado", file("docs/TOURNAMENT_DETAIL_PRO_BRACKET.md"));
@@ -183,17 +183,23 @@ check("Tournaments hub layout fidelity documentado", file("docs/TOURNAMENTS_HUB_
 check("Tournaments hub mobile polish documentado", file("docs/TOURNAMENTS_HUB_MOBILE_POLISH.md"));
 check("Right activity rail UX documentado", file("docs/RIGHT_ACTIVITY_RAIL_UX.md"));
 check("Right activity rail global documentado", file("docs/RIGHT_ACTIVITY_RAIL_GLOBAL.md"));
+check("Teams hub layout fidelity documentado", file("docs/TEAMS_HUB_LAYOUT_FIDELITY.md"));
+check("Riot key rotation y Render env documentado", file("docs/RIOT_KEY_ROTATION_AND_RENDER_ENV.md"));
+check("Pre-beta deploy checklist documentado", file("docs/PRE_BETA_DEPLOY_CHECKLIST.md"));
+check("Main release bridge documentado", file("docs/MAIN_RELEASE_BRIDGE.md"));
+check("Script Riot readiness existe", file("scripts/riot-readiness-check.mjs"));
+check("Script pre-beta smoke existe", file("scripts/prebeta-smoke-check.mjs"));
 
 const publicLanding = file("apps/web/components/public-landing.tsx") ? read("apps/web/components/public-landing.tsx") : "";
-check("Home pública usa Motion", publicLanding.includes('from "motion/react"'));
-check("Home pública usa Lucide React", publicLanding.includes('from "lucide-react"'));
-check("Home pública mantiene hero Darkside oficial", publicLanding.includes("heroDesktop") && publicLanding.includes("heroMobile"));
-check("Home pública oculta navegación admin directa", !publicLanding.includes("/dashboard/admin") && !publicLanding.includes("/dashboard/moderation"));
+check("Home pÃºblica usa Motion", publicLanding.includes('from "motion/react"'));
+check("Home pÃºblica usa Lucide React", publicLanding.includes('from "lucide-react"'));
+check("Home pÃºblica mantiene hero Darkside oficial", publicLanding.includes("heroDesktop") && publicLanding.includes("heroMobile"));
+check("Home pÃºblica oculta navegaciÃ³n admin directa", !publicLanding.includes("/dashboard/admin") && !publicLanding.includes("/dashboard/moderation"));
 
 const tournamentDetail = file("apps/web/components/tournament-detail.tsx") ? read("apps/web/components/tournament-detail.tsx") : "";
 check("Tournament detail usa hero oficial Darkside", tournamentDetail.includes("hero-desktop.jpg"));
-check("Tournament detail no expone tab Automatización pública", !tournamentDetail.includes('"Automatización"'));
-check("Tournament detail usa panel lateral contextual", tournamentDetail.includes("TournamentEntryPanel") && tournamentDetail.includes("Información del torneo"));
+check("Tournament detail no expone tab AutomatizaciÃ³n pÃºblica", !tournamentDetail.includes('"AutomatizaciÃ³n"'));
+check("Tournament detail usa panel lateral contextual", tournamentDetail.includes("InformaciÃ³n del torneo") && tournamentDetail.includes("Recompensas") && tournamentDetail.includes("Organizador"));
 check("Tournament detail contador vivo", tournamentDetail.includes("setInterval") && tournamentDetail.includes("countdownNow"));
 check("Tournament detail usa layout 70/30", tournamentDetail.includes("xl:grid-cols-[minmax(0,1fr)_330px]") && tournamentDetail.includes("tournament-main-stage"));
 const bracketBoard = file("apps/web/components/bracket-board.tsx") ? read("apps/web/components/bracket-board.tsx") : "";
@@ -265,10 +271,22 @@ check("Script build:api existe", packageJson.includes('"build:api"'));
 check("Script build:web existe", packageJson.includes('"build:web"'));
 check("Script check:release existe", packageJson.includes('"check:release"'));
 check("Script check:smoke existe", packageJson.includes('"check:smoke"'));
+check("Script check:riot existe", packageJson.includes('"check:riot"') && packageJson.includes("riot-readiness-check.mjs"));
+check("Script check:prebeta existe", packageJson.includes('"check:prebeta"') && packageJson.includes("prebeta-smoke-check.mjs"));
+check("Script release:prebeta existe", packageJson.includes('"release:prebeta"'));
 
 const nextConfig = file("apps/web/next.config.ts") ? read("apps/web/next.config.ts") : "";
 check("Next standalone activo para Render", nextConfig.includes('output: "standalone"'));
-check("Data Dragon permitido para imágenes", nextConfig.includes("ddragon.leagueoflegends.com"));
+check("Data Dragon permitido para imÃ¡genes", nextConfig.includes("ddragon.leagueoflegends.com"));
+
+const renderYaml = file("render.yaml") ? read("render.yaml") : "";
+const renderServiceBlocks = renderYaml.split(/\n\s*-\s*type:\s*web\s*\n/g);
+const renderApiService = renderServiceBlocks.find((block) => /arena-os-api|api-staging|apps\/api|startCommand:\s*npm\s+--workspace\s+apps\/api/i.test(block)) ?? renderYaml;
+const renderWebService = renderServiceBlocks.find((block) => /arena-os-web|web-staging|apps\/web|startCommand:\s*cd\s+apps\/web/i.test(block)) ?? "";
+check("Render API declara RIOT_API_KEY sync:false", /^\s*-\s*key:\s*RIOT_API_KEY\s*$/m.test(renderApiService) && /RIOT_API_KEY[\s\S]{0,120}sync:\s*false/m.test(renderApiService));
+check("Render API queda en modo Riot development para pre-beta", /^\s*-\s*key:\s*RIOT_API_MODE\s*$/m.test(renderApiService) && /RIOT_API_MODE[\s\S]{0,120}value:\s*development/m.test(renderApiService));
+check("Render Web no declara RIOT_API_KEY privada", !/^\s*-\s*key:\s*RIOT_API_KEY\s*$/m.test(renderWebService));
+check("Render Web no declara NEXT_PUBLIC_RIOT_API_KEY", !/NEXT_PUBLIC_RIOT_API_KEY/m.test(renderWebService));
 
 const envExamples = [".env.example", ".env.render.example", ".env.server.example"].filter(file);
 check("Existe al menos un env example", envExamples.length > 0);
@@ -276,6 +294,7 @@ const envText = envExamples.map(read).join("\n");
 check("Env example documenta DATABASE_URL", envText.includes("DATABASE_URL"));
 check("Env example documenta JWT_SECRET", envText.includes("JWT_SECRET"));
 check("Env example documenta RIOT_API_KEY", envText.includes("RIOT_API_KEY"));
+check("Env example no documenta NEXT_PUBLIC_RIOT_API_KEY", !envText.includes("NEXT_PUBLIC_RIOT_API_KEY="));
 check("Env example documenta CORS/FRONTEND", envText.includes("CORS_ORIGIN") || envText.includes("CORS_ORIGINS"));
 
 const suspicious = [];
@@ -302,8 +321,11 @@ check(
 
 console.log("\nResumen:");
 if (failed) {
-  console.log("FAIL La revisión encontró pendientes. Corrige antes de merge/deploy.");
+  console.log("FAIL La revisiÃ³n encontrÃ³ pendientes. Corrige antes de merge/deploy.");
   process.exit(1);
 }
 
-console.log("OK Revisión local lista. Ejecuta build y smoke test antes de producción.");
+console.log("OK RevisiÃ³n local lista. Ejecuta build y smoke test antes de producciÃ³n.");
+
+
+

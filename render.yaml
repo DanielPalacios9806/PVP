@@ -38,7 +38,7 @@ services:
       - key: OAUTH_STATE_SECRET
         sync: false
       - key: RIOT_API_MODE
-        value: mock
+        value: development
       - key: RIOT_API_KEY
         sync: false
       - key: RIOT_REGION
