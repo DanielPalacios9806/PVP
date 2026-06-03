@@ -299,7 +299,7 @@ async function main() {
     where: { code: "WELCOME_XP" },
     update: {
       name: "XP de bienvenida",
-      description: "Recompensa interna por unirse a Darkside.gg.",
+      description: "Recompensa interna por unirse a Darkside.cool.",
       type: RewardType.XP,
       value: 100,
       isMonetary: false
@@ -307,7 +307,7 @@ async function main() {
     create: {
       code: "WELCOME_XP",
       name: "XP de bienvenida",
-      description: "Recompensa interna por unirse a Darkside.gg.",
+      description: "Recompensa interna por unirse a Darkside.cool.",
       type: RewardType.XP,
       value: 100,
       isMonetary: false
@@ -347,7 +347,7 @@ async function main() {
           userId: user.id,
           rewardId: welcomeReward.id,
           grantedByUserId: superAdmin.id,
-          notes: "Seed demo Darkside.gg"
+          notes: "Seed demo Darkside.cool"
         }
       });
     }
@@ -504,7 +504,7 @@ async function main() {
       format: TournamentFormat.SINGLE_ELIMINATION,
       type: TournamentType.TEAM,
       status: TournamentStatus.REGISTRATION_OPEN,
-      publicRules: "Torneo universitario en modo MVP. Resultados manuales, evidencias y Riot mock para pruebas.",
+      publicRules: "Torneo universitario en modo pre-beta. Resultados manuales, evidencias y Riot mock para pruebas.",
       prizes: "XP, badges y tokens internos no monetarios.",
       entryFeeTokens: 0,
       maxParticipants: 16,
@@ -614,13 +614,13 @@ async function main() {
           riotMode: "mock"
         },
         metadata: {
-          note: "Datos demo no monetarios para MVP universitario."
+          note: "Datos demo no monetarios para pre-beta universitaria."
         }
       }
     });
   }
 
-  console.log("Seed demo Darkside.gg listo.");
+  console.log("Seed demo Darkside.cool listo.");
   console.log(`Credenciales demo: admin@esports.local / ${demoPassword}`);
   console.log(`Jugador demo: captain@darkside.cool / ${demoPassword}`);
 }

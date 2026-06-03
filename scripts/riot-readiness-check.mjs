@@ -107,7 +107,7 @@ function scanVersionedSecrets() {
     }
 
     if (/RGAPI-[A-Za-z0-9_-]{10,}/.test(content)) {
-      findings.push(`${relativePath}: contiene un patrÃ³n RGAPI real`);
+      findings.push(`${relativePath}: contiene un patrón RGAPI real`);
     }
 
     if (/^\s*NEXT_PUBLIC_RIOT_API_KEY\s*=\s*.+/gim.test(content)) {
@@ -139,19 +139,19 @@ console.log(`Mode: ${mode}`);
 console.log(`RIOT_API_KEY: ${apiKeyConfigured ? "configured" : "not configured"}`);
 console.log("");
 
-ok("RIOT_API_MODE tiene valor vÃ¡lido", ["mock", "development", "production"].includes(mode), "usa mock, development o production");
+ok("RIOT_API_MODE tiene valor válido", ["mock", "development", "production"].includes(mode), "usa mock, development o production");
 if (mode === "mock") {
   warn("RIOT_API_KEY disponible para pruebas reales", apiKeyConfigured, "en mock es opcional, pero para pruebas de hoy usa RIOT_API_MODE=development");
 } else {
-  ok("RIOT_API_KEY configurada para modo no mock", apiKeyConfigured, "configÃºrala solo en backend/local env/Render API");
+  ok("RIOT_API_KEY configurada para modo no mock", apiKeyConfigured, "configúrala solo en backend/local env/Render API");
 }
-ok("NEXT_PUBLIC_RIOT_API_KEY no estÃ¡ configurada", !publicRiotKeyConfigured, "la key de Riot jamÃ¡s debe ir al frontend");
+ok("NEXT_PUBLIC_RIOT_API_KEY no está configurada", !publicRiotKeyConfigured, "la key de Riot jamás debe ir al frontend");
 ok("Config backend reconoce RIOT_API_KEY", envConfig.includes("RIOT_API_KEY"));
 ok("Config backend reconoce RIOT_API_MODE", envConfig.includes("RIOT_API_MODE"));
 ok("Riot client centralizado existe", riotClient.includes("getRiotRuntimeConfig") && riotClient.includes("RIOT_API_KEY"));
 ok("Rutas Riot protegidas por backend", riotRoutes.includes("requireAuth") && riotRoutes.includes("/health") && riotRoutes.includes("/status"));
 ok("API package no depende de NEXT_PUBLIC Riot", !apiPackage.includes("NEXT_PUBLIC_RIOT"));
-ok("Web package no declara Riot key pÃºblica", !webPackage.includes("NEXT_PUBLIC_RIOT_API_KEY"));
+ok("Web package no declara Riot key pública", !webPackage.includes("NEXT_PUBLIC_RIOT_API_KEY"));
 
 if (renderYaml) {
   const renderServices = renderYaml
@@ -179,15 +179,15 @@ if (renderYaml) {
 } else {
   warn("render.yaml disponible para auditoría", false, "si usas Render Dashboard manual, valida variables en docs/PRE_BETA_DEPLOY_CHECKLIST.md");
 }
-ok("DocumentaciÃ³n de rotaciÃ³n Riot existe", docs.includes("RIOT_API_KEY") && docs.includes("Render"));
-ok("DocumentaciÃ³n advierte no usar NEXT_PUBLIC_RIOT_API_KEY", docs.includes("NEXT_PUBLIC_RIOT_API_KEY"));
+ok("Documentación de rotación Riot existe", docs.includes("RIOT_API_KEY") && docs.includes("Render"));
+ok("Documentación advierte no usar NEXT_PUBLIC_RIOT_API_KEY", docs.includes("NEXT_PUBLIC_RIOT_API_KEY"));
 
 const findings = scanVersionedSecrets();
 ok("No hay Riot API keys versionadas", findings.length === 0, findings.slice(0, 8).join(" | "));
 
 console.log("\nResumen:");
 if (failed) {
-  console.log("FAIL Riot readiness con pendientes. Corrige antes de deploy o revisiÃ³n Riot.");
+  console.log("FAIL Riot readiness con pendientes. Corrige antes de deploy o revisión Riot.");
   process.exit(1);
 }
 

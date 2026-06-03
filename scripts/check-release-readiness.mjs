@@ -173,8 +173,8 @@ check("Primitivos UI Darkside existen", file("apps/web/components/ui/ds-primitiv
 
 check("External UI Fusion documentado", file("docs/EXTERNAL_UI_FUSION.md"));
 check("Mapa funcional UX documentado", file("docs/UX_NAVIGATION_FUNCTIONAL_MAP.md"));
-check("Mapa de navegaciÃ³n frontend existe", file("apps/web/lib/navigation-map.ts"));
-check("Mapa de librerÃ­as externas existe", file("apps/web/lib/external-ui-map.ts"));
+check("Mapa de navegación frontend existe", file("apps/web/lib/navigation-map.ts"));
+check("Mapa de librerías externas existe", file("apps/web/lib/external-ui-map.ts"));
 check("Home External UI Fusion documentado", file("docs/HOME_EXTERNAL_UI_FUSION.md"));
 check("Tournament detail mockup fidelity documentado", file("docs/TOURNAMENT_DETAIL_MOCKUP_FIDELITY.md"));
 check("Tournament detail pro bracket documentado", file("docs/TOURNAMENT_DETAIL_PRO_BRACKET.md"));
@@ -200,6 +200,12 @@ check("Riot API usage map documentado", file("docs/RIOT_API_USAGE_MAP.md"));
 check("Riot screenshot evidence documentado", file("docs/RIOT_SCREENSHOT_EVIDENCE.md"));
 check("Riot production request draft documentado", file("docs/RIOT_PRODUCTION_REQUEST_DRAFT.md"));
 check("Riot application checklist documentado", file("docs/RIOT_APPLICATION_CHECKLIST.md"));
+check("Script Riot final submission existe", file("scripts/riot-submission-final-check.mjs"));
+check("Riot final demo runbook documentado", file("docs/RIOT_FINAL_DEMO_RUNBOOK.md"));
+check("Riot submission risk notes documentado", file("docs/RIOT_SUBMISSION_RISK_NOTES.md"));
+check("Riot submission evidence index documentado", file("docs/RIOT_SUBMISSION_EVIDENCE_INDEX.md"));
+check("Riot portal field answers documentado", file("docs/RIOT_PORTAL_FIELD_ANSWERS.md"));
+check("Riot submission final checklist documentado", file("docs/RIOT_SUBMISSION_FINAL_CHECKLIST.md"));
 check("Beta launch checklist documentado", file("docs/BETA_LAUNCH_CHECKLIST.md"));
 check("Beta tester guide documentado", file("docs/BETA_TESTER_GUIDE.md"));
 check("Beta rollback and support documentado", file("docs/BETA_ROLLBACK_AND_SUPPORT.md"));
@@ -248,10 +254,10 @@ check("API env declara SERVER_ENV", apiEnv.includes("SERVER_ENV") && apiEnv.incl
 check("API env declara DIRECT_URL opcional", apiEnv.includes("DIRECT_URL"));
 
 const publicLanding = file("apps/web/components/public-landing.tsx") ? read("apps/web/components/public-landing.tsx") : "";
-check("Home pÃºblica usa Motion", publicLanding.includes('from "motion/react"'));
-check("Home pÃºblica usa Lucide React", publicLanding.includes('from "lucide-react"'));
-check("Home pÃºblica mantiene hero Darkside oficial", publicLanding.includes("heroDesktop") && publicLanding.includes("heroMobile"));
-check("Home pÃºblica oculta navegaciÃ³n admin directa", !publicLanding.includes("/dashboard/admin") && !publicLanding.includes("/dashboard/moderation"));
+check("Home pública usa Motion", publicLanding.includes('from "motion/react"'));
+check("Home pública usa Lucide React", publicLanding.includes('from "lucide-react"'));
+check("Home pública mantiene hero Darkside oficial", publicLanding.includes("heroDesktop") && publicLanding.includes("heroMobile"));
+check("Home pública oculta navegación admin directa", !publicLanding.includes("/dashboard/admin") && !publicLanding.includes("/dashboard/moderation"));
 
 const tournamentDetail = file("apps/web/components/tournament-detail.tsx") ? read("apps/web/components/tournament-detail.tsx") : "";
 check("Tournament detail usa hero oficial Darkside", tournamentDetail.includes("hero-desktop.jpg"));
@@ -345,7 +351,7 @@ const gitignore = file(".gitignore") ? read(".gitignore") : "";
 check("Visual QA artifacts ignorados", gitignore.includes("visual-qa-artifacts/"));
 const nextConfig = file("apps/web/next.config.ts") ? read("apps/web/next.config.ts") : "";
 check("Next standalone activo para Render", nextConfig.includes('output: "standalone"'));
-check("Data Dragon permitido para imÃ¡genes", nextConfig.includes("ddragon.leagueoflegends.com"));
+check("Data Dragon permitido para imágenes", nextConfig.includes("ddragon.leagueoflegends.com"));
 
 const renderYaml = file("render.yaml") ? read("render.yaml") : "";
 const renderServiceBlocks = renderYaml.split(/\n\s*-\s*type:\s*web\s*\n/g);
@@ -391,8 +397,8 @@ check(
 
 console.log("\nResumen:");
 if (failed) {
-  console.log("FAIL La revisiÃ³n encontrÃ³ pendientes. Corrige antes de merge/deploy.");
+  console.log("FAIL La revisión encontró pendientes. Corrige antes de merge/deploy.");
   process.exit(1);
 }
 
-console.log("OK RevisiÃ³n local lista. Ejecuta build y smoke test antes de producciÃ³n.");
+console.log("OK Revisión local lista. Ejecuta build y smoke test antes de producción.");

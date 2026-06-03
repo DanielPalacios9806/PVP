@@ -77,7 +77,7 @@ const gameCards = [
   }
 ] as const;
 
-const sponsorLabels = ["Campus League", "Darkside Labs", "Scrim Hub", "Rank Forge", "Arena Ops"];
+const platformSignalLabels = ["Brackets auditables", "Tokens internos", "Riot mock/development", "Roles protegidos", "Sin apuestas"];
 
 function formatCount(value: number | null, fallback: string) {
   return value === null ? fallback : new Intl.NumberFormat("es-EC").format(value);
@@ -379,7 +379,7 @@ export function PublicLanding() {
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[rgba(3,6,10,0.74)] backdrop-blur-2xl">
         <div className="mx-auto flex h-[76px] max-w-[1520px] items-center gap-4 px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex min-w-0 items-center gap-3">
-            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.04] shadow-[0_0_34px_rgba(255,36,56,0.18)]">
+            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.04] shadow-[0_0_34px_rgba(255,36,56,0.18)] sm:hidden">
               <Image src={brand.logoMark} alt={`${brand.name} logo`} fill sizes="44px" className="object-contain p-2" />
             </span>
             <Image src={brand.logoHorizontal} alt={brand.name} width={214} height={42} priority className="hidden h-auto w-[188px] sm:block xl:w-[214px]" />
@@ -408,13 +408,15 @@ export function PublicLanding() {
               </Link>
             ) : (
               <>
-                <Link href="/auth/login" className="hidden min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white/70 transition hover:text-white sm:inline-flex">
+                <Link href="/auth/login" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 text-xs font-bold text-white/70 transition hover:text-white sm:min-h-11 sm:px-4 sm:text-sm">
                   <LogIn size={16} />
-                  Login
+                  <span className="hidden sm:inline">Login</span>
+                  <span className="sm:hidden">Entrar</span>
                 </Link>
-                <Link href="/auth/register" className="ds-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-black">
+                <Link href="/auth/register" className="ds-button-primary inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-3 text-xs font-black sm:min-h-11 sm:px-4 sm:text-sm">
                   <UserPlus size={16} />
-                  Registrarse
+                  <span className="hidden sm:inline">Registrarse</span>
+                  <span className="sm:hidden">Registro</span>
                 </Link>
               </>
             )}
@@ -441,11 +443,10 @@ export function PublicLanding() {
 
             <p className="text-xs font-black uppercase tracking-[0.34em] text-[var(--ds-red-primary)]">{brand.tagline}</p>
             <h1 className="mt-4 max-w-[780px] font-heading text-[3.15rem] font-black uppercase leading-[0.94] tracking-[-0.06em] text-white sm:text-6xl lg:text-7xl xl:text-[5.8rem]">
-              Compite.
-              <span className="block bg-gradient-to-r from-[var(--ds-red-primary)] via-white to-[var(--ds-cyan-primary)] bg-clip-text text-transparent">
-                Forma equipo.
+              Compite en torneos
+              <span className="block bg-gradient-to-r from-[var(--ds-cyan-primary)] via-white to-[var(--ds-red-primary)] bg-clip-text text-transparent">
+                de LoL y VALORANT
               </span>
-              Domina la arena.
             </h1>
             <p className="mt-6 max-w-[560px] text-base leading-8 text-white/68 sm:text-lg">
               Una plataforma competitiva para organizar torneos universitarios, equipos, brackets, salas de partida y resultados con trazabilidad.
@@ -644,9 +645,9 @@ export function PublicLanding() {
 
       <section className="mx-auto max-w-[1520px] px-4 py-8 pb-24 sm:px-6 lg:px-8 lg:pb-12">
         <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.035] p-5 shadow-[0_28px_80px_rgba(0,0,0,0.38)] backdrop-blur-xl">
-          <p className="text-center text-xs font-black uppercase tracking-[0.26em] text-white/38">Sponsors y aliados visuales de beta</p>
+          <p className="text-center text-xs font-black uppercase tracking-[0.26em] text-white/38">Preparado para operación competitiva segura</p>
           <div className="mt-5 grid gap-3 sm:grid-cols-5">
-            {sponsorLabels.map((label) => (
+            {platformSignalLabels.map((label) => (
               <div key={label} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-4 py-5 text-center font-heading text-sm font-black uppercase tracking-[0.16em] text-white/45">
                 {label}
               </div>

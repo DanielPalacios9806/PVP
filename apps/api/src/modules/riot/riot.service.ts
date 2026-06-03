@@ -319,8 +319,8 @@ export function getRiotComplianceReadiness() {
 
   const items = [
     buildReadinessItem({
-      key: "functional_mvp",
-      label: "MVP funcional",
+      key: "functional_prebeta",
+      label: "Producto pre-beta funcional",
       status: "ready",
       description: "Auth, roles, torneos, brackets, matches, disputas, auditoria y paneles admin ya existen.",
       action: "Mantener una demo estable en darkside.cool."

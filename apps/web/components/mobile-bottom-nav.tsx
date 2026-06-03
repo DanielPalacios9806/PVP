@@ -26,7 +26,9 @@ export function MobileBottomNav() {
               active ? "text-[#ff4655]" : "text-white/50"
             }`}
           >
-            <Image src={item.icon} alt="" width={19} height={19} />
+            <span className="flex h-5 w-5 items-center justify-center">
+              <Image src={item.icon} alt="" width={20} height={20} className="h-5 w-5 object-contain" />
+            </span>
             {item.label}
           </Link>
         );

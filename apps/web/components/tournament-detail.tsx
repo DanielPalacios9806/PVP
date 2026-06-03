@@ -409,7 +409,7 @@ function canManageTournamentUi(user: StoredUser | null, tournament: any) {
 
 function operationStatusCopy(status?: string) {
   const copy: Record<string, string> = {
-    DRAFT: "Prepara datos, reglas y premios antes de publicar.",
+    DRAFT: "Prepara datos, reglas y recompensas antes de publicar.",
     PUBLISHED: "El torneo es visible, pero las inscripciones aún no están abiertas.",
     REGISTRATION_OPEN: "Los jugadores pueden registrarse. Cierra el registro cuando estés listo.",
     REGISTRATION_CLOSED: "Registro cerrado. Puedes abrir check-in o generar bracket.",
@@ -1909,7 +1909,7 @@ function InfoPanel({ tournament, game, registeredCount, maxParticipants }: { tou
       </div>
       <dl className="mt-5 space-y-3 text-sm">
         {[
-          ["Organizador", tournament.organizer?.displayName || tournament.organizer?.username || "Darkside.gg"],
+          ["Organizador", tournament.organizer?.displayName || tournament.organizer?.username || "Darkside.cool"],
           ["Juego", game],
           ["Región", tournament.regionalRoute || "LATAM"],
           ["Formato", String(tournament.format || "SINGLE_ELIMINATION").replaceAll("_", " ")],

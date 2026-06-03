@@ -329,7 +329,7 @@ function LobbyAutomationCard({ match }: { match: any }) {
             </span>
           </div>
           <p className="mt-3 text-xs leading-5 text-white/52">
-            Este código no es un Tournament Code oficial. Sirve para operar el MVP con reglas, evidencia y moderación mientras se prepara Production Key + provider + callback de Riot.
+            Este código no es un Tournament Code oficial. Sirve para operar la pre-beta con reglas, evidencia y moderación mientras se prepara Production Key + provider + callback de Riot.
           </p>
         </div>
 

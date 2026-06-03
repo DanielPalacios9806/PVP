@@ -509,7 +509,7 @@ export function TokenCenter() {
           ) : (
             <div className="space-y-4">
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-white/70">
-                En esta etapa del MVP no existen pagos reales ni recargas monetarias. Las acreditaciones futuras se
+                En esta etapa pre-beta no existen pagos reales ni recargas monetarias. Las acreditaciones futuras se
                 asignaran por premios, participacion o ajustes aprobados por administracion.
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-white/70">

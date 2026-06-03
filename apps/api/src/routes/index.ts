@@ -24,7 +24,7 @@ apiRouter.get("/health/runtime", (_request, response) => {
 
   response.json({
     status: "ok",
-    service: "arena-os-api",
+    service: "darkside-api",
     serverEnv: env.SERVER_ENV,
     nodeEnv: env.NODE_ENV,
     timestamp: new Date().toISOString(),
@@ -49,7 +49,7 @@ apiRouter.get("/health/readiness", async (_request, response) => {
 
     response.json({
       status: "ready",
-      service: "arena-os-api",
+      service: "darkside-api",
       database: "ok",
       latencyMs: Date.now() - startedAt,
       timestamp: new Date().toISOString()
@@ -57,7 +57,7 @@ apiRouter.get("/health/readiness", async (_request, response) => {
   } catch {
     response.status(503).json({
       status: "degraded",
-      service: "arena-os-api",
+      service: "darkside-api",
       database: "unavailable",
       latencyMs: Date.now() - startedAt,
       timestamp: new Date().toISOString()
