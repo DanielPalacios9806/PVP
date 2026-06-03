@@ -40,11 +40,11 @@ export function RiotRankCard({ queues = [], loading }: RiotRankCardProps) {
     return (
       <article className="rounded-[1.6rem] border border-white/10 bg-[#0d1421] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-white/48">Ranking actual</p>
-        <div className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
-          <Image src={rankIconUrl("unranked")} alt="Unranked" width={68} height={68} className="shrink-0 drop-shadow-[0_0_22px_rgba(24,230,242,0.2)]" />
+        <div className="mt-4 flex min-w-0 flex-col items-start gap-3">
+          <Image src={rankIconUrl("unranked")} alt="Unranked" width={58} height={58} className="shrink-0 drop-shadow-[0_0_22px_rgba(24,230,242,0.2)]" />
           <div>
-            <strong className="block text-2xl font-black leading-tight text-white">Pendiente</strong>
-            <p className="mt-1 max-w-[14rem] text-sm leading-5 text-white/58">Valida Riot ID para cargar League API.</p>
+            <strong className="block break-words text-xl font-black leading-tight text-white sm:text-2xl">Pendiente</strong>
+            <p className="mt-1 max-w-full text-sm leading-5 text-white/58">Valida Riot ID para cargar League API.</p>
           </div>
         </div>
       </article>
@@ -57,11 +57,11 @@ export function RiotRankCard({ queues = [], loading }: RiotRankCardProps) {
     <article className="relative overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0d1421] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(24,230,242,0.2),transparent_34%),radial-gradient(circle_at_95%_0%,rgba(70,120,255,0.18),transparent_36%)]" />
       <div className="relative">
-        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
-          <Image src={rankIconUrl(primary.tier)} alt={primary.tier} width={84} height={84} className="shrink-0 drop-shadow-[0_0_34px_rgba(24,230,242,0.3)]" />
+        <div className="flex min-w-0 flex-col gap-4">
+          <Image src={rankIconUrl(primary.tier)} alt={primary.tier} width={74} height={74} className="shrink-0 drop-shadow-[0_0_34px_rgba(24,230,242,0.3)]" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/48">Ranking actual</p>
-            <h3 className="mt-2 break-words text-2xl font-black tracking-[-0.05em] text-white sm:text-3xl">{primary.tier} {primary.rank}</h3>
+            <h3 className="mt-2 break-words text-xl font-black tracking-[-0.05em] text-white sm:text-2xl">{primary.tier} {primary.rank}</h3>
             <p className="text-sm font-semibold text-[#18e6f2]">{queueLabel(primary.queueType)} · {primary.leaguePoints} LP</p>
           </div>
         </div>
