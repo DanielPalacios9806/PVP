@@ -549,49 +549,20 @@ export function CompetitiveDashboard() {
         </aside>
 
         <main className="min-w-0 space-y-5">
-          <section className="grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
-            <div className="rounded-[1.6rem] border border-white/10 bg-[#0a101a]/82 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.36)] sm:p-6">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-white/52">Bienvenido de vuelta</p>
-                  <h1 className="mt-2 text-3xl font-black tracking-[-0.06em] text-white sm:text-4xl">
-                    {riotGameName ?? displayName} <span className="text-[#18e6f2]">{riotGameName ? `#${riotTagLine}` : ""}</span>
-                  </h1>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58">
-                    Preparate para competir. Tu perfil Riot, torneos, tokens, equipo y partidas se sincronizan desde un solo centro competitivo.
-                  </p>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[520px]">
-                  <Link href="/dashboard/teams" className="rounded-2xl border border-[#18e6f2]/35 bg-[#18e6f2]/7 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-[#18e6f2]/12">Crear equipo</Link>
-                  <Link href="/dashboard/tournaments" className="rounded-2xl border border-[#18e6f2]/25 bg-white/5 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-white/8">Buscar torneo</Link>
-                  <Link href={nextMatch ? `/dashboard/matches/${nextMatch.id}` : "/dashboard/tournaments"} className="rounded-2xl border border-[#ff2941]/35 bg-[#ff2941]/8 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-[#ff2941]/12">Ver partida</Link>
-                </div>
+          <section className="rounded-[1.35rem] border border-[#18e6f2]/10 bg-[#061019]/72 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.28)]">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.24em] text-[#6fb8ff]">Centro competitivo</p>
+                <h1 className="mt-1 text-2xl font-black tracking-[-0.05em] text-white sm:text-3xl">Tu perfil primero</h1>
               </div>
-            </div>
-
-            <div className="rounded-[1.6rem] border border-white/10 bg-[#0a101a]/82 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.36)] sm:p-6">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#6fb8ff]">Acciones rapidas</p>
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                <div className="rounded-2xl border border-white/10 bg-white/6 p-4">
-                  <p className="text-xs text-white/44">Riot</p>
-                  <strong className="mt-1 block text-white">{riot.label}</strong>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/6 p-4">
-                  <p className="text-xs text-white/44">RSO</p>
-                  <strong className="mt-1 block text-white">{runtime.readyForOfficialRso ? "Listo" : "Pendiente"}</strong>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/6 p-4">
-                  <p className="text-xs text-white/44">Modo</p>
-                  <strong className="mt-1 block text-white">{runtime.mode ?? "mock"}</strong>
-                </div>
-              </div>
+              <p className="max-w-xl text-sm leading-6 text-white/50">Riot ID, rango, puntos y estado competitivo quedan arriba para evitar textos comprimidos y bloques desordenados.</p>
             </div>
           </section>
 
-          <section className="grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+          <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
             <article className="relative overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0d1421] shadow-[0_24px_80px_rgba(0,0,0,0.42)]">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_20%,rgba(255,41,65,0.24),transparent_32%),radial-gradient(circle_at_86%_18%,rgba(24,230,242,0.16),transparent_34%)]" />
-              <div className="relative grid gap-5 p-5 sm:p-6 lg:grid-cols-[118px_1fr]">
+              <div className="relative grid min-w-0 gap-5 p-5 sm:p-6 lg:grid-cols-[118px_minmax(0,1fr)]">
                 <div className="relative h-28 w-28 overflow-hidden rounded-full border-2 border-[#ff2941]/70 bg-black shadow-[0_0_44px_rgba(255,41,65,0.34)]">
                   {profileIconId ? <Image src={profileIconUrl(profileIconId)} alt="Riot profile icon" fill sizes="112px" className="object-cover" /> : <Image src={brand.logoMark} alt="Darkside" fill sizes="112px" className="object-contain p-7" />}
                   <span className="absolute bottom-2 right-2 h-4 w-4 rounded-full border-2 border-[#0d1421] bg-emerald-400" />
@@ -604,7 +575,7 @@ export function CompetitiveDashboard() {
                   </div>
                   <p className="mt-2 text-sm text-white/58">{riotId} · {role} · Region {riotSummary?.account?.platformRoute ?? primaryRiot?.platformRoute ?? "LA1"}</p>
 
-                  <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="mt-6 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
                     <div className="border-l border-white/10 pl-4">
                       <p className="text-xs text-white/42">Nivel</p>
                       <strong className="mt-1 block text-2xl text-white">{summonerLevel ?? "--"}</strong>
@@ -626,7 +597,7 @@ export function CompetitiveDashboard() {
               </div>
             </article>
 
-            <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
               <RiotRankCard queues={riotQueues} loading={loading} />
               <article className="relative overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0d1421] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_10%,rgba(255,41,65,0.26),transparent_34%)]" />
@@ -646,6 +617,45 @@ export function CompetitiveDashboard() {
                   </div>
                 </div>
               </article>
+            </div>
+          </section>
+
+          <section className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(280px,0.7fr)]">
+            <div className="rounded-[1.35rem] border border-white/10 bg-[#0a101a]/82 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.32)] sm:p-5">
+              <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-white/52">Bienvenido de vuelta</p>
+                  <h1 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white sm:text-3xl">
+                    {riotGameName ?? displayName} <span className="text-[#18e6f2]">{riotGameName ? `#${riotTagLine}` : ""}</span>
+                  </h1>
+                  <p className="mt-3 max-w-[36rem] text-sm leading-6 text-white/58">
+                    Preparate para competir. Tu perfil Riot, torneos, tokens, equipo y partidas se sincronizan desde un solo centro competitivo.
+                  </p>
+                </div>
+                <div className="grid w-full min-w-0 gap-2 sm:grid-cols-3 lg:max-w-[520px]">
+                  <Link href="/dashboard/teams" className="rounded-2xl border border-[#18e6f2]/35 bg-[#18e6f2]/7 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-[#18e6f2]/12">Crear equipo</Link>
+                  <Link href="/dashboard/tournaments" className="rounded-2xl border border-[#18e6f2]/25 bg-white/5 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-white/8">Buscar torneo</Link>
+                  <Link href={nextMatch ? `/dashboard/matches/${nextMatch.id}` : "/dashboard/tournaments"} className="rounded-2xl border border-[#ff2941]/35 bg-[#ff2941]/8 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-[#ff2941]/12">Ver partida</Link>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[1.35rem] border border-white/10 bg-[#0a101a]/82 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.32)] sm:p-5">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#6fb8ff]">Acciones rapidas</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="min-w-0 rounded-2xl border border-white/10 bg-white/6 p-3">
+                  <p className="text-xs text-white/44">Riot</p>
+                  <strong className="mt-1 block break-words text-sm font-black leading-5 text-white">{riot.label}</strong>
+                </div>
+                <div className="min-w-0 rounded-2xl border border-white/10 bg-white/6 p-3">
+                  <p className="text-xs text-white/44">RSO</p>
+                  <strong className="mt-1 block break-words text-sm font-black leading-5 text-white">{runtime.readyForOfficialRso ? "Listo" : "Pendiente"}</strong>
+                </div>
+                <div className="min-w-0 rounded-2xl border border-white/10 bg-white/6 p-3">
+                  <p className="text-xs text-white/44">Modo</p>
+                  <strong className="mt-1 block break-words text-sm font-black leading-5 text-white">{runtime.mode ?? "mock"}</strong>
+                </div>
+              </div>
             </div>
           </section>
 
