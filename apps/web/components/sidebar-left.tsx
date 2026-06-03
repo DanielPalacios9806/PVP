@@ -61,13 +61,17 @@ export function SidebarLeft() {
                 : "border-white/8 bg-[#151c28] hover:border-white/20 hover:bg-[#1b2332]"
             }`}
           >
-            <Image src={item.icon} alt="" width={28} height={28} className="max-h-7 max-w-7 object-contain" />
+            <span className="flex h-7 w-7 items-center justify-center">
+              <Image src={item.icon} alt="" width={24} height={24} className="h-6 w-6 object-contain" />
+            </span>
           </Link>
         );
       })}
 
       <Link href="/dashboard/account" title="Perfil" className="mt-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/8 bg-[#111722]">
-        <Image src="/assets/darkside/icons/icon-user.svg" alt="" width={24} height={24} />
+        <span className="flex h-7 w-7 items-center justify-center">
+          <Image src="/assets/darkside/icons/icon-user.svg" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
+        </span>
       </Link>
     </div>
   );

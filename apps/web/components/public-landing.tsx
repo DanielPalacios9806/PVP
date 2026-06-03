@@ -379,7 +379,7 @@ export function PublicLanding() {
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[rgba(3,6,10,0.74)] backdrop-blur-2xl">
         <div className="mx-auto flex h-[76px] max-w-[1520px] items-center gap-4 px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex min-w-0 items-center gap-3">
-            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.04] shadow-[0_0_34px_rgba(255,36,56,0.18)]">
+            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.04] shadow-[0_0_34px_rgba(255,36,56,0.18)] sm:hidden">
               <Image src={brand.logoMark} alt={`${brand.name} logo`} fill sizes="44px" className="object-contain p-2" />
             </span>
             <Image src={brand.logoHorizontal} alt={brand.name} width={214} height={42} priority className="hidden h-auto w-[188px] sm:block xl:w-[214px]" />
@@ -408,13 +408,15 @@ export function PublicLanding() {
               </Link>
             ) : (
               <>
-                <Link href="/auth/login" className="hidden min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white/70 transition hover:text-white sm:inline-flex">
+                <Link href="/auth/login" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 text-xs font-bold text-white/70 transition hover:text-white sm:min-h-11 sm:px-4 sm:text-sm">
                   <LogIn size={16} />
-                  Login
+                  <span className="hidden sm:inline">Login</span>
+                  <span className="sm:hidden">Entrar</span>
                 </Link>
-                <Link href="/auth/register" className="ds-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-black">
+                <Link href="/auth/register" className="ds-button-primary inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-3 text-xs font-black sm:min-h-11 sm:px-4 sm:text-sm">
                   <UserPlus size={16} />
-                  Registrarse
+                  <span className="hidden sm:inline">Registrarse</span>
+                  <span className="sm:hidden">Registro</span>
                 </Link>
               </>
             )}
