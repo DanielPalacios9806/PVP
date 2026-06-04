@@ -396,6 +396,113 @@ function ParticipantCard({
   );
 }
 
+
+function normalizeManualPassword(value?: string | null) {
+  const raw = String(value || "");
+  return raw.startsWith("manual:") ? raw.slice("manual:".length) : raw;
+}
+
+function dateTimeLocalValue(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function manualLobbyDetails(match: any) {
+  const code = match?.riotShortCode || simulatedLobbyCode(match);
+  const home = participantLabel(match?.homeRegistration);
+  const away = participantLabel(match?.awayRegistration);
+  const lobbyName = match?.riotGameId || `${match?.tournament?.name || "Darkside Cup"} - ${home} vs ${away}`.slice(0, 110);
+  const lobbyPassword = normalizeManualPassword(match?.riotPlatform) || code.replace(/[^A-Z0-9]/gi, "").slice(-8);
+  const instructions =
+    match?.riotRegion ||
+    "Crear partida personalizada, compartir sala/codigo con capitanes, respetar el BO y reportar resultado con evidencia si aplica.";
+  const providerLabel = match?.tournament?.externalProvider === "toornament_manual" ? "Toornament manual" : "Darkside manual";
+
+  return {
+    code,
+    lobbyName,
+    lobbyPassword,
+    instructions,
+    providerLabel,
+    scheduledInput: dateTimeLocalValue(match?.scheduledAt)
+  };
+}
+
+function ManualLobbyOpsCard({
+  match,
+  canOperate,
+  submitting,
+  onUpdate
+}: {
+  match: any;
+  canOperate: boolean;
+  submitting: boolean;
+  onUpdate: (formData: FormData) => void;
+}) {
+  const lobby = manualLobbyDetails(match);
+  const fieldClass = "w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#18e6f2]/50";
+
+  return (
+    <SectionCard title="Lobby manual asistido" description="Operación beta para salas, códigos y horarios antes de Riot Tournament API oficial.">
+      <div className="overflow-hidden rounded-[24px] border border-[#18e6f2]/20 bg-[linear-gradient(135deg,rgba(24,230,242,0.10),rgba(255,79,99,0.08)_55%,rgba(0,0,0,0.28))]">
+        <div className="border-b border-white/10 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#18e6f2]">Sala/código operativo</p>
+            <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/62">
+              {lobby.providerLabel}
+            </span>
+          </div>
+
+          <div className="mt-3 grid gap-3">
+            <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">Código / referencia</p>
+              <strong className="mt-1 block break-all font-mono text-xl tracking-[0.16em] text-white">{lobby.code}</strong>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">Nombre de sala</p>
+                <strong className="mt-1 block text-sm leading-5 text-white">{lobby.lobbyName}</strong>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">Contraseña</p>
+                <strong className="mt-1 block font-mono text-sm text-white">{lobby.lobbyPassword}</strong>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-3 text-xs leading-5 text-white/52">
+            El staff puede pegar códigos de Toornament/manuales o activar una sala provisional. Cuando Riot apruebe Tournament API, este bloque se reemplaza por generación oficial.
+          </p>
+        </div>
+
+        {canOperate ? (
+          <form action={onUpdate} className="border-t border-white/10 bg-black/20 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/50">Panel rápido moderador</p>
+            <div className="mt-3 grid gap-3">
+              <input name="lobbyCode" defaultValue={lobby.code} placeholder="Código o referencia" className={fieldClass} />
+              <input name="lobbyName" defaultValue={lobby.lobbyName} placeholder="Nombre de sala" className={fieldClass} />
+              <input name="lobbyPassword" defaultValue={lobby.lobbyPassword} placeholder="Contraseña de sala" className={fieldClass} />
+              <input name="scheduledAt" type="datetime-local" defaultValue={lobby.scheduledInput} className={fieldClass} />
+              <select name="status" defaultValue={match.status === "IN_PROGRESS" ? "IN_PROGRESS" : "READY"} className={fieldClass}>
+                <option value="PENDING">Pendiente</option>
+                <option value="READY">Sala lista</option>
+                <option value="IN_PROGRESS">En juego</option>
+              </select>
+              <textarea name="instructions" rows={4} defaultValue={lobby.instructions} placeholder="Instrucciones para capitanes" className={fieldClass} />
+            </div>
+            <button disabled={submitting} className="btn-primary mt-4 w-full disabled:opacity-50">
+              {submitting ? "Guardando..." : "Guardar sala manual"}
+            </button>
+          </form>
+        ) : null}
+      </div>
+    </SectionCard>
+  );
+}
+
 function canOperateMatch(user: StoredUser | null, match: any) {
   if (!user) {
     return false;
@@ -649,6 +756,46 @@ export function MatchRoom({ matchId }: { matchId: string }) {
     }
   }
 
+
+  async function updateLobby(formData: FormData) {
+    setSubmitting(true);
+    setMessage("");
+
+    const payload = {
+      lobbyCode: String(formData.get("lobbyCode") || ""),
+      lobbyName: String(formData.get("lobbyName") || ""),
+      lobbyPassword: String(formData.get("lobbyPassword") || ""),
+      scheduledAt: String(formData.get("scheduledAt") || ""),
+      instructions: String(formData.get("instructions") || ""),
+      status: String(formData.get("status") || "READY")
+    };
+
+    try {
+      const response = await fetch(`${apiUrl}/matches/${matchId}/lobby`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.message ?? "No se pudo guardar la sala manual.");
+        setMessageTone("error");
+        return;
+      }
+
+      setMessage("Sala manual actualizada. Los capitanes ya pueden consultar la información operativa.");
+      setMessageTone("success");
+      await load();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   function requestResultConfirmation(resultId: string, approved: boolean) {
     setPendingConfirmation({
       title: approved ? "Confirmar resultado" : "Rechazar resultado",
@@ -861,6 +1008,7 @@ export function MatchRoom({ matchId }: { matchId: string }) {
 
         <div className="space-y-6">
           <LobbyAutomationCard match={match} />
+          <ManualLobbyOpsCard match={match} canOperate={canOperate} submitting={submitting} onUpdate={updateLobby} />
 
           <SectionCard title="Reportar resultado" description="Flujo manual para capitanes y jugadores autorizados.">
             {canReport ? (
