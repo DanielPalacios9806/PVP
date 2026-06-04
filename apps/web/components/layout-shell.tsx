@@ -27,11 +27,11 @@ export function LayoutShell({
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 md:px-6 md:py-8">
-      <header className="mb-10 flex flex-col gap-5 rounded-[10px] border border-white/8 bg-[#070b12]/86 px-5 py-5 md:flex-row md:items-center md:justify-between md:px-7">
+      <header className="mb-6 flex flex-col gap-4 rounded-[10px] border border-white/8 bg-[#070b12]/86 px-4 py-4 md:mb-10 md:flex-row md:items-center md:justify-between md:px-7 md:py-5">
         <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="flex h-12 w-12 items-center justify-center rounded-[6px] border border-[var(--ds-border-red)] bg-black/30"
+            className="hidden lg:inline-flex flex h-12 w-12 items-center justify-center rounded-[6px] border border-[var(--ds-border-red)] bg-black/30"
           >
             <Image src={brand.logoMark} alt={brand.name} width={30} height={30} />
           </Link>
@@ -45,16 +45,16 @@ export function LayoutShell({
           </div>
         </div>
         <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold text-white/72">
-          <Link href="/" className="rounded-[8px] border border-white/10 px-4 py-2 hover:text-white">
+          <Link href="/" className="hidden rounded-[8px] border border-white/10 px-4 py-2 hover:text-white sm:inline-flex">
             Inicio
           </Link>
-          <Link href="/dashboard/tournaments" className="rounded-[8px] border border-white/10 px-4 py-2 hover:text-white">
+          <Link href="/dashboard/tournaments" className="hidden lg:inline-flex rounded-[8px] border border-white/10 px-4 py-2 hover:text-white">
             Torneos
           </Link>
-          <Link href="/auth/login" className="rounded-[8px] border border-[#43d3ff]/40 px-4 py-2 text-[#43d3ff]">
+          <Link href="/auth/login" className="rounded-[8px] border border-[#43d3ff]/40 px-3 py-2 text-[#43d3ff] sm:px-3 sm:px-4">
             Login
           </Link>
-          <Link href="/auth/register" className="rounded-[8px] bg-[#ff2f43] px-4 py-2 text-white">
+          <Link href="/auth/register" className="rounded-[8px] bg-[#ff2f43] px-3 py-2 text-white sm:px-3 sm:px-4">
             Registro
           </Link>
         </nav>

@@ -105,15 +105,18 @@ export async function registerUser(data: {
 }
 
 export async function loginUser(data: { email: string; password: string; ipAddress?: string | null }) {
-  const user = await prisma.user.findUnique({
-    where: { email: data.email },
+  const identifier = data.email.trim();
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: identifier }, { username: identifier }]
+    },
     include: {
       wallets: true
     }
   });
 
   if (!user) {
-    throw unauthorized("Correo o contrasena incorrectos.");
+    throw unauthorized("Correo, usuario o contrasena incorrectos.");
   }
 
   if (user.status !== UserStatus.ACTIVE) {
@@ -123,7 +126,7 @@ export async function loginUser(data: { email: string; password: string; ipAddre
   const valid = await bcrypt.compare(data.password, user.passwordHash);
 
   if (!valid) {
-    throw unauthorized("Correo o contrasena incorrectos.");
+    throw unauthorized("Correo, usuario o contrasena incorrectos.");
   }
 
   await createAuditLog({

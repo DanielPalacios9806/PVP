@@ -26,6 +26,16 @@ function getApiErrorMessage(data: ApiErrorResponse) {
   return firstFieldError ?? firstFormError ?? data.message ?? "No se pudo completar la solicitud.";
 }
 
+function isLikelyRealEmail(value: string) {
+  const normalized = value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(normalized)) return false;
+
+  const domain = normalized.split("@")[1]?.toLowerCase() ?? "";
+  if (!domain || domain.endsWith(".local") || domain.endsWith(".test") || domain.endsWith(".invalid")) return false;
+
+  return true;
+}
+
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -45,17 +55,38 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setMessage("");
     setMessageType("info");
 
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
+
+    if (mode === "register") {
+      if (!isLikelyRealEmail(email)) {
+        setMessageType("error");
+        setMessage("Ingresa un correo valido con dominio real. Los usuarios antiguos no se modifican.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (password !== passwordConfirm) {
+        setMessageType("error");
+        setMessage("Las contrasenas no coinciden. Revisa la confirmacion antes de crear la cuenta.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const payload =
       mode === "register"
         ? {
-            email: String(formData.get("email") ?? "").trim(),
+            email,
             username: String(formData.get("username") ?? "").trim(),
             displayName: String(formData.get("displayName") ?? "").trim(),
-            password: String(formData.get("password") ?? "")
+            password,
+            passwordConfirm
           }
         : {
-            email: String(formData.get("email") ?? "").trim(),
-            password: String(formData.get("password") ?? "")
+            email,
+            password
           };
 
     try {
@@ -117,7 +148,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
-      <aside className="glass-panel relative overflow-hidden rounded-[30px] p-6">
+      <aside className="glass-panel relative order-2 overflow-hidden rounded-[30px] p-5 sm:p-6 lg:order-1">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(47,107,255,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,79,99,0.14),transparent_30%)]" />
         <div className="relative space-y-5">
           <p className="eyebrow">{mode === "register" ? "Alta de jugador" : `Acceso a ${brand.name}`}</p>
@@ -143,7 +174,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </div>
       </aside>
 
-      <form action={onSubmit} className="glass-panel space-y-4 rounded-[30px] p-6">
+      <form action={onSubmit} className="glass-panel order-1 space-y-4 rounded-[30px] p-5 sm:p-6 lg:order-2">
         <div className="mb-2">
           <p className="eyebrow">{mode === "register" ? `Unete a ${brand.name}` : "Inicio seguro"}</p>
           <h3 className="mt-2 text-2xl font-semibold uppercase">
@@ -170,15 +201,39 @@ export function AuthForm({ mode }: { mode: Mode }) {
             />
           </>
         ) : null}
-        <input name="email" type="email" placeholder="Correo" required />
+        <input
+          name="email"
+          type={mode === "login" ? "text" : "email"}
+          inputMode="email"
+          autoComplete={mode === "register" ? "email" : "username"}
+          placeholder={mode === "register" ? "Correo real" : "Correo o usuario"}
+          required
+        />
+        <p className="-mt-2 text-xs leading-5 text-white/42">
+          {mode === "register"
+            ? "Para beta, los registros nuevos deben usar un correo con formato real. Las cuentas de prueba existentes no se modifican."
+            : "Puedes iniciar con correo o usuario. El acceso por nickname se mantiene como evolucion no destructiva."}
+        </p>
         <input
           name="password"
           type="password"
           placeholder="Contrasena"
+          autoComplete={mode === "register" ? "new-password" : "current-password"}
           required
           minLength={8}
           title="Debe tener minimo 8 caracteres, una mayuscula, una minuscula, un numero y un caracter especial."
         />
+        {mode === "register" ? (
+          <input
+            name="passwordConfirm"
+            type="password"
+            placeholder="Confirmar contrasena"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            title="Repite la misma contrasena para evitar errores de escritura."
+          />
+        ) : null}
         <button className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting}>
           {isSubmitting
             ? mode === "register"
