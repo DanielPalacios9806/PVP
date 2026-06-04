@@ -73,6 +73,22 @@ function actorLabel(actor: AuditActor) {
   return actor.displayName ?? actor.username ?? actor.email;
 }
 
+function maskIpAddress(value?: string | null) {
+  if (!value) return "n/a";
+
+  if (value.includes(":")) {
+    const parts = value.split(":").filter(Boolean);
+    return parts.length > 2 ? parts.slice(0, 2).join(":") + ":xxxx:xxxx" : "masked";
+  }
+
+  const parts = value.split(".");
+  if (parts.length === 4) {
+    return parts[0] + "." + parts[1] + ".xxx.xxx";
+  }
+
+  return "masked";
+}
+
 function stringifyPreview(value: unknown) {
   if (value === null || value === undefined) return "Sin datos";
 
@@ -226,7 +242,7 @@ export function AdminAuditPanel() {
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/50">
                   <span>Actor: {actorLabel(log.actorUser ?? null)}</span>
                   <span>Rol: {log.actorUser?.role ?? "sistema"}</span>
-                  <span>IP: {log.ipAddress ?? "n/a"}</span>
+                  <span>IP: {maskIpAddress(log.ipAddress)}</span>
                 </div>
               </button>
             );

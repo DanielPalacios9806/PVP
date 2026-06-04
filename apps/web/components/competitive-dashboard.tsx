@@ -322,6 +322,7 @@ export function CompetitiveDashboard() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failedProfileIcons, setFailedProfileIcons] = useState<Record<string, boolean>>({});
 
   function syncStoredSession() {
     setUser(getStoredUser());
@@ -475,6 +476,8 @@ export function CompetitiveDashboard() {
   const riotQueues = riotSummary?.ranked?.queues ?? [];
   const riotMatches = riotSummary?.recentMatches?.matches ?? [];
   const profileIconId = riotSummary?.summoner?.profileIconId ?? null;
+  const profileIconKey = profileIconId ? String(profileIconId) : null;
+  const profileIconSrc = profileIconKey && !failedProfileIcons[profileIconKey] ? profileIconUrl(profileIconId) : null;
   const summonerLevel = riotSummary?.summoner?.summonerLevel ?? null;
   const soloQueue = pickSoloQueue(riotQueues);
   const flexQueue = riotQueues.find((queue) => queue.queueType === "RANKED_FLEX_SR") ?? null;
@@ -554,7 +557,22 @@ export function CompetitiveDashboard() {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_20%,rgba(255,41,65,0.24),transparent_32%),radial-gradient(circle_at_86%_18%,rgba(24,230,242,0.16),transparent_34%)]" />
               <div className="relative grid min-w-0 gap-5 p-5 sm:p-6 lg:grid-cols-[112px_minmax(0,1fr)]">
                 <div className="relative h-24 w-24 overflow-hidden rounded-full sm:h-28 sm:w-28 border-2 border-[#ff2941]/70 bg-black shadow-[0_0_44px_rgba(255,41,65,0.34)]">
-                  {profileIconId ? <Image src={profileIconUrl(profileIconId)} alt="Riot profile icon" fill sizes="112px" className="object-cover" /> : <Image src={brand.logoMark} alt="Darkside" fill sizes="112px" className="object-contain p-7" />}
+                  {profileIconSrc ? (
+                    <Image
+                      src={profileIconSrc}
+                      alt="Icono Riot"
+                      fill
+                      sizes="112px"
+                      className="object-cover"
+                      onError={() => {
+                        if (profileIconKey) {
+                          setFailedProfileIcons((state) => ({ ...state, [profileIconKey]: true }));
+                        }
+                      }}
+                    />
+                  ) : (
+                    <Image src={brand.logoMark} alt="Darkside" fill sizes="112px" className="object-contain p-7" />
+                  )}
                   <span className="absolute bottom-2 right-2 h-4 w-4 rounded-full border-2 border-[#0d1421] bg-emerald-400" />
                 </div>
                 <div className="min-w-0">
@@ -666,7 +684,22 @@ export function CompetitiveDashboard() {
                   return (
                     <div key={index} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/5 p-3">
                       <div className="relative h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-black/40">
-                        {index === 0 && profileIconId ? <Image src={profileIconUrl(profileIconId)} alt="Player" fill sizes="40px" className="object-cover" /> : <Image src={index === 0 ? brand.logoMark : "/images/teams/default-team.svg"} alt="Player" fill sizes="40px" className="object-contain p-2" />}
+                        {index === 0 && profileIconSrc ? (
+                          <Image
+                            src={profileIconSrc}
+                            alt="Jugador"
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                            onError={() => {
+                              if (profileIconKey) {
+                                setFailedProfileIcons((state) => ({ ...state, [profileIconKey]: true }));
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Image src={index === 0 ? brand.logoMark : "/images/teams/default-team.svg"} alt="Jugador" fill sizes="40px" className="object-contain p-2" />
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-black text-white">{member ? names[index] : index === 0 && riotGameName ? riotGameName : names[index]}</p>

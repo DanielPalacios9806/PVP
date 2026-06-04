@@ -48,7 +48,10 @@ authRouter.post(
   asyncHandler(async (request, response) => {
     const payload = registerSchema.parse(request.body);
     const user = await registerUser({
-      ...payload,
+      email: payload.email,
+      username: payload.username,
+      displayName: payload.displayName,
+      password: payload.password,
       ipAddress: getRequestIp(request)
     });
 
