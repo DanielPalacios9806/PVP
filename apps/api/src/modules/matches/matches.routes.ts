@@ -1,4 +1,4 @@
-import { Router } from "express";
+import {Router } from "express";
 import { DisputeStatus, MatchResultStatus, MatchStatus, ResultSource } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
@@ -17,7 +17,7 @@ import { getRequestParam } from "../../utils/request-param.js";
 import { badRequest, forbidden, notFound } from "../../utils/http-error.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { advanceWinnerAfterMatch } from "../brackets/brackets.service.js";
-import { confirmResultSchema, createDisputeSchema, reportResultSchema, resolveDisputeSchema } from "./matches.schemas.js";
+import { confirmResultSchema, createDisputeSchema, reportResultSchema, resolveDisputeSchema, updateManualLobbySchema } from "./matches.schemas.js";
 
 
 async function completeMatchWithResult(params: {
@@ -299,6 +299,94 @@ matchesRouter.get(
   })
 );
 
+
+
+matchesRouter.patch(
+  "/:id/lobby",
+  requireAuth,
+  requireRole(["ORGANIZER", "MODERATOR", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const matchId = getRequestParam(request.params.id);
+    if (!matchId) {
+      throw badRequest("Match id is required");
+    }
+
+    const payload = updateManualLobbySchema.parse(request.body);
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        tournament: { select: { id: true, name: true, organizerId: true } }
+      }
+    });
+
+    if (!match) {
+      throw notFound("Match not found");
+    }
+
+    const moderator = isMatchModerator({
+      userId: request.user!.sub,
+      role: request.user!.role,
+      organizerId: match.tournament.organizerId
+    });
+
+    if (!moderator) {
+      throw forbidden("Only tournament staff can update lobby operations");
+    }
+
+    const updateData: Record<string, unknown> = {};
+
+    if (Object.prototype.hasOwnProperty.call(payload, "scheduledAt")) {
+      const rawDate = payload.scheduledAt?.trim();
+      updateData.scheduledAt = rawDate ? new Date(rawDate) : null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "lobbyCode")) {
+      const value = payload.lobbyCode?.trim();
+      updateData.riotShortCode = value || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "lobbyName")) {
+      const value = payload.lobbyName?.trim();
+      updateData.riotGameId = value || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "lobbyPassword")) {
+      const value = payload.lobbyPassword?.trim();
+      updateData.riotPlatform = value ? "manual:" + value : null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "instructions")) {
+      const value = payload.instructions?.trim();
+      updateData.riotRegion = value || null;
+    }
+
+    if (payload.status) {
+      updateData.status = payload.status as MatchStatus;
+    }
+
+    const updated = await prisma.match.update({
+      where: { id: match.id },
+      data: updateData
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "match_lobby.manual_update",
+      entityType: "match",
+      entityId: match.id,
+      after: {
+        scheduledAt: updated.scheduledAt,
+        status: updated.status,
+        lobbyCode: updated.riotShortCode,
+        lobbyName: updated.riotGameId,
+        hasLobbyPassword: Boolean(updated.riotPlatform)
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(updated);
+  })
+);
 matchesRouter.post(
   "/:id/results",
   requireAuth,

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, Coins, Gavel, LockKeyhole, Radar, ScrollText, ShieldCheck, Users, type LucideIcon } from "lucide-react";
+import {Activity, Coins, Gavel, LockKeyhole, Radar, ScrollText, ShieldCheck, Users, type LucideIcon, Gamepad2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getStoredUser, subscribeSessionChange, type AppRole } from "@/lib/session";
 
@@ -17,6 +17,16 @@ type OpsCard = {
 };
 
 const opsCards: OpsCard[] = [
+  {
+    title: "Salas manuales asistidas",
+    eyebrow: "Pre-beta",
+    description: "Control de salas, horarios, códigos manuales y operación provisional mientras Riot Tournament API está pendiente.",
+    href: "/dashboard/moderation",
+    icon: Gamepad2,
+    tone: "cyan",
+    roles: ["MODERATOR", "ADMIN", "SUPER_ADMIN"],
+    status: "manual"
+  },
   {
     title: "Riot development bridge",
     eyebrow: "Integracion",

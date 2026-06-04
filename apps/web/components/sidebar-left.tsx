@@ -16,6 +16,7 @@ interface RailItem {
 
 const railItems: RailItem[] = [
   { id: "lol", href: "/dashboard/tournaments?game=lol", label: "League of Legends", icon: "/assets/darkside/official/game-lol-logo.png" },
+  { id: "rules", href: "/legal/terms", label: "Reglamento", icon: "/assets/darkside/icons/icon-comment.svg" },
   { id: "valo", href: "/dashboard/tournaments?game=valorant", label: "VALORANT", icon: "/assets/darkside/official/game-valorant-logo.png" },
   { id: "teams", href: "/dashboard/teams", label: "Equipos", icon: "/assets/darkside/icons/icon-users.svg" },
   { id: "spaces", href: "/dashboard/spaces", label: "Comunidades", icon: "/assets/darkside/icons/icon-comment.svg" },
@@ -76,3 +77,4 @@ export function SidebarLeft() {
     </div>
   );
 }
+

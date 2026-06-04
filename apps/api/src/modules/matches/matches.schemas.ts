@@ -13,6 +13,15 @@ export const confirmResultSchema = z.object({
 });
 
 
+
+export const updateManualLobbySchema = z.object({
+  scheduledAt: z.string().max(80).optional(),
+  lobbyName: z.string().max(160).optional(),
+  lobbyPassword: z.string().max(80).optional(),
+  lobbyCode: z.string().max(140).optional(),
+  instructions: z.string().max(1200).optional(),
+  status: z.enum(["PENDING", "READY", "IN_PROGRESS"]).optional()
+});
 export const createDisputeSchema = z.object({
   reason: z.string().min(10).max(1000)
 });
