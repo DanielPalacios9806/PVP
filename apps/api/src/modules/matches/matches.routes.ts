@@ -1,4 +1,4 @@
-import {Router } from "express";
+import { Router } from "express";
 import { DisputeStatus, MatchResultStatus, MatchStatus, ResultSource } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
@@ -17,7 +17,7 @@ import { getRequestParam } from "../../utils/request-param.js";
 import { badRequest, forbidden, notFound } from "../../utils/http-error.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { advanceWinnerAfterMatch } from "../brackets/brackets.service.js";
-import { confirmResultSchema, createDisputeSchema, reportResultSchema, resolveDisputeSchema, updateManualLobbySchema } from "./matches.schemas.js";
+import { confirmResultSchema, createDisputeSchema, reportResultSchema, resolveDisputeSchema, moderatorConfirmResultSchema, updateManualLobbySchema } from "./matches.schemas.js";
 
 
 async function completeMatchWithResult(params: {
@@ -387,6 +387,130 @@ matchesRouter.patch(
     response.json(updated);
   })
 );
+
+matchesRouter.post(
+  "/:id/moderator-confirm",
+  requireAuth,
+  requireRole(["ORGANIZER", "MODERATOR", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const matchId = getRequestParam(request.params.id);
+    if (!matchId) {
+      throw badRequest("Match id is required");
+    }
+
+    const payload = moderatorConfirmResultSchema.parse(request.body);
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        tournament: { select: { id: true, name: true, organizerId: true } }
+      }
+    });
+
+    if (!match) {
+      throw notFound("Match not found");
+    }
+
+    if (match.status === MatchStatus.COMPLETED || match.status === MatchStatus.CANCELLED) {
+      throw badRequest("Match is already closed");
+    }
+
+    const moderator = isMatchModerator({
+      userId: request.user!.sub,
+      role: request.user!.role,
+      organizerId: match.tournament.organizerId
+    });
+
+    if (!moderator) {
+      throw forbidden("Only tournament staff can confirm bracket results");
+    }
+
+    if (
+      !validateWinnerForScores({
+        homeRegistrationId: match.homeRegistrationId,
+        awayRegistrationId: match.awayRegistrationId,
+        winnerRegistrationId: payload.winnerRegistrationId,
+        homeScore: payload.homeScore,
+        awayScore: payload.awayScore
+      })
+    ) {
+      throw badRequest("Winner registration does not match the submitted score");
+    }
+
+    const sourceLabels: Record<string, string> = {
+      WINNER_EVIDENCE: "evidencia del capitan ganador",
+      TOORNAMENT_MANUAL: "resultado validado en Toornament",
+      EXTERNAL_BRACKET: "bracket externo validado",
+      MODERATOR_DECISION: "decision operativa del moderador"
+    };
+
+    const moderationNotes = [
+      "Confirmacion staff: " + (sourceLabels[payload.confirmationSource] ?? payload.confirmationSource),
+      payload.notes?.trim(),
+      payload.moderationNote?.trim()
+    ].filter(Boolean).join(" | ");
+
+    const administrativeResult = await prisma.matchResult.create({
+      data: {
+        matchId: match.id,
+        reportedByUserId: request.user!.sub,
+        winnerRegistrationId: payload.winnerRegistrationId,
+        homeScore: payload.homeScore,
+        awayScore: payload.awayScore,
+        evidenceUrls: payload.evidenceUrls,
+        notes: moderationNotes,
+        status: MatchResultStatus.PENDING_CONFIRMATION
+      }
+    });
+
+    const result = await completeMatchWithResult({
+      resultId: administrativeResult.id,
+      actorUserId: request.user!.sub,
+      source: ResultSource.ADMIN_OVERRIDE
+    });
+
+    await prisma.matchResult.updateMany({
+      where: {
+        matchId: match.id,
+        id: { not: result.id },
+        status: MatchResultStatus.PENDING_CONFIRMATION
+      },
+      data: {
+        status: MatchResultStatus.REJECTED,
+        confirmedByUserId: request.user!.sub,
+        confirmedAt: new Date()
+      }
+    });
+
+    await prisma.dispute.updateMany({
+      where: {
+        matchId: match.id,
+        status: { in: [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW] }
+      },
+      data: {
+        status: DisputeStatus.RESOLVED,
+        resolution: payload.moderationNote?.trim() || ("Resultado confirmado por staff con fuente: " + (sourceLabels[payload.confirmationSource] ?? payload.confirmationSource)),
+        resolvedByUserId: request.user!.sub
+      }
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: "match_result.moderator_confirm_bracket",
+      entityType: "match_result",
+      entityId: result.id,
+      after: {
+        result,
+        confirmationSource: payload.confirmationSource,
+        moderationNote: payload.moderationNote,
+        matchId: match.id
+      },
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json({ result, confirmationSource: payload.confirmationSource });
+  })
+);
+
 matchesRouter.post(
   "/:id/results",
   requireAuth,

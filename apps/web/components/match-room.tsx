@@ -23,6 +23,14 @@ const resultStatusLabel: Record<string, string> = {
   REJECTED: "Rechazado"
 };
 
+
+const moderatorConfirmationSourceLabels: Record<string, string> = {
+  WINNER_EVIDENCE: "Evidencia del ganador",
+  TOORNAMENT_MANUAL: "Toornament manual",
+  EXTERNAL_BRACKET: "Bracket externo",
+  MODERATOR_DECISION: "Decision del moderador"
+};
+
 const disputeStatusLabel: Record<string, string> = {
   OPEN: "Abierta",
   UNDER_REVIEW: "En revisión",
@@ -503,6 +511,59 @@ function ManualLobbyOpsCard({
   );
 }
 
+
+function StaffBracketConfirmCard({
+  match,
+  canOperate,
+  submitting,
+  onConfirmStaff
+}: {
+  match: any;
+  canOperate: boolean;
+  submitting: boolean;
+  onConfirmStaff: (formData: FormData) => void | Promise<void>;
+}) {
+  if (!canOperate || ["COMPLETED", "CANCELLED"].includes(match?.status)) {
+    return null;
+  }
+
+  const options = winnerOptionsFromMatch(match);
+
+  return (
+    <SectionCard title="Confirmacion staff del bracket" description="Permite cerrar el resultado si el rival no responde o cuando Toornament/bracket externo ya valido el marcador.">
+      <form action={onConfirmStaff} className="space-y-4">
+        <select name="winnerRegistrationId" defaultValue={options[0]?.id} className="w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none focus:border-[#18e6f2]/50">
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="grid grid-cols-2 gap-3">
+          <input name="homeScore" type="number" min="0" defaultValue="1" required placeholder="Score A" />
+          <input name="awayScore" type="number" min="0" defaultValue="0" required placeholder="Score B" />
+        </div>
+        <select name="confirmationSource" defaultValue="WINNER_EVIDENCE" className="w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none focus:border-[#18e6f2]/50">
+          {Object.entries(moderatorConfirmationSourceLabels).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <input name="evidenceUrl" placeholder="URL de evidencia o captura (opcional)" />
+        <textarea name="notes" rows={3} placeholder="Notas visibles del reporte" />
+        <textarea name="moderationNote" rows={3} placeholder="Nota de moderacion / criterio aplicado" />
+        <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-6 text-amber-100">
+          Usalo cuando el ganador reporta y el perdedor no responde, o cuando Toornament/bracket externo ya confirma el ganador. Esta accion cierra la partida y puede avanzar el bracket.
+        </div>
+        <button disabled={submitting || options.length === 0} className="btn-primary w-full disabled:opacity-50">
+          {submitting ? "Confirmando..." : "Confirmar ganador como staff"}
+        </button>
+      </form>
+    </SectionCard>
+  );
+}
+
 function canOperateMatch(user: StoredUser | null, match: any) {
   if (!user) {
     return false;
@@ -657,6 +718,48 @@ export function MatchRoom({ matchId }: { matchId: string }) {
     await load();
   }
 
+
+
+  async function confirmByStaff(formData: FormData) {
+    setSubmitting(true);
+    setMessage("");
+
+    const evidenceUrl = String(formData.get("evidenceUrl") || "").trim();
+    const payload = {
+      winnerRegistrationId: String(formData.get("winnerRegistrationId") || ""),
+      homeScore: Number(formData.get("homeScore") || 0),
+      awayScore: Number(formData.get("awayScore") || 0),
+      confirmationSource: String(formData.get("confirmationSource") || "MODERATOR_DECISION"),
+      evidenceUrls: evidenceUrl ? [evidenceUrl] : [],
+      notes: String(formData.get("notes") || ""),
+      moderationNote: String(formData.get("moderationNote") || "")
+    };
+
+    try {
+      const response = await fetch(`${apiUrl}/matches/${matchId}/moderator-confirm`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.message ?? "No se pudo confirmar el bracket como staff.");
+        setMessageTone("error");
+        return;
+      }
+
+      setMessage("Ganador confirmado por staff. La partida quedo cerrada y el bracket puede avanzar.");
+      setMessageTone("success");
+      await load();
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function resolveDispute(formData: FormData) {
     const disputeId = String(formData.get("disputeId") || "");
@@ -1034,6 +1137,8 @@ export function MatchRoom({ matchId }: { matchId: string }) {
               <p className="text-sm leading-7 text-white/60">Esta partida no está disponible para reportar resultados.</p>
             )}
           </SectionCard>
+
+          <StaffBracketConfirmCard match={match} canOperate={canOperate} submitting={submitting} onConfirmStaff={confirmByStaff} />
 
           {pendingResult ? (
             <SectionCard title="Validación pendiente" description="Resultado esperando aceptación o revisión del staff.">

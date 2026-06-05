@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, Coins, FileSearch, Radar, ShieldCheck, Users, type LucideIcon } from "lucide-react";
+import { Activity, Coins, FileSearch, Network, Radar, ShieldCheck, Users, type LucideIcon } from "lucide-react";
 import { getStoredUser, subscribeSessionChange, type AppRole } from "@/lib/session";
 
 type QuickAccessItem = {
@@ -24,6 +24,15 @@ const quickAccess: QuickAccessItem[] = [
     icon: Radar,
     roles: ["ADMIN", "SUPER_ADMIN"],
     meta: "server-side"
+  },
+  {
+    href: "/dashboard/admin#toornament-bridge",
+    kicker: "Toornament",
+    title: "Bracket externo",
+    copy: "Flujo manual para crear participantes, fases, encuentros y referencias de sala mientras Riot Tournament API esta pendiente.",
+    icon: Network,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+    meta: "manual"
   },
   {
     href: "/dashboard/admin#operacion-torneos",

@@ -3,6 +3,7 @@ import { AdminOpsCommandCenter } from "@/components/admin-ops-command-center";
 import { AdminQuickAccess } from "@/components/admin-quick-access";
 import { AdminRiotPanel } from "@/components/admin-riot-panel";
 import { AdminTokenPanel } from "@/components/admin-token-panel";
+import { AdminToornamentPanel } from "@/components/admin-toornament-panel";
 import { RoleGate } from "@/components/role-gate";
 import { TournamentOpsPanel } from "@/components/tournament-ops-panel";
 
@@ -16,6 +17,9 @@ export default function AdminPage() {
           <AdminQuickAccess />
           <div id="riot-api" className="scroll-mt-28">
             <AdminRiotPanel />
+          </div>
+          <div id="toornament-bridge" className="scroll-mt-28">
+            <AdminToornamentPanel />
           </div>
           <div id="operacion-torneos" className="scroll-mt-28">
             <TournamentOpsPanel />
