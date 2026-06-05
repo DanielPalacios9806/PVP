@@ -370,6 +370,9 @@ model Tournament {
   maxParticipants      Int
   minParticipants      Int?                     @default(20)
   checkInEnabled       Boolean                  @default(false)
+  externalProvider     String?
+  externalTournamentId String?
+  externalBracketUrl   String?
   registrationClosesAt DateTime?
   startsAt             DateTime?
   endsAt               DateTime?
@@ -455,6 +458,9 @@ model Match {
   riotGameId         String?
   riotPlatform       String?
   riotRegion         String?
+  externalProvider   String?
+  externalMatchId    String?
+  externalBracketUrl String?
   resultSource       ResultSource        @default(MANUAL)
   callbackReceivedAt DateTime?
   resultSyncedAt     DateTime?

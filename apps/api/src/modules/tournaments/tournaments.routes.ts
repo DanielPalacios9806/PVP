@@ -10,7 +10,7 @@ import { getRequestParam } from "../../utils/request-param.js";
 import { slugify } from "../../utils/slug.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { generateSingleEliminationBracket } from "../brackets/brackets.service.js";
-import { checkInSchema, matchSchema, registrationSchema, tournamentSchema } from "./tournaments.schemas.js";
+import { checkInSchema, externalBridgeSchema, matchSchema, registrationSchema, tournamentSchema } from "./tournaments.schemas.js";
 
 export const tournamentsRouter = Router();
 
@@ -1017,6 +1017,56 @@ tournamentsRouter.post(
       tournamentId: requireRouteParam(request.params.id, "Tournament id"),
       status: TournamentStatus.COMPLETED,
       action: "tournament.complete"
+    });
+
+    response.json(tournament);
+  })
+);
+
+tournamentsRouter.patch(
+  "/:id/external-bridge",
+  requireAuth,
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const tournamentId = requireRouteParam(request.params.id, "Tournament id");
+    const payload = externalBridgeSchema.parse(request.body);
+    const existing = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+
+    if (!existing) {
+      throw notFound("Tournament not found");
+    }
+
+    assertCanManageTournament(request.user!, existing.organizerId);
+
+    const externalProvider = payload.externalProvider ?? null;
+    const externalTournamentId = payload.externalTournamentId?.trim() || null;
+    const externalBracketUrl = payload.externalBracketUrl?.trim() || null;
+
+    const tournament = await prisma.tournament.update({
+      where: { id: tournamentId },
+      data: {
+        externalProvider,
+        externalTournamentId,
+        externalBracketUrl
+      }
+    });
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: externalProvider ? "tournament.external_bridge.update" : "tournament.external_bridge.clear",
+      entityType: "tournament",
+      entityId: tournament.id,
+      before: {
+        externalProvider: existing.externalProvider,
+        externalTournamentId: existing.externalTournamentId,
+        externalBracketUrl: existing.externalBracketUrl
+      },
+      after: {
+        externalProvider: tournament.externalProvider,
+        externalTournamentId: tournament.externalTournamentId,
+        externalBracketUrl: tournament.externalBracketUrl
+      },
+      ipAddress: getRequestIp(request)
     });
 
     response.json(tournament);

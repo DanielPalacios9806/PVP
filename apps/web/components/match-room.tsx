@@ -23,6 +23,14 @@ const resultStatusLabel: Record<string, string> = {
   REJECTED: "Rechazado"
 };
 
+
+const moderatorConfirmationSourceLabels: Record<string, string> = {
+  WINNER_EVIDENCE: "Evidencia del ganador",
+  TOORNAMENT_MANUAL: "Toornament manual",
+  EXTERNAL_BRACKET: "Bracket externo",
+  MODERATOR_DECISION: "Decision del moderador"
+};
+
 const disputeStatusLabel: Record<string, string> = {
   OPEN: "Abierta",
   UNDER_REVIEW: "En revisión",
@@ -419,13 +427,19 @@ function manualLobbyDetails(match: any) {
   const instructions =
     match?.riotRegion ||
     "Crear partida personalizada, compartir sala/codigo con capitanes, respetar el BO y reportar resultado con evidencia si aplica.";
-  const providerLabel = match?.tournament?.externalProvider === "toornament_manual" ? "Toornament manual" : "Darkside manual";
+  const externalProvider = match?.externalProvider || match?.tournament?.externalProvider || "";
+  const externalMatchId = match?.externalMatchId || "";
+  const externalBracketUrl = match?.externalBracketUrl || match?.tournament?.externalBracketUrl || "";
+  const providerLabel = String(externalProvider).toUpperCase().includes("TOORNAMENT") ? "Toornament manual" : "Darkside manual";
 
   return {
     code,
     lobbyName,
     lobbyPassword,
     instructions,
+    externalProvider,
+    externalMatchId,
+    externalBracketUrl,
     providerLabel,
     scheduledInput: dateTimeLocalValue(match?.scheduledAt)
   };
@@ -461,6 +475,17 @@ function ManualLobbyOpsCard({
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">Código / referencia</p>
               <strong className="mt-1 block break-all font-mono text-xl tracking-[0.16em] text-white">{lobby.code}</strong>
             </div>
+            {lobby.externalMatchId || lobby.externalBracketUrl ? (
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-300/8 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-100">Referencia Toornament</p>
+                {lobby.externalMatchId ? <strong className="mt-1 block break-all text-sm text-white">{lobby.externalMatchId}</strong> : null}
+                {lobby.externalBracketUrl ? (
+                  <a href={lobby.externalBracketUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-bold text-[#18e6f2] hover:text-white">
+                    Abrir bracket externo
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">Nombre de sala</p>
@@ -483,6 +508,13 @@ function ManualLobbyOpsCard({
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/50">Panel rápido moderador</p>
             <div className="mt-3 grid gap-3">
               <input name="lobbyCode" defaultValue={lobby.code} placeholder="Código o referencia" className={fieldClass} />
+              <select name="externalProvider" defaultValue={lobby.externalProvider || "TOORNAMENT_MANUAL"} className={fieldClass}>
+                <option value="">Sin proveedor externo</option>
+                <option value="TOORNAMENT_MANUAL">Toornament manual</option>
+                <option value="TOORNAMENT_API">Toornament API futura</option>
+              </select>
+              <input name="externalMatchId" defaultValue={lobby.externalMatchId} placeholder="ID o referencia de encuentro Toornament" className={fieldClass} />
+              <input name="externalBracketUrl" defaultValue={lobby.externalBracketUrl} placeholder="URL del bracket externo" className={fieldClass} />
               <input name="lobbyName" defaultValue={lobby.lobbyName} placeholder="Nombre de sala" className={fieldClass} />
               <input name="lobbyPassword" defaultValue={lobby.lobbyPassword} placeholder="Contraseña de sala" className={fieldClass} />
               <input name="scheduledAt" type="datetime-local" defaultValue={lobby.scheduledInput} className={fieldClass} />
@@ -499,6 +531,59 @@ function ManualLobbyOpsCard({
           </form>
         ) : null}
       </div>
+    </SectionCard>
+  );
+}
+
+
+function StaffBracketConfirmCard({
+  match,
+  canOperate,
+  submitting,
+  onConfirmStaff
+}: {
+  match: any;
+  canOperate: boolean;
+  submitting: boolean;
+  onConfirmStaff: (formData: FormData) => void | Promise<void>;
+}) {
+  if (!canOperate || ["COMPLETED", "CANCELLED"].includes(match?.status)) {
+    return null;
+  }
+
+  const options = winnerOptionsFromMatch(match);
+
+  return (
+    <SectionCard title="Confirmacion staff del bracket" description="Permite cerrar el resultado si el rival no responde o cuando Toornament/bracket externo ya valido el marcador.">
+      <form action={onConfirmStaff} className="space-y-4">
+        <select name="winnerRegistrationId" defaultValue={options[0]?.id} className="w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none focus:border-[#18e6f2]/50">
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="grid grid-cols-2 gap-3">
+          <input name="homeScore" type="number" min="0" defaultValue="1" required placeholder="Score A" />
+          <input name="awayScore" type="number" min="0" defaultValue="0" required placeholder="Score B" />
+        </div>
+        <select name="confirmationSource" defaultValue="WINNER_EVIDENCE" className="w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none focus:border-[#18e6f2]/50">
+          {Object.entries(moderatorConfirmationSourceLabels).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <input name="evidenceUrl" placeholder="URL de evidencia o captura (opcional)" />
+        <textarea name="notes" rows={3} placeholder="Notas visibles del reporte" />
+        <textarea name="moderationNote" rows={3} placeholder="Nota de moderacion / criterio aplicado" />
+        <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-6 text-amber-100">
+          Usalo cuando el ganador reporta y el perdedor no responde, o cuando Toornament/bracket externo ya confirma el ganador. Esta accion cierra la partida y puede avanzar el bracket.
+        </div>
+        <button disabled={submitting || options.length === 0} className="btn-primary w-full disabled:opacity-50">
+          {submitting ? "Confirmando..." : "Confirmar ganador como staff"}
+        </button>
+      </form>
     </SectionCard>
   );
 }
@@ -658,6 +743,48 @@ export function MatchRoom({ matchId }: { matchId: string }) {
   }
 
 
+
+  async function confirmByStaff(formData: FormData) {
+    setSubmitting(true);
+    setMessage("");
+
+    const evidenceUrl = String(formData.get("evidenceUrl") || "").trim();
+    const payload = {
+      winnerRegistrationId: String(formData.get("winnerRegistrationId") || ""),
+      homeScore: Number(formData.get("homeScore") || 0),
+      awayScore: Number(formData.get("awayScore") || 0),
+      confirmationSource: String(formData.get("confirmationSource") || "MODERATOR_DECISION"),
+      evidenceUrls: evidenceUrl ? [evidenceUrl] : [],
+      notes: String(formData.get("notes") || ""),
+      moderationNote: String(formData.get("moderationNote") || "")
+    };
+
+    try {
+      const response = await fetch(`${apiUrl}/matches/${matchId}/moderator-confirm`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.message ?? "No se pudo confirmar el bracket como staff.");
+        setMessageTone("error");
+        return;
+      }
+
+      setMessage("Ganador confirmado por staff. La partida quedo cerrada y el bracket puede avanzar.");
+      setMessageTone("success");
+      await load();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function resolveDispute(formData: FormData) {
     const disputeId = String(formData.get("disputeId") || "");
     if (!disputeId) {
@@ -763,6 +890,9 @@ export function MatchRoom({ matchId }: { matchId: string }) {
 
     const payload = {
       lobbyCode: String(formData.get("lobbyCode") || ""),
+      externalProvider: String(formData.get("externalProvider") || ""),
+      externalMatchId: String(formData.get("externalMatchId") || ""),
+      externalBracketUrl: String(formData.get("externalBracketUrl") || ""),
       lobbyName: String(formData.get("lobbyName") || ""),
       lobbyPassword: String(formData.get("lobbyPassword") || ""),
       scheduledAt: String(formData.get("scheduledAt") || ""),
@@ -1034,6 +1164,8 @@ export function MatchRoom({ matchId }: { matchId: string }) {
               <p className="text-sm leading-7 text-white/60">Esta partida no está disponible para reportar resultados.</p>
             )}
           </SectionCard>
+
+          <StaffBracketConfirmCard match={match} canOperate={canOperate} submitting={submitting} onConfirmStaff={confirmByStaff} />
 
           {pendingResult ? (
             <SectionCard title="Validación pendiente" description="Resultado esperando aceptación o revisión del staff.">

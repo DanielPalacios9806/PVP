@@ -53,3 +53,9 @@ export const matchSchema = z.object({
     .enum(["PENDING", "READY", "IN_PROGRESS", "RESULT_PENDING", "COMPLETED", "DISPUTED", "CANCELLED"])
     .optional()
 });
+
+export const externalBridgeSchema = z.object({
+  externalProvider: z.enum(["TOORNAMENT_MANUAL", "TOORNAMENT_API"]).nullable().optional(),
+  externalTournamentId: z.string().trim().max(160).nullable().optional(),
+  externalBracketUrl: z.string().trim().url().max(500).nullable().optional()
+});

@@ -736,6 +736,46 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
     }
   }
 
+  async function updateExternalBridge(formData: FormData) {
+    if (!tournament || isMockTournament) {
+      setOperationMessage("El puente externo solo se guarda en torneos reales publicados en la API.");
+      return;
+    }
+
+    const externalProvider = String(formData.get("externalProvider") || "").trim() || null;
+    const externalTournamentId = String(formData.get("externalTournamentId") || "").trim() || null;
+    const externalBracketUrl = String(formData.get("externalBracketUrl") || "").trim() || null;
+
+    try {
+      setOperatingAction("external-bridge");
+      setOperationMessage("");
+      const response = await fetch(`${apiUrl}/tournaments/${tournament.id}/external-bridge`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          externalProvider,
+          externalTournamentId,
+          externalBracketUrl
+        })
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(translateTournamentError(data?.message ?? "No se pudo guardar el puente externo."));
+      }
+
+      setOperationMessage("Puente Toornament guardado correctamente.");
+      await load();
+    } catch (error) {
+      setOperationMessage(error instanceof Error ? error.message : "No se pudo guardar el puente externo.");
+    } finally {
+      setOperatingAction("");
+    }
+  }
+
   function requestTournamentOperation(action: string, path: string, successMessage: string, method = "POST") {
     const criticalActions: Record<string, ConfirmActionRequest> = {
       "close-registration": {
@@ -1093,6 +1133,7 @@ export function TournamentDetail({ tournamentId }: { tournamentId: string }) {
               operatingAction={operatingAction}
               operationMessage={operationMessage}
               onAction={requestTournamentOperation}
+              onExternalBridgeUpdate={updateExternalBridge}
               onRegistrationDecision={requestRegistrationDecision}
             />
           ) : null}
@@ -1663,12 +1704,14 @@ function TournamentOperationsPanel({
   operatingAction,
   operationMessage,
   onAction,
+  onExternalBridgeUpdate,
   onRegistrationDecision
 }: {
   tournament: any;
   operatingAction: string;
   operationMessage: string;
   onAction: (action: string, path: string, successMessage: string, method?: string) => void;
+  onExternalBridgeUpdate: (formData: FormData) => void | Promise<void>;
   onRegistrationDecision: (registrationId: string, decision: "approve" | "reject") => void;
 }) {
   const registrations = tournament.registrations ?? [];
@@ -1763,6 +1806,8 @@ function TournamentOperationsPanel({
         </div>
       </div>
 
+      <ExternalBridgeForm tournament={tournament} submitting={operatingAction === "external-bridge"} onSubmit={onExternalBridgeUpdate} />
+
       <div className="mt-5 grid gap-2">
         {actions.map((action) => (
           <button
@@ -1837,6 +1882,59 @@ function TournamentOperationsPanel({
         </div>
       </div>
     </div>
+  );
+}
+
+function ExternalBridgeForm({
+  tournament,
+  submitting,
+  onSubmit
+}: {
+  tournament: any;
+  submitting: boolean;
+  onSubmit: (formData: FormData) => void | Promise<void>;
+}) {
+  const provider = tournament.externalProvider || "";
+
+  return (
+    <form action={onSubmit} className="mt-5 rounded-[16px] border border-amber-300/20 bg-amber-300/8 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-100">Puente externo</p>
+          <h4 className="mt-1 text-lg font-semibold text-white">Toornament manual</h4>
+          <p className="mt-1 text-xs leading-5 text-white/55">
+            Guarda el ID o URL del bracket externo para operar torneos sin Riot Tournament API.
+          </p>
+        </div>
+        <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">
+          {provider || "sin vincular"}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        <select name="externalProvider" defaultValue={provider || "TOORNAMENT_MANUAL"} className="w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none focus:border-[#18e6f2]/50">
+          <option value="">Sin proveedor externo</option>
+          <option value="TOORNAMENT_MANUAL">Toornament manual</option>
+          <option value="TOORNAMENT_API">Toornament API futura</option>
+        </select>
+        <input
+          name="externalTournamentId"
+          defaultValue={tournament.externalTournamentId || ""}
+          placeholder="ID torneo Toornament o referencia interna"
+          className="w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#18e6f2]/50"
+        />
+        <input
+          name="externalBracketUrl"
+          defaultValue={tournament.externalBracketUrl || ""}
+          placeholder="URL publica o privada del bracket"
+          className="w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#18e6f2]/50"
+        />
+      </div>
+
+      <button disabled={submitting} className="btn-primary mt-4 w-full disabled:opacity-50">
+        {submitting ? "Guardando puente..." : "Guardar puente externo"}
+      </button>
+    </form>
   );
 }
 

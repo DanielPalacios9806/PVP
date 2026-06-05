@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {Activity, Coins, Gavel, LockKeyhole, Radar, ScrollText, ShieldCheck, Users, type LucideIcon, Gamepad2 } from "lucide-react";
+import { Activity, Coins, Gamepad2, Gavel, LockKeyhole, Network, Radar, ScrollText, ShieldCheck, Users, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getStoredUser, subscribeSessionChange, type AppRole } from "@/lib/session";
 
@@ -36,6 +36,16 @@ const opsCards: OpsCard[] = [
     tone: "cyan",
     roles: ["ADMIN", "SUPER_ADMIN"],
     status: "development"
+  },
+  {
+    title: "Toornament bridge manual",
+    eyebrow: "Bracket externo",
+    description: "Plan Free como operador provisional: participantes, fases, encuentros y codigos de sala se gestionan fuera y se auditan en Darkside.",
+    href: "/dashboard/admin#toornament-bridge",
+    icon: Network,
+    tone: "amber",
+    roles: ["ADMIN", "SUPER_ADMIN"],
+    status: "manual"
   },
   {
     title: "Operacion de torneos",
