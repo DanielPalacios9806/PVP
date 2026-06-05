@@ -59,3 +59,43 @@ export const externalBridgeSchema = z.object({
   externalTournamentId: z.string().trim().max(160).nullable().optional(),
   externalBracketUrl: z.string().trim().url().max(500).nullable().optional()
 });
+
+export const toornamentManualImportSchema = z.object({
+  dryRun: z.boolean().default(false),
+  externalTournamentId: z.string().trim().max(160).optional(),
+  externalBracketUrl: z.string().trim().url().max(500).optional(),
+  participants: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(160),
+        email: z.string().trim().email().optional(),
+        teamName: z.string().trim().max(160).optional(),
+        teamTag: z.string().trim().max(20).optional(),
+        externalParticipantId: z.string().trim().max(160).optional()
+      })
+    )
+    .max(256)
+    .default([]),
+  matches: z
+    .array(
+      z.object({
+        roundName: z.string().trim().min(1).max(80).default("Ronda 1"),
+        sequence: z.number().int().positive().optional(),
+        externalMatchId: z.string().trim().max(160).optional(),
+        externalBracketUrl: z.string().trim().url().max(500).optional(),
+        home: z.string().trim().min(1).max(160),
+        away: z.string().trim().max(160).optional(),
+        scheduledAt: z.string().datetime().optional(),
+        bestOf: z.number().int().positive().max(7).default(1),
+        lobbyCode: z.string().trim().max(140).optional(),
+        lobbyName: z.string().trim().max(160).optional(),
+        lobbyPassword: z.string().trim().max(80).optional(),
+        instructions: z.string().trim().max(1200).optional(),
+        status: z.enum(["PENDING", "READY", "IN_PROGRESS"]).default("READY")
+      })
+    )
+    .max(512)
+    .default([])
+}).refine((payload) => payload.participants.length > 0 || payload.matches.length > 0, {
+  message: "Import requires participants or matches"
+});

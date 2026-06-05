@@ -58,8 +58,32 @@ El plan Free de Toornament debe tratarse como apoyo para torneos pequenos. Si el
 - `Match.externalBracketUrl`
 - Endpoint staff: `PATCH /api/tournaments/:id/external-bridge`
 - Endpoint staff existente ampliado: `PATCH /api/matches/:id/lobby`
+- Endpoint staff de importacion: `POST /api/tournaments/:id/toornament/import`
+
+## Importacion manual / CSV
+
+Desde el panel admin se puede pegar CSV simple para participantes y matches. El import no crea usuarios ni equipos nuevos: solo resuelve participantes existentes y devuelve filas `unresolved` para corregir manualmente.
+
+Participantes:
+
+```csv
+name,email,teamName,teamTag,externalParticipantId
+Dark Ravens,,Dark Ravens,DRV,toornament-participant-1
+```
+
+Matches:
+
+```csv
+roundName,externalMatchId,home,away,scheduledAt,lobbyCode,externalBracketUrl
+Ronda 1,match-001,Dark Ravens,Blue Phoenix,2026-06-15T20:00:00.000Z,ROOM-001,https://organizer.toornament.com/...
+```
+
+Modos:
+
+- `dryRun=true`: previsualiza creaciones/errores sin escribir datos.
+- `dryRun=false`: confirma inscripciones existentes, crea bracket/rondas si hace falta y crea o actualiza matches por `externalMatchId`.
 
 ## Siguiente fase
 
-- Agregar import manual/CSV de participantes y matches.
 - Evaluar Toornament Organizer API si el plan y credenciales lo permiten.
+- Mejorar parser CSV con soporte para comillas y exportaciones complejas si el volumen crece.
