@@ -64,6 +64,13 @@ El plan Free de Toornament debe tratarse como apoyo para torneos pequenos. Si el
 
 Desde el panel admin se puede pegar CSV simple para participantes y matches. El import no crea usuarios ni equipos nuevos: solo resuelve participantes existentes y devuelve filas `unresolved` para corregir manualmente.
 
+El parser acepta:
+
+- Separador coma, punto y coma o tab.
+- Celdas entre comillas.
+- Headers en ingles o espanol, por ejemplo `team`, `equipo`, `match id`, `codigo`, `fecha`.
+- Vista previa con `dryRun=true` antes de escribir datos.
+
 Participantes:
 
 ```csv
@@ -86,4 +93,4 @@ Modos:
 ## Siguiente fase
 
 - Evaluar Toornament Organizer API si el plan y credenciales lo permiten.
-- Mejorar parser CSV con soporte para comillas y exportaciones complejas si el volumen crece.
+- Agregar una vista de historial de importaciones si el volumen operativo crece.

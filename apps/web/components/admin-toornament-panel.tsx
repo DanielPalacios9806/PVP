@@ -39,6 +39,99 @@ const syncFields = [
 
 const fieldClass = "w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#18e6f2]/50";
 
+const participantTemplate = `name,email,teamName,teamTag,externalParticipantId
+Dark Ravens,,Dark Ravens,DRV,toornament-participant-1
+Blue Phoenix,,Blue Phoenix,BPX,toornament-participant-2`;
+
+const matchTemplate = `roundName,externalMatchId,home,away,scheduledAt,lobbyCode,externalBracketUrl
+Ronda 1,match-001,Dark Ravens,Blue Phoenix,2026-06-15T20:00:00.000Z,ROOM-001,https://organizer.toornament.com/...`;
+
+const headerAliases: Record<string, string> = {
+  participant: "name",
+  player: "name",
+  jugador: "name",
+  equipo: "teamName",
+  team: "teamName",
+  "team name": "teamName",
+  "nombre equipo": "teamName",
+  tag: "teamTag",
+  "team tag": "teamTag",
+  email: "email",
+  correo: "email",
+  id: "externalParticipantId",
+  "participant id": "externalParticipantId",
+  "external participant id": "externalParticipantId",
+  round: "roundName",
+  ronda: "roundName",
+  "round name": "roundName",
+  match: "externalMatchId",
+  "match id": "externalMatchId",
+  "match identifier": "externalMatchId",
+  home: "home",
+  local: "home",
+  away: "away",
+  visitante: "away",
+  opponent: "away",
+  date: "scheduledAt",
+  fecha: "scheduledAt",
+  scheduled: "scheduledAt",
+  "scheduled at": "scheduledAt",
+  code: "lobbyCode",
+  codigo: "lobbyCode",
+  "lobby code": "lobbyCode",
+  url: "externalBracketUrl",
+  bracket: "externalBracketUrl",
+  "bracket url": "externalBracketUrl"
+};
+
+function detectSeparator(row: string) {
+  const candidates = ["\t", ";", ","];
+  return candidates
+    .map((separator) => ({
+      separator,
+      count: splitCsvLine(row, separator).length
+    }))
+    .sort((a, b) => b.count - a.count)[0]?.separator ?? ",";
+}
+
+function splitCsvLine(row: string, separator: string) {
+  const cells: string[] = [];
+  let current = "";
+  let quoted = false;
+
+  for (let index = 0; index < row.length; index += 1) {
+    const char = row[index];
+    const next = row[index + 1];
+
+    if (char === "\"" && quoted && next === "\"") {
+      current += "\"";
+      index += 1;
+      continue;
+    }
+
+    if (char === "\"") {
+      quoted = !quoted;
+      continue;
+    }
+
+    if (char === separator && !quoted) {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current.trim());
+  return cells.map((cell) => cell || undefined);
+}
+
+function normalizeHeader(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return headerAliases[normalized] || value.trim();
+}
+
 function parseTable(text: string) {
   const rows = text
     .split(/\r?\n/)
@@ -49,14 +142,14 @@ function parseTable(text: string) {
     return [];
   }
 
-  const separator = rows[0].includes("\t") ? "\t" : rows[0].includes(";") ? ";" : ",";
-  const first = rows[0].split(separator).map((cell) => cell.trim());
-  const hasHeader = first.some((cell) => ["name", "email", "teamName", "roundName", "home", "away"].includes(cell));
+  const separator = detectSeparator(rows[0]);
+  const first = splitCsvLine(rows[0], separator).map((cell) => normalizeHeader(String(cell || "")));
+  const hasHeader = first.some((cell) => ["name", "email", "teamName", "roundName", "home", "away", "externalMatchId"].includes(cell));
   const headers = hasHeader ? first : [];
   const dataRows = hasHeader ? rows.slice(1) : rows;
 
   return dataRows.map((row) => {
-    const cells = row.split(separator).map((cell) => cell.trim());
+    const cells = splitCsvLine(row, separator);
     if (headers.length) {
       return Object.fromEntries(headers.map((header, index) => [header, cells[index] || undefined]));
     }
@@ -117,10 +210,12 @@ export function AdminToornamentPanel() {
   const [tournamentId, setTournamentId] = useState("");
   const [externalTournamentId, setExternalTournamentId] = useState("");
   const [externalBracketUrl, setExternalBracketUrl] = useState("");
-  const [participantsText, setParticipantsText] = useState("name,email,teamName,teamTag,externalParticipantId\n");
-  const [matchesText, setMatchesText] = useState("roundName,externalMatchId,home,away,scheduledAt,lobbyCode,externalBracketUrl\n");
+  const [participantsText, setParticipantsText] = useState(participantTemplate);
+  const [matchesText, setMatchesText] = useState(matchTemplate);
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
+  const parsedParticipants = participantsFromText(participantsText);
+  const parsedMatches = matchesFromText(matchesText);
 
   async function importToornament(dryRun: boolean) {
     setLoading(true);
@@ -137,8 +232,8 @@ export function AdminToornamentPanel() {
           dryRun,
           externalTournamentId: externalTournamentId.trim() || undefined,
           externalBracketUrl: externalBracketUrl.trim() || undefined,
-          participants: participantsFromText(participantsText),
-          matches: matchesFromText(matchesText)
+          participants: parsedParticipants,
+          matches: parsedMatches
         })
       });
       const data = await response.json().catch(() => null);
@@ -222,12 +317,24 @@ export function AdminToornamentPanel() {
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <label className="block">
-            <span className="text-xs font-black uppercase tracking-[0.18em] text-white/48">Participantes CSV</span>
+            <span className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.18em] text-white/48">
+              Participantes CSV
+              <button type="button" onClick={() => setParticipantsText(participantTemplate)} className="text-[#18e6f2] hover:text-white">
+                plantilla
+              </button>
+            </span>
             <textarea value={participantsText} onChange={(event) => setParticipantsText(event.target.value)} rows={7} className={`${fieldClass} mt-2 font-mono text-xs`} />
+            <span className="mt-2 block text-xs text-white/45">{parsedParticipants.length} participantes detectados</span>
           </label>
           <label className="block">
-            <span className="text-xs font-black uppercase tracking-[0.18em] text-white/48">Matches CSV</span>
+            <span className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.18em] text-white/48">
+              Matches CSV
+              <button type="button" onClick={() => setMatchesText(matchTemplate)} className="text-[#18e6f2] hover:text-white">
+                plantilla
+              </button>
+            </span>
             <textarea value={matchesText} onChange={(event) => setMatchesText(event.target.value)} rows={7} className={`${fieldClass} mt-2 font-mono text-xs`} />
+            <span className="mt-2 block text-xs text-white/45">{parsedMatches.length} matches detectados</span>
           </label>
         </div>
 
