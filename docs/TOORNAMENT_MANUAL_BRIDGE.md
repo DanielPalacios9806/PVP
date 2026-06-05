@@ -18,8 +18,8 @@ Darkside.cool conserva login, equipos, perfiles, Riot mock/development, auditori
 2. Admin crea torneo espejo en Toornament Organizer.
 3. Staff agrega participantes manualmente en Toornament.
 4. Staff crea estructura/fase/bracket en Toornament.
-5. Staff copia URL/ID del torneo Toornament en notas operativas del torneo Darkside.
-6. Staff copia referencias de encuentro, sala, password y horario en la match room Darkside.
+5. Staff guarda URL/ID del torneo Toornament en el puente externo del torneo Darkside.
+6. Staff guarda referencia de encuentro, URL de bracket, sala, password y horario en la match room Darkside.
 7. Capitanes juegan la partida y reportan evidencia en Darkside.
 8. Staff confirma el resultado usando `Confirmacion staff del bracket`.
 9. Darkside guarda audit log y resuelve disputas abiertas.
@@ -28,9 +28,10 @@ Darkside.cool conserva login, equipos, perfiles, Riot mock/development, auditori
 
 | Dato Toornament | Uso temporal en Darkside |
 | --- | --- |
-| Tournament ID / URL | Reglas, descripcion o nota operativa del torneo |
+| Tournament ID / URL | `Tournament.externalTournamentId` / `Tournament.externalBracketUrl` |
 | Participantes | Inscripciones aprobadas en Darkside |
-| Match ID / referencia | Campo `Codigo / referencia` de sala manual |
+| Match ID / referencia | `Match.externalMatchId` o campo `Codigo / referencia` de sala manual |
+| Bracket URL del match | `Match.externalBracketUrl` |
 | Nombre de sala | Campo `Nombre de sala` |
 | Password / codigo lobby | Campo `Contrasena de sala` |
 | Horario | Campo `scheduledAt` del match |
@@ -47,8 +48,18 @@ El plan Free de Toornament debe tratarse como apoyo para torneos pequenos. Si el
 - Usuarios normales no crean brackets externos ni confirman resultados oficiales.
 - Toda confirmacion staff queda en audit log.
 
+## Persistencia implementada
+
+- `Tournament.externalProvider`
+- `Tournament.externalTournamentId`
+- `Tournament.externalBracketUrl`
+- `Match.externalProvider`
+- `Match.externalMatchId`
+- `Match.externalBracketUrl`
+- Endpoint staff: `PATCH /api/tournaments/:id/external-bridge`
+- Endpoint staff existente ampliado: `PATCH /api/matches/:id/lobby`
+
 ## Siguiente fase
 
-- Persistir `externalProvider`, `externalTournamentId`, `externalBracketUrl` y `externalMatchId` con migracion Prisma controlada.
 - Agregar import manual/CSV de participantes y matches.
 - Evaluar Toornament Organizer API si el plan y credenciales lo permiten.

@@ -19,6 +19,9 @@ export const updateManualLobbySchema = z.object({
   lobbyName: z.string().max(160).optional(),
   lobbyPassword: z.string().max(80).optional(),
   lobbyCode: z.string().max(140).optional(),
+  externalProvider: z.enum(["TOORNAMENT_MANUAL", "TOORNAMENT_API"]).nullable().optional(),
+  externalMatchId: z.string().max(160).nullable().optional(),
+  externalBracketUrl: z.string().url().max(500).nullable().optional(),
   instructions: z.string().max(1200).optional(),
   status: z.enum(["PENDING", "READY", "IN_PROGRESS"]).optional()
 });

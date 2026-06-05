@@ -427,13 +427,19 @@ function manualLobbyDetails(match: any) {
   const instructions =
     match?.riotRegion ||
     "Crear partida personalizada, compartir sala/codigo con capitanes, respetar el BO y reportar resultado con evidencia si aplica.";
-  const providerLabel = match?.tournament?.externalProvider === "toornament_manual" ? "Toornament manual" : "Darkside manual";
+  const externalProvider = match?.externalProvider || match?.tournament?.externalProvider || "";
+  const externalMatchId = match?.externalMatchId || "";
+  const externalBracketUrl = match?.externalBracketUrl || match?.tournament?.externalBracketUrl || "";
+  const providerLabel = String(externalProvider).toUpperCase().includes("TOORNAMENT") ? "Toornament manual" : "Darkside manual";
 
   return {
     code,
     lobbyName,
     lobbyPassword,
     instructions,
+    externalProvider,
+    externalMatchId,
+    externalBracketUrl,
     providerLabel,
     scheduledInput: dateTimeLocalValue(match?.scheduledAt)
   };
@@ -469,6 +475,17 @@ function ManualLobbyOpsCard({
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">Código / referencia</p>
               <strong className="mt-1 block break-all font-mono text-xl tracking-[0.16em] text-white">{lobby.code}</strong>
             </div>
+            {lobby.externalMatchId || lobby.externalBracketUrl ? (
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-300/8 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-100">Referencia Toornament</p>
+                {lobby.externalMatchId ? <strong className="mt-1 block break-all text-sm text-white">{lobby.externalMatchId}</strong> : null}
+                {lobby.externalBracketUrl ? (
+                  <a href={lobby.externalBracketUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-bold text-[#18e6f2] hover:text-white">
+                    Abrir bracket externo
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">Nombre de sala</p>
@@ -491,6 +508,13 @@ function ManualLobbyOpsCard({
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/50">Panel rápido moderador</p>
             <div className="mt-3 grid gap-3">
               <input name="lobbyCode" defaultValue={lobby.code} placeholder="Código o referencia" className={fieldClass} />
+              <select name="externalProvider" defaultValue={lobby.externalProvider || "TOORNAMENT_MANUAL"} className={fieldClass}>
+                <option value="">Sin proveedor externo</option>
+                <option value="TOORNAMENT_MANUAL">Toornament manual</option>
+                <option value="TOORNAMENT_API">Toornament API futura</option>
+              </select>
+              <input name="externalMatchId" defaultValue={lobby.externalMatchId} placeholder="ID o referencia de encuentro Toornament" className={fieldClass} />
+              <input name="externalBracketUrl" defaultValue={lobby.externalBracketUrl} placeholder="URL del bracket externo" className={fieldClass} />
               <input name="lobbyName" defaultValue={lobby.lobbyName} placeholder="Nombre de sala" className={fieldClass} />
               <input name="lobbyPassword" defaultValue={lobby.lobbyPassword} placeholder="Contraseña de sala" className={fieldClass} />
               <input name="scheduledAt" type="datetime-local" defaultValue={lobby.scheduledInput} className={fieldClass} />
@@ -866,6 +890,9 @@ export function MatchRoom({ matchId }: { matchId: string }) {
 
     const payload = {
       lobbyCode: String(formData.get("lobbyCode") || ""),
+      externalProvider: String(formData.get("externalProvider") || ""),
+      externalMatchId: String(formData.get("externalMatchId") || ""),
+      externalBracketUrl: String(formData.get("externalBracketUrl") || ""),
       lobbyName: String(formData.get("lobbyName") || ""),
       lobbyPassword: String(formData.get("lobbyPassword") || ""),
       scheduledAt: String(formData.get("scheduledAt") || ""),

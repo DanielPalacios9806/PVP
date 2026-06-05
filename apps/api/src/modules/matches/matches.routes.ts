@@ -345,6 +345,20 @@ matchesRouter.patch(
       updateData.riotShortCode = value || null;
     }
 
+    if (Object.prototype.hasOwnProperty.call(payload, "externalProvider")) {
+      updateData.externalProvider = payload.externalProvider || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "externalMatchId")) {
+      const value = payload.externalMatchId?.trim();
+      updateData.externalMatchId = value || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "externalBracketUrl")) {
+      const value = payload.externalBracketUrl?.trim();
+      updateData.externalBracketUrl = value || null;
+    }
+
     if (Object.prototype.hasOwnProperty.call(payload, "lobbyName")) {
       const value = payload.lobbyName?.trim();
       updateData.riotGameId = value || null;
@@ -379,6 +393,9 @@ matchesRouter.patch(
         status: updated.status,
         lobbyCode: updated.riotShortCode,
         lobbyName: updated.riotGameId,
+        externalProvider: updated.externalProvider,
+        externalMatchId: updated.externalMatchId,
+        externalBracketUrl: updated.externalBracketUrl,
         hasLobbyPassword: Boolean(updated.riotPlatform)
       },
       ipAddress: getRequestIp(request)
