@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ExternalAccountProvider, RegistrationStatus, RiotLinkedAccountStatus, TeamMemberRole, TeamStatus, TournamentStatus } from "@prisma/client";
+import { BracketStatus, ExternalAccountProvider, MatchStatus, RegistrationStatus, RiotLinkedAccountStatus, RoundStatus, TeamMemberRole, TeamStatus, TournamentStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import type { AuthenticatedRequest, AuthUser } from "../../types.js";
@@ -10,7 +10,7 @@ import { getRequestParam } from "../../utils/request-param.js";
 import { slugify } from "../../utils/slug.js";
 import { createAuditLog } from "../audit/audit.service.js";
 import { generateSingleEliminationBracket } from "../brackets/brackets.service.js";
-import { checkInSchema, externalBridgeSchema, matchSchema, registrationSchema, tournamentSchema } from "./tournaments.schemas.js";
+import { checkInSchema, externalBridgeSchema, matchSchema, registrationSchema, toornamentManualImportSchema, tournamentSchema } from "./tournaments.schemas.js";
 
 export const tournamentsRouter = Router();
 
@@ -228,6 +228,17 @@ function canManageTournament(params: { user: AuthUser; organizerId: string }) {
 function assertCanManageTournament(user: AuthUser, organizerId: string) {
   if (!canManageTournament({ user, organizerId })) {
     throw forbidden("Only the tournament organizer or an admin can manage this tournament");
+  }
+}
+
+function importKey(value?: string | null) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function addImportAlias(map: Map<string, string>, value: string | null | undefined, registrationId: string) {
+  const key = importKey(value);
+  if (key) {
+    map.set(key, registrationId);
   }
 }
 
@@ -1070,6 +1081,280 @@ tournamentsRouter.patch(
     });
 
     response.json(tournament);
+  })
+);
+
+tournamentsRouter.post(
+  "/:id/toornament/import",
+  requireAuth,
+  requireRole(["ORGANIZER", "ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (request: AuthenticatedRequest, response) => {
+    const tournamentId = requireRouteParam(request.params.id, "Tournament id");
+    const payload = toornamentManualImportSchema.parse(request.body);
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+
+    if (!tournament) {
+      throw notFound("Tournament not found");
+    }
+
+    assertCanManageTournament(request.user!, tournament.organizerId);
+
+    if (terminalTournamentStatuses.includes(tournament.status)) {
+      throw badRequest("Cannot import Toornament data into completed or cancelled tournaments");
+    }
+
+    const summary = {
+      dryRun: payload.dryRun,
+      participants: { created: 0, existing: 0, unresolved: [] as Array<Record<string, string>> },
+      matches: { created: 0, updated: 0, skipped: 0, unresolved: [] as Array<Record<string, string>> }
+    };
+
+    const runImport = async (tx: typeof prisma) => {
+      const aliases = new Map<string, string>();
+
+      const existingRegistrations = await tx.tournamentRegistration.findMany({
+        where: {
+          tournamentId,
+          status: { in: activeRegistrationStatuses }
+        },
+        include: {
+          user: { select: { email: true, username: true, displayName: true } },
+          team: { select: { name: true, tag: true } }
+        }
+      });
+
+      for (const registration of existingRegistrations) {
+        addImportAlias(aliases, registration.user?.email, registration.id);
+        addImportAlias(aliases, registration.user?.username, registration.id);
+        addImportAlias(aliases, registration.user?.displayName, registration.id);
+        addImportAlias(aliases, registration.team?.name, registration.id);
+        addImportAlias(aliases, registration.team?.tag, registration.id);
+      }
+
+      let activeCount = existingRegistrations.length;
+
+      for (const participant of payload.participants) {
+        const participantLabel = participant.teamName || participant.name;
+        let targetUserId: string | null = null;
+        let targetTeamId: string | null = null;
+
+        if (tournament.type === "TEAM") {
+          const teamLookup = [participant.teamName, participant.name, participant.teamTag].filter(Boolean) as string[];
+          const team = teamLookup.length
+            ? await tx.team.findFirst({
+                where: {
+                  status: TeamStatus.ACTIVE,
+                  OR: teamLookup.flatMap((value) => [
+                    { name: { equals: value, mode: "insensitive" } },
+                    { tag: { equals: value, mode: "insensitive" } }
+                  ])
+                }
+              })
+            : null;
+
+          if (!team) {
+            summary.participants.unresolved.push({ name: participantLabel, reason: "team_not_found" });
+            continue;
+          }
+
+          targetTeamId = team.id;
+        } else {
+          const userOr = [
+            participant.email ? { email: { equals: participant.email, mode: "insensitive" as const } } : null,
+            { username: { equals: participant.name, mode: "insensitive" as const } },
+            { displayName: { equals: participant.name, mode: "insensitive" as const } }
+          ].filter(Boolean) as any[];
+
+          const user = await tx.user.findFirst({ where: { OR: userOr } });
+
+          if (!user) {
+            summary.participants.unresolved.push({ name: participant.name, reason: "user_not_found" });
+            continue;
+          }
+
+          targetUserId = user.id;
+        }
+
+        const existing = await tx.tournamentRegistration.findFirst({
+          where: {
+            tournamentId,
+            status: { in: activeRegistrationStatuses },
+            ...(targetTeamId ? { teamId: targetTeamId } : { userId: targetUserId })
+          }
+        });
+
+        if (existing) {
+          summary.participants.existing += 1;
+          addImportAlias(aliases, participant.name, existing.id);
+          addImportAlias(aliases, participant.teamName, existing.id);
+          addImportAlias(aliases, participant.teamTag, existing.id);
+          addImportAlias(aliases, participant.email, existing.id);
+          addImportAlias(aliases, participant.externalParticipantId, existing.id);
+          continue;
+        }
+
+        if (activeCount >= tournament.maxParticipants) {
+          summary.participants.unresolved.push({ name: participantLabel, reason: "capacity_reached" });
+          continue;
+        }
+
+        if (payload.dryRun) {
+          const previewRegistrationId = "dryrun:" + participantLabel;
+          activeCount += 1;
+          summary.participants.created += 1;
+          addImportAlias(aliases, participant.name, previewRegistrationId);
+          addImportAlias(aliases, participant.teamName, previewRegistrationId);
+          addImportAlias(aliases, participant.teamTag, previewRegistrationId);
+          addImportAlias(aliases, participant.email, previewRegistrationId);
+          addImportAlias(aliases, participant.externalParticipantId, previewRegistrationId);
+          continue;
+        }
+
+        const registration = await tx.tournamentRegistration.create({
+          data: {
+            tournamentId,
+            userId: targetUserId,
+            teamId: targetTeamId,
+            status: RegistrationStatus.CONFIRMED,
+            approvedByUserId: request.user!.sub,
+            approvedAt: new Date()
+          }
+        });
+
+        activeCount += 1;
+        summary.participants.created += 1;
+        addImportAlias(aliases, participant.name, registration.id);
+        addImportAlias(aliases, participant.teamName, registration.id);
+        addImportAlias(aliases, participant.teamTag, registration.id);
+        addImportAlias(aliases, participant.email, registration.id);
+        addImportAlias(aliases, participant.externalParticipantId, registration.id);
+      }
+
+      if (!payload.dryRun && (payload.externalTournamentId || payload.externalBracketUrl)) {
+        await tx.tournament.update({
+          where: { id: tournamentId },
+          data: {
+            externalProvider: "TOORNAMENT_MANUAL",
+            externalTournamentId: payload.externalTournamentId || tournament.externalTournamentId,
+            externalBracketUrl: payload.externalBracketUrl || tournament.externalBracketUrl
+          }
+        });
+      }
+
+      if (!payload.matches.length) {
+        return summary;
+      }
+
+      let bracket = await tx.bracket.findUnique({ where: { tournamentId } });
+      if (!bracket && !payload.dryRun) {
+        bracket = await tx.bracket.create({
+          data: {
+            tournamentId,
+            status: BracketStatus.GENERATED,
+            metadata: { source: "TOORNAMENT_MANUAL" }
+          }
+        });
+      }
+
+      const roundByName = new Map<string, string>();
+      if (bracket) {
+        const rounds = await tx.round.findMany({ where: { bracketId: bracket.id } });
+        for (const round of rounds) {
+          roundByName.set(importKey(round.name), round.id);
+        }
+      }
+
+      for (const [index, importedMatch] of payload.matches.entries()) {
+        const homeRegistrationId = aliases.get(importKey(importedMatch.home));
+        const awayRegistrationId = importedMatch.away ? aliases.get(importKey(importedMatch.away)) : null;
+
+        if (!homeRegistrationId || (importedMatch.away && !awayRegistrationId)) {
+          summary.matches.unresolved.push({
+            externalMatchId: importedMatch.externalMatchId || importedMatch.home,
+            reason: "participant_not_resolved"
+          });
+          continue;
+        }
+
+        if (payload.dryRun) {
+          summary.matches.created += 1;
+          continue;
+        }
+
+        let roundId: string | null = null;
+        if (bracket) {
+          const roundKey = importKey(importedMatch.roundName);
+          roundId = roundByName.get(roundKey) || null;
+
+          if (!roundId) {
+            const round = await tx.round.create({
+              data: {
+                bracketId: bracket.id,
+                name: importedMatch.roundName,
+                sequence: importedMatch.sequence ?? index + 1,
+                status: RoundStatus.ACTIVE
+              }
+            });
+            roundId = round.id;
+            roundByName.set(roundKey, round.id);
+          }
+        }
+
+        const existingMatch = importedMatch.externalMatchId
+          ? await tx.match.findFirst({
+              where: {
+                tournamentId,
+                externalProvider: "TOORNAMENT_MANUAL",
+                externalMatchId: importedMatch.externalMatchId
+              }
+            })
+          : null;
+
+        const matchData = {
+          roundId,
+          homeRegistrationId,
+          awayRegistrationId: awayRegistrationId || null,
+          scheduledAt: parseOptionalDate(importedMatch.scheduledAt),
+          bestOf: importedMatch.bestOf,
+          status: importedMatch.status as MatchStatus,
+          externalProvider: "TOORNAMENT_MANUAL",
+          externalMatchId: importedMatch.externalMatchId || null,
+          externalBracketUrl: importedMatch.externalBracketUrl || payload.externalBracketUrl || null,
+          riotShortCode: importedMatch.lobbyCode || null,
+          riotGameId: importedMatch.lobbyName || null,
+          riotPlatform: importedMatch.lobbyPassword ? "manual:" + importedMatch.lobbyPassword : null,
+          riotRegion: importedMatch.instructions || null
+        };
+
+        if (existingMatch) {
+          await tx.match.update({ where: { id: existingMatch.id }, data: matchData });
+          summary.matches.updated += 1;
+        } else {
+          await tx.match.create({
+            data: {
+              tournamentId,
+              ...matchData
+            }
+          });
+          summary.matches.created += 1;
+        }
+      }
+
+      return summary;
+    };
+
+    const result = payload.dryRun ? await runImport(prisma) : await prisma.$transaction((tx) => runImport(tx as typeof prisma));
+
+    await createAuditLog({
+      actorUserId: request.user!.sub,
+      action: payload.dryRun ? "toornament.import.preview" : "toornament.import.apply",
+      entityType: "tournament",
+      entityId: tournamentId,
+      after: result,
+      ipAddress: getRequestIp(request)
+    });
+
+    response.json(result);
   })
 );
 

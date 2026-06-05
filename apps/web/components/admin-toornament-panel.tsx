@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { ExternalLink, ListChecks, Upload, UsersRound } from "lucide-react";
+import { apiUrl, getAuthHeaders } from "../lib/config";
 import { SectionCard } from "./section-card";
 
 const toornamentSteps = [
@@ -28,14 +30,226 @@ const toornamentSteps = [
 ];
 
 const syncFields = [
-  ["ID torneo Toornament", "Guardar temporalmente en notas operativas del torneo hasta habilitar campo persistente."],
-  ["URL publica del bracket", "Compartir en reglas o descripcion del torneo para jugadores y moderadores."],
-  ["Codigo / referencia de match", "Usar el campo Codigo o referencia de la sala manual."],
+  ["ID torneo Toornament", "Guardar en el puente externo persistente del torneo."],
+  ["URL publica del bracket", "Guardar como URL externa del torneo o match."],
+  ["Codigo / referencia de match", "Usar referencia externa del match o codigo de sala manual."],
   ["Nombre y password de sala", "Usar campos de lobby manual en cada match room."],
   ["Fuente del resultado", "Cerrar con Confirmacion staff del bracket usando Toornament manual o bracket externo."]
 ];
 
+const fieldClass = "w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#18e6f2]/50";
+
+const participantTemplate = `name,email,teamName,teamTag,externalParticipantId
+Dark Ravens,,Dark Ravens,DRV,toornament-participant-1
+Blue Phoenix,,Blue Phoenix,BPX,toornament-participant-2`;
+
+const matchTemplate = `roundName,externalMatchId,home,away,scheduledAt,lobbyCode,externalBracketUrl
+Ronda 1,match-001,Dark Ravens,Blue Phoenix,2026-06-15T20:00:00.000Z,ROOM-001,https://organizer.toornament.com/...`;
+
+const headerAliases: Record<string, string> = {
+  participant: "name",
+  player: "name",
+  jugador: "name",
+  equipo: "teamName",
+  team: "teamName",
+  "team name": "teamName",
+  "nombre equipo": "teamName",
+  tag: "teamTag",
+  "team tag": "teamTag",
+  email: "email",
+  correo: "email",
+  id: "externalParticipantId",
+  "participant id": "externalParticipantId",
+  "external participant id": "externalParticipantId",
+  round: "roundName",
+  ronda: "roundName",
+  "round name": "roundName",
+  match: "externalMatchId",
+  "match id": "externalMatchId",
+  "match identifier": "externalMatchId",
+  home: "home",
+  local: "home",
+  away: "away",
+  visitante: "away",
+  opponent: "away",
+  date: "scheduledAt",
+  fecha: "scheduledAt",
+  scheduled: "scheduledAt",
+  "scheduled at": "scheduledAt",
+  code: "lobbyCode",
+  codigo: "lobbyCode",
+  "lobby code": "lobbyCode",
+  url: "externalBracketUrl",
+  bracket: "externalBracketUrl",
+  "bracket url": "externalBracketUrl"
+};
+
+function detectSeparator(row: string) {
+  const candidates = ["\t", ";", ","];
+  return candidates
+    .map((separator) => ({
+      separator,
+      count: splitCsvLine(row, separator).length
+    }))
+    .sort((a, b) => b.count - a.count)[0]?.separator ?? ",";
+}
+
+function splitCsvLine(row: string, separator: string) {
+  const cells: string[] = [];
+  let current = "";
+  let quoted = false;
+
+  for (let index = 0; index < row.length; index += 1) {
+    const char = row[index];
+    const next = row[index + 1];
+
+    if (char === "\"" && quoted && next === "\"") {
+      current += "\"";
+      index += 1;
+      continue;
+    }
+
+    if (char === "\"") {
+      quoted = !quoted;
+      continue;
+    }
+
+    if (char === separator && !quoted) {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current.trim());
+  return cells.map((cell) => cell || undefined);
+}
+
+function normalizeHeader(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return headerAliases[normalized] || value.trim();
+}
+
+function parseTable(text: string) {
+  const rows = text
+    .split(/\r?\n/)
+    .map((row) => row.trim())
+    .filter(Boolean);
+
+  if (!rows.length) {
+    return [];
+  }
+
+  const separator = detectSeparator(rows[0]);
+  const first = splitCsvLine(rows[0], separator).map((cell) => normalizeHeader(String(cell || "")));
+  const hasHeader = first.some((cell) => ["name", "email", "teamName", "roundName", "home", "away", "externalMatchId"].includes(cell));
+  const headers = hasHeader ? first : [];
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+
+  return dataRows.map((row) => {
+    const cells = splitCsvLine(row, separator);
+    if (headers.length) {
+      return Object.fromEntries(headers.map((header, index) => [header, cells[index] || undefined]));
+    }
+
+    return cells;
+  });
+}
+
+function participantsFromText(text: string) {
+  return parseTable(text).map((row: any) => {
+    if (Array.isArray(row)) {
+      return {
+        name: row[0],
+        email: row[1] || undefined,
+        teamName: row[2] || undefined,
+        teamTag: row[3] || undefined,
+        externalParticipantId: row[4] || undefined
+      };
+    }
+
+    return {
+      name: row.name || row.teamName || row.email,
+      email: row.email,
+      teamName: row.teamName,
+      teamTag: row.teamTag,
+      externalParticipantId: row.externalParticipantId
+    };
+  }).filter((row: any) => row.name);
+}
+
+function matchesFromText(text: string) {
+  return parseTable(text).map((row: any) => {
+    if (Array.isArray(row)) {
+      return {
+        roundName: row[0] || "Ronda 1",
+        externalMatchId: row[1] || undefined,
+        home: row[2],
+        away: row[3] || undefined,
+        scheduledAt: row[4] || undefined,
+        lobbyCode: row[5] || undefined,
+        externalBracketUrl: row[6] || undefined
+      };
+    }
+
+    return {
+      roundName: row.roundName || "Ronda 1",
+      externalMatchId: row.externalMatchId,
+      home: row.home,
+      away: row.away,
+      scheduledAt: row.scheduledAt,
+      lobbyCode: row.lobbyCode,
+      externalBracketUrl: row.externalBracketUrl
+    };
+  }).filter((row: any) => row.home);
+}
+
 export function AdminToornamentPanel() {
+  const [tournamentId, setTournamentId] = useState("");
+  const [externalTournamentId, setExternalTournamentId] = useState("");
+  const [externalBracketUrl, setExternalBracketUrl] = useState("");
+  const [participantsText, setParticipantsText] = useState(participantTemplate);
+  const [matchesText, setMatchesText] = useState(matchTemplate);
+  const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
+  const parsedParticipants = participantsFromText(participantsText);
+  const parsedMatches = matchesFromText(matchesText);
+
+  async function importToornament(dryRun: boolean) {
+    setLoading(true);
+    setResult("");
+
+    try {
+      const response = await fetch(`${apiUrl}/tournaments/${tournamentId.trim()}/toornament/import`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          dryRun,
+          externalTournamentId: externalTournamentId.trim() || undefined,
+          externalBracketUrl: externalBracketUrl.trim() || undefined,
+          participants: parsedParticipants,
+          matches: parsedMatches
+        })
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.message || "No se pudo importar desde Toornament.");
+      }
+
+      setResult(JSON.stringify(data, null, 2));
+    } catch (error) {
+      setResult(error instanceof Error ? error.message : "Error inesperado.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <SectionCard
       title="Puente Toornament manual"
@@ -77,6 +291,68 @@ export function AdminToornamentPanel() {
           </div>
         </aside>
       </div>
+
+      <form className="mt-5 rounded-[26px] border border-[#18e6f2]/18 bg-[#18e6f2]/8 p-4" onSubmit={(event) => {
+        event.preventDefault();
+        importToornament(false);
+      }}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#18e6f2]">Importacion fase 3</p>
+            <h3 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">Pegar CSV desde Toornament</h3>
+            <p className="mt-2 text-sm leading-6 text-white/58">
+              Resuelve participantes existentes, confirma inscripciones y crea/actualiza matches con referencias externas.
+            </p>
+          </div>
+          <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/55">
+            Staff only
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <input value={tournamentId} onChange={(event) => setTournamentId(event.target.value)} placeholder="Tournament ID Darkside" className={fieldClass} required />
+          <input value={externalTournamentId} onChange={(event) => setExternalTournamentId(event.target.value)} placeholder="Tournament ID Toornament" className={fieldClass} />
+          <input value={externalBracketUrl} onChange={(event) => setExternalBracketUrl(event.target.value)} placeholder="URL bracket Toornament" className={fieldClass} />
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <label className="block">
+            <span className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.18em] text-white/48">
+              Participantes CSV
+              <button type="button" onClick={() => setParticipantsText(participantTemplate)} className="text-[#18e6f2] hover:text-white">
+                plantilla
+              </button>
+            </span>
+            <textarea value={participantsText} onChange={(event) => setParticipantsText(event.target.value)} rows={7} className={`${fieldClass} mt-2 font-mono text-xs`} />
+            <span className="mt-2 block text-xs text-white/45">{parsedParticipants.length} participantes detectados</span>
+          </label>
+          <label className="block">
+            <span className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.18em] text-white/48">
+              Matches CSV
+              <button type="button" onClick={() => setMatchesText(matchTemplate)} className="text-[#18e6f2] hover:text-white">
+                plantilla
+              </button>
+            </span>
+            <textarea value={matchesText} onChange={(event) => setMatchesText(event.target.value)} rows={7} className={`${fieldClass} mt-2 font-mono text-xs`} />
+            <span className="mt-2 block text-xs text-white/45">{parsedMatches.length} matches detectados</span>
+          </label>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <button type="button" disabled={loading || !tournamentId.trim()} onClick={() => importToornament(true)} className="btn-secondary flex-1 disabled:opacity-50">
+            {loading ? "Procesando..." : "Previsualizar"}
+          </button>
+          <button disabled={loading || !tournamentId.trim()} className="btn-primary flex-1 disabled:opacity-50">
+            {loading ? "Importando..." : "Importar a Darkside"}
+          </button>
+        </div>
+
+        {result ? (
+          <pre className="mt-4 max-h-72 overflow-auto rounded-2xl border border-white/10 bg-black/35 p-4 text-xs leading-5 text-white/72">
+            {result}
+          </pre>
+        ) : null}
+      </form>
 
       <div className="mt-5 overflow-hidden rounded-[24px] border border-white/10">
         <div className="grid grid-cols-[0.8fr_1.2fr] border-b border-white/10 bg-white/[0.045] px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-white/55">
