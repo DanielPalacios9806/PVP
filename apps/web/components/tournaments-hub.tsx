@@ -271,7 +271,7 @@ function HubMetric({ icon, label, value, tone = "text-white" }: { icon: ReactNod
   );
 }
 
-export function TournamentsHub({ game = "lol" }: { game?: string }) {
+export function TournamentsHub({ game = "lol", initialQuery = "" }: { game?: string; initialQuery?: string }) {
   const gameKey = game === "valorant" ? "valorant" : "lol";
   const config = hubConfig[gameKey];
   const [items, setItems] = useState<any[]>([]);
@@ -280,7 +280,7 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
   const [activeTab, setActiveTab] = useState("Torneos");
   const [activeFormats, setActiveFormats] = useState<string[]>([]);
   const [activeStatus, setActiveStatus] = useState<HubStatus | "ALL">("ALL");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
@@ -305,6 +305,10 @@ export function TournamentsHub({ game = "lol" }: { game?: string }) {
 
     void load();
   }, []);
+
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
 
   const cards = useMemo(() => {
     return items.length ? sortTournamentsForViewer(items, user).map((item) => mapTournamentCard(item, user)) : curatedCards;

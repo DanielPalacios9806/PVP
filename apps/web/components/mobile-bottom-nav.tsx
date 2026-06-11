@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 const items = [
   { label: "Inicio", href: "/dashboard", icon: "/assets/darkside/icons/icon-trophy.svg" },
   { label: "Torneos", href: "/dashboard/tournaments", icon: "/assets/darkside/icons/icon-bracket.svg" },
-  { label: "Reglamento", href: "/legal/terms", icon: "/assets/darkside/icons/icon-comment.svg" },
   { label: "Equipos", href: "/dashboard/teams", icon: "/assets/darkside/icons/icon-users.svg" },
   { label: "Perfil", href: "/dashboard/account", icon: "/assets/darkside/icons/icon-user.svg" }
 ];

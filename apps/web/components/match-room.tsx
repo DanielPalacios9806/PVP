@@ -506,7 +506,7 @@ function ManualLobbyOpsCard({
         {canOperate ? (
           <form action={onUpdate} className="border-t border-white/10 bg-black/20 p-4">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/50">Panel rápido moderador</p>
-            <div className="mt-3 grid gap-3">
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
               <input name="lobbyCode" defaultValue={lobby.code} placeholder="Código o referencia" className={fieldClass} />
               <select name="externalProvider" defaultValue={lobby.externalProvider || "TOORNAMENT_MANUAL"} className={fieldClass}>
                 <option value="">Sin proveedor externo</option>
@@ -523,7 +523,7 @@ function ManualLobbyOpsCard({
                 <option value="READY">Sala lista</option>
                 <option value="IN_PROGRESS">En juego</option>
               </select>
-              <textarea name="instructions" rows={4} defaultValue={lobby.instructions} placeholder="Instrucciones para capitanes" className={fieldClass} />
+              <textarea name="instructions" rows={4} defaultValue={lobby.instructions} placeholder="Instrucciones para capitanes" className={`${fieldClass} md:col-span-2`} />
             </div>
             <button disabled={submitting} className="btn-primary mt-4 w-full disabled:opacity-50">
               {submitting ? "Guardando..." : "Guardar sala manual"}
@@ -555,8 +555,8 @@ function StaffBracketConfirmCard({
 
   return (
     <SectionCard title="Confirmacion staff del bracket" description="Permite cerrar el resultado si el rival no responde o cuando Toornament/bracket externo ya valido el marcador.">
-      <form action={onConfirmStaff} className="space-y-4">
-        <select name="winnerRegistrationId" defaultValue={options[0]?.id} className="w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none focus:border-[#18e6f2]/50">
+      <form action={onConfirmStaff} className="grid gap-4 md:grid-cols-2">
+        <select name="winnerRegistrationId" defaultValue={options[0]?.id} className="w-full rounded-2xl border border-white/10 bg-[#0c1324] p-3 text-sm text-white outline-none focus:border-[#18e6f2]/50 md:col-span-2">
           {options.map((option) => (
             <option key={option.id} value={option.id}>
               {option.label}
@@ -574,13 +574,13 @@ function StaffBracketConfirmCard({
             </option>
           ))}
         </select>
-        <input name="evidenceUrl" placeholder="URL de evidencia o captura (opcional)" />
+        <input name="evidenceUrl" placeholder="URL de evidencia o captura (opcional)" className="md:col-span-2" />
         <textarea name="notes" rows={3} placeholder="Notas visibles del reporte" />
         <textarea name="moderationNote" rows={3} placeholder="Nota de moderacion / criterio aplicado" />
-        <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-6 text-amber-100">
+        <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-6 text-amber-100 md:col-span-2">
           Usalo cuando el ganador reporta y el perdedor no responde, o cuando Toornament/bracket externo ya confirma el ganador. Esta accion cierra la partida y puede avanzar el bracket.
         </div>
-        <button disabled={submitting || options.length === 0} className="btn-primary w-full disabled:opacity-50">
+        <button disabled={submitting || options.length === 0} className="btn-primary w-full disabled:opacity-50 md:col-span-2">
           {submitting ? "Confirmando..." : "Confirmar ganador como staff"}
         </button>
       </form>
@@ -966,8 +966,8 @@ export function MatchRoom({ matchId }: { matchId: string }) {
   const actionSummary = matchActionSummary(match, pendingResult, activeDispute, canOperate, latestWinner);
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#070b16] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
+    <div className="mx-auto max-w-[1480px] space-y-5 px-3 pb-10 sm:px-4 xl:px-5">
+      <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#070b16] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.38)] sm:p-6">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(24,230,242,0.18),transparent_34%),radial-gradient(circle_at_84%_12%,rgba(255,79,99,0.18),transparent_32%)]" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -994,16 +994,16 @@ export function MatchRoom({ matchId }: { matchId: string }) {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <MatchTimeline status={match.status} />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+        <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-1">
           <ActionSummaryCard summary={actionSummary} />
           <WinnerSummaryCard winner={latestWinner} />
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-        <div className="space-y-6">
+      <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,0.95fr)_minmax(520px,1.05fr)]">
+        <div className="space-y-5">
           <SectionCard title="Enfrentamiento" description="Marcador principal y participantes de la partida.">
             <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-center">
               <ParticipantCard
@@ -1032,6 +1032,9 @@ export function MatchRoom({ matchId }: { matchId: string }) {
               <div className="stat-tile">Fuente: {match.resultSource ?? "MANUAL"}</div>
             </div>
           </SectionCard>
+
+          <LobbyAutomationCard match={match} />
+          <ManualLobbyOpsCard match={match} canOperate={canOperate} submitting={submitting} onUpdate={updateLobby} />
 
           <SectionCard title="Historial de resultados" description="Reportes enviados por jugadores, capitanes o staff.">
             <div className="space-y-3">
@@ -1136,10 +1139,7 @@ export function MatchRoom({ matchId }: { matchId: string }) {
           </SectionCard>
         </div>
 
-        <div className="space-y-6">
-          <LobbyAutomationCard match={match} />
-          <ManualLobbyOpsCard match={match} canOperate={canOperate} submitting={submitting} onUpdate={updateLobby} />
-
+        <div className="space-y-5">
           <SectionCard title="Reportar resultado" description="Flujo manual para capitanes y jugadores autorizados.">
             {canReport ? (
               <form action={reportResult} className="space-y-4">
